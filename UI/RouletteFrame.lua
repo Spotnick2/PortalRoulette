@@ -200,10 +200,10 @@ local function positionNameplateForAngle(button, angleDeg, isKarazhan)
         return
     end
 
-    if angle >= 330 or angle <= 30 then
+    if angle == 150 or angle == 210 then
+        ns.DestinationNode:SetNameplateAnchor(button, "TOP", "BOTTOM", 0, -3, NODE_NAMEPLATE_W, NODE_NAMEPLATE_H)
+    elseif angle >= 330 or angle <= 30 then
         ns.DestinationNode:SetNameplateAnchor(button, "LEFT", "RIGHT", 4, 0, NODE_NAMEPLATE_W, NODE_NAMEPLATE_H)
-    elseif angle >= 150 and angle <= 210 then
-        ns.DestinationNode:SetNameplateAnchor(button, "RIGHT", "LEFT", -4, 0, NODE_NAMEPLATE_W, NODE_NAMEPLATE_H)
     elseif angle > 30 and angle < 150 then
         ns.DestinationNode:SetNameplateAnchor(button, "BOTTOM", "TOP", 0, 4, NODE_NAMEPLATE_W, NODE_NAMEPLATE_H)
     else
