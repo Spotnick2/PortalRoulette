@@ -55,12 +55,17 @@ local MOUNTED_SHOULDER_F2 = -4.0
 -- We use the same convention.
 local UNMOUNTED_ZOOM         = 2.1   -- Narcissus default for human-baseline
 local MOUNTED_ZOOM           = 8.0   -- Narcissus default for mounted
-local ENTER_DURATION         = 1.20
+-- Fast-forward: the entry yaw integrates to ~180° of rotation regardless of duration
+-- (it's a function of YAW_DEGREES and the inOutSine averaging). At 0.5s the rotation
+-- happens as a brief burst rather than a slow visible swing — the camera "starts" at
+-- the facing position and the slow orbit continues from there indefinitely.
+local ENTER_DURATION         = 0.50
 local EXIT_DURATION          = 0.35
 local ORBIT_SPEED            = 0.005
-local TOTAL_PRESENT_DURATION = 10.0  -- empirically tuned: at this point the character
-                                     -- has rotated to face the camera. We stop the
-                                     -- yaw here so the camera settles facing the user.
+-- Ping-pong orbit: hold one direction for ORBIT_HALF_PERIOD, then reverse.
+-- At 0.005 speed × 180°/s × 30s ≈ 27° of swing per leg, so the character
+-- oscillates around the facing pose and is never far from facing the viewer.
+local ORBIT_HALF_PERIOD      = 30.0
 local YAW_DEGREES            = 360
 local YAW_DIRECTION          = -1    -- -1 = turn left (character faces toward camera)
 local SAVED_VIEW_SLOT        = 5
@@ -226,22 +231,31 @@ function CameraMode:UpdateAnimation(elapsed)
 
     if self.mode == "enter" then
         local entryDur = math.max(0.01, ENTER_DURATION)
-        local totalDur = math.max(entryDur, TOTAL_PRESENT_DURATION)
-
         if self.elapsed < entryDur then
-            -- Entry phase: ease from initial fast yaw to orbit speed.
+            -- Entry burst: ease from initial fast yaw down to orbit speed.
+            -- Rotates ~180° in ~0.5s (the "fast-forward" to facing pose).
             if self.yawDir and self.yawFromSpeed and self.yawToSpeed then
                 self:_ApplyYaw(self.yawDir * inOutSine(self.elapsed, self.yawFromSpeed, self.yawToSpeed, entryDur))
             end
-        elseif self.elapsed < totalDur then
-            -- Orbit phase: continue at slow orbit speed until total duration.
-            self:_ApplyYaw(self.yawDir * ORBIT_SPEED)
         else
-            -- Total duration elapsed: stop the camera so the character settles
-            -- facing the viewer (~10s mark of the orbit).
+            -- Transition to ping-pong orbit. Keep the animFrame running so
+            -- we can flip direction every ORBIT_HALF_PERIOD seconds.
             self:_StopYaw()
-            self.mode = nil
-            if self.animFrame then self.animFrame:Hide() end
+            self:_ApplyYaw(self.yawDir * ORBIT_SPEED)
+            self.mode = "orbit"
+            self.orbitElapsed = 0
+        end
+        return
+    end
+
+    if self.mode == "orbit" then
+        self.orbitElapsed = (self.orbitElapsed or 0) + (elapsed or 0)
+        if self.orbitElapsed >= ORBIT_HALF_PERIOD then
+            -- Reverse direction so the character orbits back toward facing.
+            self.orbitElapsed = self.orbitElapsed - ORBIT_HALF_PERIOD
+            self.yawDir = -self.yawDir
+            self:_StopYaw()
+            self:_ApplyYaw(self.yawDir * ORBIT_SPEED)
         end
         return
     end
