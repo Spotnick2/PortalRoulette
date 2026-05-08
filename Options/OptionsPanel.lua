@@ -91,6 +91,8 @@ function OptionsPanel:RefreshControls()
     self.cameraModeCheckbox:SetChecked(ns.db.cinematicCamera)
     self.lockLauncherCheckbox:SetChecked(ns.db.lockLauncher)
     self.minimapVisibilityCheckbox:SetChecked(ns.db.showMinimapButton)
+    self.soundsEnabledCheckbox:SetChecked(ns.db.soundsEnabled)
+    self.hoverSoundsEnabledCheckbox:SetChecked(ns.db.hoverSoundsEnabled)
 
     self.scaleSlider:SetValue(ns.db.uiScale or 1)
     self.scaleValueText:SetText(string.format("%.2f", ns.db.uiScale or 1))
@@ -158,8 +160,18 @@ function OptionsPanel:Create()
         applyAllSettings()
     end)
 
+    self.soundsEnabledCheckbox = createCheckbox(panel, "Enable addon sounds", 16, -330)
+    self.soundsEnabledCheckbox:SetScript("OnClick", function(selfButton)
+        ns.db.soundsEnabled = selfButton:GetChecked() and true or false
+    end)
+
+    self.hoverSoundsEnabledCheckbox = createCheckbox(panel, "Enable hover sounds", 16, -358)
+    self.hoverSoundsEnabledCheckbox:SetScript("OnClick", function(selfButton)
+        ns.db.hoverSoundsEnabled = selfButton:GetChecked() and true or false
+    end)
+
     local slider = CreateFrame("Slider", "PortalRouletteScaleSlider", panel, "OptionsSliderTemplate")
-    slider:SetPoint("TOPLEFT", panel, "TOPLEFT", 20, -352)
+    slider:SetPoint("TOPLEFT", panel, "TOPLEFT", 20, -410)
     slider:SetWidth(220)
     slider:SetMinMaxValues(0.75, 1.35)
     slider:SetValueStep(0.01)
