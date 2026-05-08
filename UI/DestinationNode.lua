@@ -36,28 +36,14 @@ local function setMacroAction(button, macroText)
     return true
 end
 
-local function setSpellActions(button, teleportSpellName, portalSpellName)
+local function setTeleportAction(button, teleportSpellName)
     if not clearAction(button) then
         return false
     end
 
-    local hasTeleport = teleportSpellName and teleportSpellName ~= ""
-    local hasPortal = portalSpellName and portalSpellName ~= ""
-
-    if hasTeleport then
+    if teleportSpellName and teleportSpellName ~= "" then
         button:SetAttribute("type", "spell")
         button:SetAttribute("spell", teleportSpellName)
-        button:SetAttribute("type1", "spell")
-        button:SetAttribute("spell1", teleportSpellName)
-    end
-
-    if hasPortal then
-        button:SetAttribute("type2", "spell")
-        button:SetAttribute("spell2", portalSpellName)
-        if not hasTeleport then
-            button:SetAttribute("type", "spell")
-            button:SetAttribute("spell", portalSpellName)
-        end
     end
 
     return true
@@ -127,6 +113,7 @@ function DestinationNode:Create(parent, size)
     button.tooltipDetail = nil
     button.teleportSpellName = nil
     button.portalSpellName = nil
+    button.portalMacroText = nil
     button.visualEnabled = true
     button.linkTexture = nil
     button.linkNormalTexturePath = nil
@@ -148,6 +135,18 @@ function DestinationNode:Create(parent, size)
     button:SetScript("OnLeave", function()
         applyHoverState(button, false)
         GameTooltip:Hide()
+    end)
+
+    button:SetScript("OnClick", function(self, mouseButton)
+        if mouseButton ~= "RightButton" or InCombatLockdown() then
+            return
+        end
+
+        if self.portalSpellName and self.portalSpellName ~= "" then
+            CastSpellByName(self.portalSpellName)
+        elseif self.portalMacroText and self.portalMacroText ~= "" then
+            RunMacroText(self.portalMacroText)
+        end
     end)
 
     return button
@@ -176,6 +175,7 @@ end
 function DestinationNode:ApplyState(button, state)
     button.teleportSpellName = state.teleportSpellName or ""
     button.portalSpellName   = state.portalSpellName   or ""
+    button.portalMacroText   = state.portalMacroText   or ""
 
     local applied
     if state.disableActions then
@@ -183,7 +183,7 @@ function DestinationNode:ApplyState(button, state)
     elseif state.karazhanMacro then
         applied = setMacroAction(button, state.karazhanMacro)
     else
-        applied = setSpellActions(button, button.teleportSpellName, button.portalSpellName)
+        applied = setTeleportAction(button, button.teleportSpellName)
     end
 
     if not applied then
