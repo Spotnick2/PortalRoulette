@@ -3,23 +3,6 @@ local _, ns = ...
 local DestinationNode = {}
 ns.DestinationNode = DestinationNode
 
--- Set the LEFT-CLICK (teleport) secure attribute. Only the default "type"/"spell"
--- pair is used — numbered attributes (type1, type2) are unreliable in TBC Classic
--- Anniversary. Right-click portal is handled via OnClick below.
-local function setTeleportAction(button, spellName)
-    if InCombatLockdown() then
-        return false
-    end
-    button:SetAttribute("type", nil)
-    button:SetAttribute("spell", nil)
-    button:SetAttribute("macrotext", nil)
-    if spellName and spellName ~= "" then
-        button:SetAttribute("type", "spell")
-        button:SetAttribute("spell", spellName)
-    end
-    return true
-end
-
 local function setMacroAction(button, macroText)
     if InCombatLockdown() then
         return false
@@ -34,34 +17,72 @@ local function setMacroAction(button, macroText)
     return true
 end
 
+local function buildMacro(teleportSpellName, portalSpellName)
+    local hasTeleport = teleportSpellName and teleportSpellName ~= ""
+    local hasPortal = portalSpellName and portalSpellName ~= ""
+    if hasTeleport and hasPortal then
+        return "/cast [btn:2] " .. portalSpellName .. "\n/cast [btn:1] " .. teleportSpellName
+    elseif hasTeleport then
+        return "/cast " .. teleportSpellName
+    elseif hasPortal then
+        return "/cast " .. portalSpellName
+    end
+    return nil
+end
+
+local function applyHoverState(button, isHover)
+    if isHover and button.visualEnabled then
+        button.hoverTexture:SetAlpha(0.8)
+        if button.iconHoverTexture and button.iconHoverTexturePath then
+            button.iconHoverTexture:SetAlpha(1)
+        end
+        if button.nameplateHoverTexture and button.nameplateHoverTexturePath then
+            button.nameplateHoverTexture:SetAlpha(1)
+        end
+        if button.linkTexture and button.linkHoverTexturePath then
+            button.linkTexture:SetTexture(button.linkHoverTexturePath)
+        end
+    else
+        button.hoverTexture:SetAlpha(0)
+        if button.iconHoverTexture then
+            button.iconHoverTexture:SetAlpha(0)
+        end
+        if button.nameplateHoverTexture then
+            button.nameplateHoverTexture:SetAlpha(0)
+        end
+        if button.linkTexture and button.linkNormalTexturePath then
+            button.linkTexture:SetTexture(button.linkNormalTexturePath)
+        end
+    end
+end
+
 function DestinationNode:Create(parent, size)
     local button = CreateFrame("Button", nil, parent, "SecureActionButtonTemplate")
     button:SetSize(size or 64, size or 64)
     button:RegisterForClicks("LeftButtonUp", "RightButtonUp")
     button:EnableMouse(true)
 
-    -- Left click → teleport (via SecureActionButtonTemplate type/spell attribute)
-    -- Right click → portal (via OnClick CastSpellByName, safe out-of-combat)
-    -- Addon can only be opened out of combat so right-click path is always available.
-    button:SetScript("OnClick", function(self, mouseButton)
-        if mouseButton == "RightButton" and not InCombatLockdown() then
-            if self.portalSpellName and self.portalSpellName ~= "" then
-                CastSpellByName(self.portalSpellName)
-            elseif self.portalMacroText and self.portalMacroText ~= "" then
-                -- Karazhan / Atiesh path uses the macro for both clicks already;
-                -- right-click here is a no-op since SecureHandler covers it.
-            end
-        end
-    end)
-
     button.baseTexture = button:CreateTexture(nil, "BACKGROUND")
     button.baseTexture:SetAllPoints()
     button.baseTexture:SetTexture(ns.Media.NODE_NORMAL)
 
     button.iconTexture = button:CreateTexture(nil, "ARTWORK")
-    button.iconTexture:SetSize(40, 40)
+    button.iconTexture:SetSize(56, 56)
     button.iconTexture:SetPoint("CENTER", button, "CENTER", 0, 1)
     button.iconTexture:SetAlpha(0)
+
+    button.iconHoverTexture = button:CreateTexture(nil, "OVERLAY")
+    button.iconHoverTexture:SetSize(56, 56)
+    button.iconHoverTexture:SetPoint("CENTER", button, "CENTER", 0, 1)
+    button.iconHoverTexture:SetAlpha(0)
+
+    button.nameplateTexture = button:CreateTexture(nil, "BORDER")
+    button.nameplateTexture:SetSize(118, 30)
+    button.nameplateTexture:SetAlpha(0)
+
+    button.nameplateHoverTexture = button:CreateTexture(nil, "OVERLAY")
+    button.nameplateHoverTexture:SetSize(118, 30)
+    button.nameplateHoverTexture:SetAlpha(0)
 
     button.hoverTexture = button:CreateTexture(nil, "OVERLAY")
     button.hoverTexture:SetAllPoints()
@@ -69,30 +90,22 @@ function DestinationNode:Create(parent, size)
     button.hoverTexture:SetBlendMode("ADD")
     button.hoverTexture:SetAlpha(0)
 
-    button.labelBackdrop = button:CreateTexture(nil, "BORDER")
-    button.labelBackdrop:SetTexture("Interface\\Buttons\\WHITE8X8")
-    button.labelBackdrop:SetVertexColor(0.03, 0.04, 0.09, 0.7)
-    button.labelBackdrop:SetSize(104, 15)
-
-    button.label = button:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    button.label:SetPoint("TOP", button, "BOTTOM", 0, -6)
-    button.label:SetWidth(100)
-    button.label:SetJustifyH("CENTER")
-    button.labelBackdrop:SetPoint("CENTER", button.label, "CENTER")
-
     button.tooltipTitle = nil
     button.tooltipDetail = nil
     button.teleportSpellName = nil
     button.portalSpellName = nil
-    button.portalMacroText = nil
+    button.combinedMacroText = nil
     button.visualEnabled = true
+    button.linkTexture = nil
+    button.linkNormalTexturePath = nil
+    button.linkHoverTexturePath = nil
+    button.iconHoverTexturePath = nil
+    button.nameplateHoverTexturePath = nil
 
     button:SetScript("OnEnter", function(self)
-        if self.visualEnabled then
-            self.hoverTexture:SetAlpha(0.85)
-        end
+        applyHoverState(self, true)
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:SetText(self.tooltipTitle or self.label:GetText() or "", 0.95, 0.97, 1)
+        GameTooltip:SetText(self.tooltipTitle or "", 0.95, 0.97, 1)
         if self.tooltipDetail and self.tooltipDetail ~= "" then
             GameTooltip:AddLine(self.tooltipDetail, 0.78, 0.82, 0.92, true)
         end
@@ -101,27 +114,47 @@ function DestinationNode:Create(parent, size)
     end)
 
     button:SetScript("OnLeave", function()
-        button.hoverTexture:SetAlpha(0)
+        applyHoverState(button, false)
         GameTooltip:Hide()
     end)
 
     return button
 end
 
+function DestinationNode:SetLinkedTexture(button, texture, normalPath, hoverPath)
+    button.linkTexture = texture
+    button.linkNormalTexturePath = normalPath
+    button.linkHoverTexturePath = hoverPath
+    if texture and normalPath then
+        texture:SetTexture(normalPath)
+    end
+end
+
+function DestinationNode:SetNameplateAnchor(button, point, relativePoint, x, y, width, height)
+    button.nameplateTexture:ClearAllPoints()
+    button.nameplateHoverTexture:ClearAllPoints()
+    button.nameplateTexture:SetPoint(point, button, relativePoint, x or 0, y or 0)
+    button.nameplateHoverTexture:SetPoint(point, button, relativePoint, x or 0, y or 0)
+    if width and height then
+        button.nameplateTexture:SetSize(width, height)
+        button.nameplateHoverTexture:SetSize(width, height)
+    end
+end
+
 function DestinationNode:ApplyState(button, state)
-    -- Always keep the button interactable. WoW's own cast system will report
-    -- errors (no reagent, spell not learned, etc.) naturally.
     button.teleportSpellName = state.teleportSpellName or ""
     button.portalSpellName   = state.portalSpellName   or ""
-    button.portalMacroText   = state.portalMacroText   or ""
+    button.combinedMacroText = state.combinedMacroText or ""
 
     local applied
-    if state.karazhanMacro then
-        -- Karazhan: macro fires for left-click (no teleport exists); right-click
-        -- is handled by the same macro via SecureActionButtonTemplate.
+    if state.disableActions then
+        applied = setMacroAction(button, nil)
+    elseif state.karazhanMacro then
         applied = setMacroAction(button, state.karazhanMacro)
+    elseif state.combinedMacroText and state.combinedMacroText ~= "" then
+        applied = setMacroAction(button, state.combinedMacroText)
     else
-        applied = setTeleportAction(button, state.teleportSpellName)
+        applied = setMacroAction(button, buildMacro(button.teleportSpellName, button.portalSpellName))
     end
 
     if not applied then
@@ -130,15 +163,13 @@ function DestinationNode:ApplyState(button, state)
     end
 
     button.pendingState = nil
-    button.visualEnabled = state.enabled and true or false
-    -- Do NOT call SetEnabled(false) — always keep the button clickable.
-    button.label:SetText(state.label or "")
-    button.tooltipTitle  = state.tooltipTitle or state.label
+    button.visualEnabled = (state.enabled and not state.disableActions) and true or false
+    button.tooltipTitle  = state.tooltipTitle or state.label or ""
     button.tooltipDetail = state.tooltipDetail
-    button.hoverTexture:SetAlpha(0)
+    applyHoverState(button, false)
 
-    if state.icon then
-        button.iconTexture:SetTexture(state.icon)
+    if state.iconNormalTexture or state.icon then
+        button.iconTexture:SetTexture(state.iconNormalTexture or state.icon)
         button.iconTexture:SetTexCoord(0, 1, 0, 1)
         button.iconTexture:SetAlpha(1)
     else
@@ -146,18 +177,46 @@ function DestinationNode:ApplyState(button, state)
         button.iconTexture:SetAlpha(0)
     end
 
+    if state.iconHoverTexture then
+        button.iconHoverTexture:SetTexture(state.iconHoverTexture)
+        button.iconHoverTexturePath = state.iconHoverTexture
+        button.iconHoverTexture:SetAlpha(0)
+    else
+        button.iconHoverTexture:SetTexture(nil)
+        button.iconHoverTexturePath = nil
+        button.iconHoverTexture:SetAlpha(0)
+    end
+
+    if state.nameplateNormalTexture then
+        button.nameplateTexture:SetTexture(state.nameplateNormalTexture)
+        button.nameplateTexture:SetAlpha(1)
+    else
+        button.nameplateTexture:SetTexture(nil)
+        button.nameplateTexture:SetAlpha(0)
+    end
+
+    if state.nameplateHoverTexture then
+        button.nameplateHoverTexture:SetTexture(state.nameplateHoverTexture)
+        button.nameplateHoverTexturePath = state.nameplateHoverTexture
+        button.nameplateHoverTexture:SetAlpha(0)
+    else
+        button.nameplateHoverTexture:SetTexture(nil)
+        button.nameplateHoverTexturePath = nil
+        button.nameplateHoverTexture:SetAlpha(0)
+    end
+
+    button:Enable()
+
     if button.visualEnabled then
         button.baseTexture:SetTexture(state.normalTexture or ns.Media.NODE_NORMAL)
         button.baseTexture:SetVertexColor(1, 1, 1, 1)
         button.iconTexture:SetDesaturated(false)
-        button.label:SetTextColor(0.98, 0.93, 0.83)
-        button.labelBackdrop:SetVertexColor(0.03, 0.04, 0.09, 0.78)
+        button.nameplateTexture:SetDesaturated(false)
     else
         button.baseTexture:SetTexture(state.disabledTexture or state.normalTexture or ns.Media.NODE_DISABLED)
         button.baseTexture:SetVertexColor(1, 1, 1, 0.68)
         button.iconTexture:SetDesaturated(true)
-        button.label:SetTextColor(0.58, 0.58, 0.58)
-        button.labelBackdrop:SetVertexColor(0.03, 0.04, 0.09, 0.5)
+        button.nameplateTexture:SetDesaturated(true)
     end
 
     return true

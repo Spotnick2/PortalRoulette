@@ -101,9 +101,9 @@ local karazhanNode = {
     id = "karazhan",
     label = "Karazhan",
     subtitle = "Atiesh only",
-    angleDeg = 330,
-    radius = 202,
-    ringAttachRadius = 156,
+    angleDeg = 318,
+    radius = 226,
+    ringAttachRadius = 168,
 }
 
 local destinationIcons = {
@@ -166,4 +166,56 @@ function Destinations:GetIconForDestination(destination, mode)
 
     local icon = spellID and GetSpellTexture(spellID)
     return icon or "Interface\\ICONS\\INV_Misc_QuestionMark", false
+end
+
+local destinationFileNames = {
+    orgrimmar = "orgrimmar",
+    undercity = "undercity",
+    thunder_bluff = "thunder_bluff",
+    silvermoon = "silvermoon",
+    stonard = "stonard",
+    shattrath = "shattrath",
+    stormwind = "stormwind",
+    ironforge = "ironforge",
+    darnassus = "darnassus",
+    exodar = "the_exodar",
+    theramore = "theramore",
+    karazhan = "karazhan",
+}
+
+local function getVisualRootsForFaction(faction)
+    if faction == HORDE then
+        return {
+            iconNormal = ns.Media.CITY_ICON_HORDE_NORMAL_ROOT,
+            iconHover = ns.Media.CITY_ICON_HORDE_HOVER_ROOT,
+            nameplateNormal = ns.Media.CITY_NAMEPLATE_HORDE_NORMAL_ROOT,
+            nameplateHover = ns.Media.CITY_NAMEPLATE_HORDE_HOVER_ROOT,
+        }
+    end
+
+    return {
+        iconNormal = ns.Media.CITY_ICON_ALLIANCE_NORMAL_ROOT,
+        iconHover = ns.Media.CITY_ICON_ALLIANCE_HOVER_ROOT,
+        nameplateNormal = ns.Media.CITY_NAMEPLATE_ALLIANCE_NORMAL_ROOT,
+        nameplateHover = ns.Media.CITY_NAMEPLATE_ALLIANCE_HOVER_ROOT,
+    }
+end
+
+function Destinations:GetVisualsForDestination(destination, faction)
+    if not destination or not destination.id then
+        return nil
+    end
+
+    local roots = getVisualRootsForFaction(faction or UnitFactionGroup("player"))
+    local cityFileName = destinationFileNames[destination.id]
+    if not roots or not cityFileName then
+        return nil
+    end
+
+    return {
+        iconNormal = roots.iconNormal .. cityFileName .. ".tga",
+        iconHover = roots.iconHover .. cityFileName .. ".tga",
+        nameplateNormal = roots.nameplateNormal .. cityFileName .. ".tga",
+        nameplateHover = roots.nameplateHover .. cityFileName .. ".tga",
+    }
 end

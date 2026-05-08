@@ -50,10 +50,53 @@ local function setTextureLine(lineTexture, parent, startX, startY, endX, endY)
 
     lineTexture:ClearAllPoints()
     lineTexture:SetPoint("CENTER", parent, "CENTER", (startX + endX) * 0.5, (startY + endY) * 0.5)
-    lineTexture:SetSize(length, 3)
+    lineTexture:SetSize(length, 22)
     if lineTexture.SetRotation then
         lineTexture:SetRotation(angle)
     end
+end
+
+local function getLinkSlotForAngle(angleDeg)
+    local angle = angleDeg % 360
+    if angle == 90 then
+        return "top"
+    elseif angle == 150 then
+        return "upper_left"
+    elseif angle == 30 then
+        return "upper_right"
+    elseif angle == 210 then
+        return "lower_left"
+    elseif angle == 270 then
+        return "bottom"
+    elseif angle == 330 then
+        return "lower_right"
+    end
+    return "top"
+end
+
+local linkTexturesBySlot = {
+    top = { normal = ns.Media.LINK_TOP_NORMAL, hover = ns.Media.LINK_TOP_HOVER },
+    upper_left = { normal = ns.Media.LINK_UPPER_LEFT_NORMAL, hover = ns.Media.LINK_UPPER_LEFT_HOVER },
+    upper_right = { normal = ns.Media.LINK_UPPER_RIGHT_NORMAL, hover = ns.Media.LINK_UPPER_RIGHT_HOVER },
+    lower_left = { normal = ns.Media.LINK_LOWER_LEFT_NORMAL, hover = ns.Media.LINK_LOWER_LEFT_HOVER },
+    bottom = { normal = ns.Media.LINK_BOTTOM_NORMAL, hover = ns.Media.LINK_BOTTOM_HOVER },
+    lower_right = { normal = ns.Media.LINK_LOWER_RIGHT_NORMAL, hover = ns.Media.LINK_LOWER_RIGHT_HOVER },
+    extension_right = { normal = ns.Media.LINK_EXTENSION_RIGHT_NORMAL, hover = ns.Media.LINK_EXTENSION_RIGHT_HOVER },
+}
+
+local function applySecureMacro(button, macroText)
+    if InCombatLockdown() then
+        return false
+    end
+    button:SetAttribute("type", nil)
+    button:SetAttribute("spell", nil)
+    button:SetAttribute("item", nil)
+    button:SetAttribute("macrotext", nil)
+    if macroText and macroText ~= "" then
+        button:SetAttribute("type", "macro")
+        button:SetAttribute("macrotext", macroText)
+    end
+    return true
 end
 
 local function createTab(parent, mode, xOffset, texCoordLeft, texCoordRight)
@@ -71,31 +114,21 @@ local function createTab(parent, mode, xOffset, texCoordLeft, texCoordRight)
     return tab
 end
 
-local function positionLabelForAngle(button, angleDeg)
+local function positionNameplateForAngle(button, angleDeg, isKarazhan)
     local angle = angleDeg % 360
-    button.label:ClearAllPoints()
-
-    if angle >= 330 or angle <= 30 then
-        button.label:SetPoint("LEFT", button, "RIGHT", 8, 0)
-        button.label:SetJustifyH("LEFT")
-        button.label:SetWidth(112)
-    elseif angle >= 150 and angle <= 210 then
-        button.label:SetPoint("RIGHT", button, "LEFT", -8, 0)
-        button.label:SetJustifyH("RIGHT")
-        button.label:SetWidth(112)
-    elseif angle > 30 and angle < 150 then
-        button.label:SetPoint("BOTTOM", button, "TOP", 0, 8)
-        button.label:SetJustifyH("CENTER")
-        button.label:SetWidth(98)
-    else
-        button.label:SetPoint("TOP", button, "BOTTOM", 0, -8)
-        button.label:SetJustifyH("CENTER")
-        button.label:SetWidth(112)
+    if isKarazhan then
+        ns.DestinationNode:SetNameplateAnchor(button, "LEFT", "RIGHT", 8, -12, 132, 36)
+        return
     end
 
-    if button.labelBackdrop then
-        button.labelBackdrop:SetPoint("CENTER", button.label, "CENTER")
-        button.labelBackdrop:SetSize(button.label:GetWidth() + 10, 15)
+    if angle >= 330 or angle <= 30 then
+        ns.DestinationNode:SetNameplateAnchor(button, "LEFT", "RIGHT", 8, 0, 118, 30)
+    elseif angle >= 150 and angle <= 210 then
+        ns.DestinationNode:SetNameplateAnchor(button, "RIGHT", "LEFT", -8, 0, 118, 30)
+    elseif angle > 30 and angle < 150 then
+        ns.DestinationNode:SetNameplateAnchor(button, "BOTTOM", "TOP", 0, 8, 118, 30)
+    else
+        ns.DestinationNode:SetNameplateAnchor(button, "TOP", "BOTTOM", 0, -8, 118, 30)
     end
 end
 
@@ -163,9 +196,6 @@ function RouletteFrame:SetNodeVisualAlpha(alpha)
     if self.karazhanButton then
         self.karazhanButton:SetAlpha(alpha)
     end
-    if self.karazhanSubtitle then
-        self.karazhanSubtitle:SetAlpha(alpha)
-    end
 end
 
 function RouletteFrame:PlayOpenPresentation()
@@ -210,9 +240,6 @@ function RouletteFrame:PlayOpenPresentation()
         if self.karazhanButton then
             playFade(self.karazhanButton, 0, 1, 0.12)
         end
-        if self.karazhanSubtitle then
-            playFade(self.karazhanSubtitle, 0, 1, 0.12)
-        end
     end)
     self:RunAfter(0.16, function()
         playFadeScale(frame.sideGroup, 0, 1, 0.99, 1, 0.14)
@@ -244,9 +271,6 @@ function RouletteFrame:PlayClosePresentation(onFinish)
     end
     if self.karazhanButton then
         playFade(self.karazhanButton, self.karazhanButton:GetAlpha(), 0, 0.1)
-    end
-    if self.karazhanSubtitle then
-        playFade(self.karazhanSubtitle, self.karazhanSubtitle:GetAlpha(), 0, 0.1)
     end
     playFade(frame.wheel, frame.wheel:GetAlpha(), 0, 0.12)
     playFade(frame.headerGroup, frame.headerGroup:GetAlpha(), 0, 0.12)
@@ -400,8 +424,12 @@ function RouletteFrame:CreateMainFrame()
             RouletteFrame.innerRing:SetRotation(RouletteFrame.innerAngle)
         end
         if RouletteFrame.centerCore then
-            local pulse = 0.84 + (math.sin(GetTime() * 1.95) * 0.12)
-            RouletteFrame.centerCore:SetAlpha(pulse)
+            if RouletteFrame.mode == ns.Mode.TELEPORT then
+                RouletteFrame.centerCore:SetAlpha(0)
+            else
+                local pulse = 0.84 + (math.sin(GetTime() * 1.95) * 0.12)
+                RouletteFrame.centerCore:SetAlpha(pulse)
+            end
         end
     end)
 
@@ -417,8 +445,14 @@ function RouletteFrame:CreateWheel()
 
     self.wheelBase = frame.wheel:CreateTexture(nil, "BACKGROUND")
     self.wheelBase:SetAllPoints()
-    self.wheelBase:SetTexture(ns.Media.RUNE_WHEEL_BASE)
+    self.wheelBase:SetTexture(ns.Media.WHEEL_LAYER_NORMAL or ns.Media.RUNE_WHEEL_BASE)
     self.wheelBase:SetAlpha(0.92)
+
+    self.wheelHover = frame.wheel:CreateTexture(nil, "BORDER")
+    self.wheelHover:SetAllPoints()
+    self.wheelHover:SetTexture(ns.Media.WHEEL_LAYER_HOVER)
+    self.wheelHover:SetBlendMode("ADD")
+    self.wheelHover:SetAlpha(0)
 
     self.factionAccent = frame.wheel:CreateTexture(nil, "BORDER")
     self.factionAccent:SetAllPoints()
@@ -443,6 +477,52 @@ function RouletteFrame:CreateWheel()
     self.centerCore:SetTexture(ns.Media.CORE_VORTEX)
     self.centerCore:SetBlendMode("ADD")
     self.centerCore:SetAlpha(1.0)
+
+    frame.centerUtilityButton = CreateFrame("Button", nil, frame.wheel, "SecureActionButtonTemplate")
+    frame.centerUtilityButton:SetSize(118, 118)
+    frame.centerUtilityButton:SetPoint("CENTER", frame.wheel, "CENTER")
+    frame.centerUtilityButton:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+    frame.centerUtilityButton:EnableMouse(true)
+
+    frame.centerUtilityButton:SetNormalTexture(ns.Media.HEARTHSTONE_ORB_NORMAL)
+    frame.centerUtilityButton:SetHighlightTexture(ns.Media.HEARTHSTONE_ORB_HOVER, "BLEND")
+    frame.centerUtilityButton:SetPushedTexture(ns.Media.HEARTHSTONE_ORB_PRESSED)
+
+    local highlight = frame.centerUtilityButton:GetHighlightTexture()
+    if highlight then
+        highlight:SetAlpha(0.9)
+    end
+
+    frame.centerUtilityButton.tooltipTitle = "Utility"
+    frame.centerUtilityButton.tooltipDetail = nil
+    frame.centerUtilityButton.pendingMacroText = nil
+    frame.centerUtilityButton:SetScript("OnEnter", function(button)
+        GameTooltip:SetOwner(button, "ANCHOR_TOP")
+        GameTooltip:SetText(button.tooltipTitle or "Utility", 0.95, 0.97, 1)
+        if button.tooltipDetail and button.tooltipDetail ~= "" then
+            GameTooltip:AddLine(button.tooltipDetail, 0.78, 0.82, 0.92, true)
+        end
+        GameTooltip:Show()
+    end)
+    frame.centerUtilityButton:SetScript("OnLeave", function()
+        GameTooltip:Hide()
+    end)
+    frame.centerUtilityButton:SetScript("PostClick", function()
+        if ns.db and ns.db.utilityMode == ns.UtilityMode.RANDOM and not InCombatLockdown() then
+            RouletteFrame:RefreshCenterUtility()
+        end
+    end)
+
+    frame.wheel:SetScript("OnEnter", function()
+        if RouletteFrame.wheelHover then
+            RouletteFrame.wheelHover:SetAlpha(0.36)
+        end
+    end)
+    frame.wheel:SetScript("OnLeave", function()
+        if RouletteFrame.wheelHover then
+            RouletteFrame.wheelHover:SetAlpha(0)
+        end
+    end)
 end
 
 function RouletteFrame:CreateHeader()
@@ -565,14 +645,17 @@ function RouletteFrame:CreateDestinationNodes()
         local x, y = getPositionForAngle(destination.angleDeg, 152)
         button:SetPoint("CENTER", wheel, "CENTER", x, y)
         button.destination = destination
-        positionLabelForAngle(button, destination.angleDeg)
+        positionNameplateForAngle(button, destination.angleDeg, false)
         self.nodeButtons[index] = button
 
-        local line = wheel:CreateTexture(nil, "BACKGROUND")
-        line:SetTexture("Interface\\Buttons\\WHITE8X8")
-        line:SetVertexColor(0.44, 0.66, 1, 0.76)
+        local slot = getLinkSlotForAngle(destination.angleDeg)
+        local slotTextures = linkTexturesBySlot[slot] or linkTexturesBySlot.top
+        local line = wheel:CreateTexture(nil, "ARTWORK")
+        line:SetTexture(slotTextures.normal)
+        line:SetAlpha(0.8)
         setTextureLine(line, wheel, 0, 0, x, y)
         self.nodeLines[index] = line
+        ns.DestinationNode:SetLinkedTexture(button, line, slotTextures.normal, slotTextures.hover)
     end
 end
 
@@ -587,19 +670,16 @@ function RouletteFrame:CreateKarazhanNode()
     local x, y = getPositionForAngle(karazhan.angleDeg, karazhan.radius)
     self.karazhanButton:SetPoint("CENTER", wheel, "CENTER", x, y)
     self.karazhanButton.destination = karazhan
-    positionLabelForAngle(self.karazhanButton, karazhan.angleDeg)
+    positionNameplateForAngle(self.karazhanButton, karazhan.angleDeg, true)
 
-    self.karazhanSubtitle = wheel:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-    self.karazhanSubtitle:SetPoint("TOP", self.karazhanButton.label, "BOTTOM", 0, -2)
-    self.karazhanSubtitle:SetText("Atiesh only")
-    self.karazhanSubtitle:SetTextColor(0.82, 0.68, 1)
-
-    self.karazhanLine = wheel:CreateTexture(nil, "BACKGROUND")
-    self.karazhanLine:SetTexture("Interface\\Buttons\\WHITE8X8")
-    self.karazhanLine:SetVertexColor(0.74, 0.52, 1, 0.84)
+    local karazhanLinkTextures = linkTexturesBySlot.extension_right
+    self.karazhanLine = wheel:CreateTexture(nil, "ARTWORK")
+    self.karazhanLine:SetTexture(karazhanLinkTextures.normal)
+    self.karazhanLine:SetAlpha(0.82)
 
     local attachX, attachY = getPositionForAngle(karazhan.angleDeg, karazhan.ringAttachRadius)
     setTextureLine(self.karazhanLine, wheel, attachX, attachY, x, y)
+    ns.DestinationNode:SetLinkedTexture(self.karazhanButton, self.karazhanLine, karazhanLinkTextures.normal, karazhanLinkTextures.hover)
 end
 
 function RouletteFrame:Create()
@@ -655,12 +735,14 @@ function RouletteFrame:SetMode(mode)
     self.mode = mode
     ns.db.lastMode = mode
     self:UpdateTabVisuals()
+    self:UpdateUtilityModeVisuals()
     self:RefreshDestinationNodes()
 end
 
-function RouletteFrame:BuildNodeState(destination)
+function RouletteFrame:BuildNodeState(destination, faction)
     local teleportSpellID, teleportSpellName = ns.Destinations:GetSpellForMode(destination, ns.Mode.TELEPORT)
     local portalSpellID, portalSpellName = ns.Destinations:GetSpellForMode(destination, ns.Mode.PORTAL)
+    local visuals = ns.Destinations:GetVisualsForDestination(destination, faction)
     local icon, _ = ns.Destinations:GetIconForDestination(destination, self.mode)
 
     -- Visual enabled = spells known AND reagents available (for desaturation/label only;
@@ -671,56 +753,56 @@ function RouletteFrame:BuildNodeState(destination)
     local portalReagents   = GetItemCount(ns.Constants.ITEM_RUNE_PORTALS, false, false) or 0
     local enabled = (teleportKnown and teleportReagents > 0) or (portalKnown and portalReagents > 0)
 
-    local detail
-    if not teleportKnown then
-        detail = "Spell not known."
-    elseif teleportReagents == 0 then
-        detail = "Missing reagent."
-    else
-        detail = teleportSpellName
-    end
+    local detail = "Left-click: " .. (teleportSpellName or "Unavailable")
+        .. "   Right-click: " .. (portalSpellName or "Unavailable")
 
     return {
         label             = destination.label,
         icon              = icon,
+        iconNormalTexture = visuals and visuals.iconNormal or icon,
+        iconHoverTexture  = visuals and visuals.iconHover or nil,
+        nameplateNormalTexture = visuals and visuals.nameplateNormal or nil,
+        nameplateHoverTexture = visuals and visuals.nameplateHover or nil,
         enabled           = enabled,
         tooltipTitle      = destination.label,
         tooltipDetail     = detail,
-        -- Spell names provided unconditionally so OnClick always has a target.
         teleportSpellName = teleportSpellName or "",
         portalSpellName   = portalSpellName   or "",
+        combinedMacroText = (teleportSpellName and portalSpellName)
+                            and ("/cast [btn:2] " .. portalSpellName .. "\n/cast [btn:1] " .. teleportSpellName)
+                            or nil,
     }
 end
 
-function RouletteFrame:BuildKarazhanState()
+function RouletteFrame:BuildKarazhanState(faction)
     local hasAtiesh = ns.UtilityItems:HasItem(ns.Constants.ITEM_ATIESH)
     local showDisabled = ns.db.showUnavailableKarazhan
-    local isPortalMode = self.mode == ns.Mode.PORTAL
-
-    if not isPortalMode then
-        return nil, false
-    end
     if (not hasAtiesh) and (not showDisabled) then
         return nil, false
     end
 
     local enabled = hasAtiesh
     local detail = enabled and "Use Atiesh to open a portal to Karazhan." or "Requires Atiesh."
-    local icon, _ = ns.Destinations:GetIconForDestination(ns.Destinations:GetKarazhanNode(), self.mode)
+    local karazhanDestination = ns.Destinations:GetKarazhanNode()
+    local visuals = ns.Destinations:GetVisualsForDestination(karazhanDestination, faction)
+    local icon, _ = ns.Destinations:GetIconForDestination(karazhanDestination, self.mode)
 
     return {
         label           = "Karazhan",
         icon            = icon,
+        iconNormalTexture = visuals and visuals.iconNormal or icon,
+        iconHoverTexture = visuals and visuals.iconHover or nil,
+        nameplateNormalTexture = visuals and visuals.nameplateNormal or nil,
+        nameplateHoverTexture = visuals and visuals.nameplateHover or nil,
         enabled         = enabled,
         tooltipTitle    = "Karazhan (Atiesh only)",
         tooltipDetail   = detail,
-        -- Karazhan only has the Atiesh macro path (no teleport spell exists).
-        -- karazhanMacro triggers SecureActionButtonTemplate for both clicks.
         karazhanMacro   = "/use item:" .. ns.Constants.ITEM_ATIESH,
         teleportSpellName = "",
         portalSpellName   = "",
         normalTexture   = ns.Media.KARAZHAN_NODE,
         disabledTexture = ns.Media.KARAZHAN_NODE,
+        disableActions  = not enabled,
     }, true
 end
 
@@ -733,17 +815,77 @@ function RouletteFrame:RefreshDestinationNodes()
     self.factionAccent:SetTexture((faction == ns.Constants.FACTION_HORDE) and ns.Media.FACTION_HORDE or ns.Media.FACTION_ALLIANCE)
 
     for _, button in ipairs(self.nodeButtons) do
-        local state = self:BuildNodeState(button.destination)
+        local state = self:BuildNodeState(button.destination, faction)
         ns.DestinationNode:ApplyState(button, state)
     end
 
-    local karazhanState, shouldShowKarazhan = self:BuildKarazhanState()
+    local karazhanState, shouldShowKarazhan = self:BuildKarazhanState(faction)
     self.karazhanButton:SetShown(shouldShowKarazhan)
     self.karazhanLine:SetShown(shouldShowKarazhan)
-    self.karazhanSubtitle:SetShown(shouldShowKarazhan)
     if shouldShowKarazhan and karazhanState then
         ns.DestinationNode:ApplyState(self.karazhanButton, karazhanState)
     end
+end
+
+function RouletteFrame:RefreshCenterUtility()
+    if not self.frame or not self.frame.centerUtilityButton or not ns.db then
+        return
+    end
+
+    local centerButton = self.frame.centerUtilityButton
+    local isTeleportMode = self.mode == ns.Mode.TELEPORT
+    if not isTeleportMode then
+        centerButton:Hide()
+        centerButton:EnableMouse(false)
+        centerButton.pendingMacroText = nil
+        applySecureMacro(centerButton, nil)
+        return
+    end
+
+    local source = ns.UtilityItems:GetSourceForMode(ns.db.utilityMode)
+    local enabled = source and source.available and true or false
+    local macroText = (source and source.macro) or nil
+
+    centerButton:Show()
+    centerButton:EnableMouse(true)
+    centerButton.tooltipTitle = (source and source.label) or "Hearthstone"
+    centerButton.tooltipDetail = enabled and "Click to use selected utility." or "Selected utility is unavailable."
+    centerButton:SetAlpha(enabled and 1 or 0.55)
+
+    if not enabled then
+        macroText = nil
+    end
+
+    local applied = applySecureMacro(centerButton, macroText)
+    if not applied then
+        centerButton.pendingMacroText = macroText
+    else
+        centerButton.pendingMacroText = nil
+    end
+end
+
+function RouletteFrame:UpdateUtilityModeVisuals()
+    if not self.frame then
+        return
+    end
+
+    if self.mode == ns.Mode.TELEPORT then
+        if ns.UtilityButton and ns.UtilityButton.button then
+            ns.UtilityButton.button:Hide()
+        end
+        if self.centerCore then
+            self.centerCore:SetAlpha(0)
+        end
+    else
+        if ns.UtilityButton and ns.UtilityButton.button then
+            ns.UtilityButton.button:Show()
+        end
+        if self.centerCore then
+            self.centerCore:SetAlpha(1)
+        end
+    end
+
+    self:RefreshCenterUtility()
 end
 
 function RouletteFrame:RefreshAll()
@@ -752,6 +894,7 @@ function RouletteFrame:RefreshAll()
     end
     self:ApplyScale()
     self:UpdateTabVisuals()
+    self:UpdateUtilityModeVisuals()
     self:RefreshDestinationNodes()
     ns.ReagentPanel:Refresh()
     ns.UtilityButton:Refresh()
