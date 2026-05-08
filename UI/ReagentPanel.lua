@@ -3,11 +3,11 @@ local _, ns = ...
 local ReagentPanel = {}
 ns.ReagentPanel = ReagentPanel
 
-local PANEL_W = 170
-local PANEL_H = 108
-local ROW_W = 148
-local ROW_H = 38
-local ICON_SIZE = 30
+local PANEL_W = 178
+local PANEL_H = 122
+local ROW_W = 156
+local ROW_H = 43
+local ICON_SIZE = 34
 
 local reagentRows = {
     {
@@ -71,7 +71,7 @@ function ReagentPanel:Create(parent)
     for index, rowData in ipairs(reagentRows) do
         local row = CreateFrame("Frame", nil, frame)
         row:SetSize(ROW_W, ROW_H)
-        row:SetPoint("TOP", frame, "TOP", 0, -26 - ((index - 1) * (ROW_H + 5)))
+        row:SetPoint("TOP", frame, "TOP", 0, -28 - ((index - 1) * (ROW_H + 6)))
         row:EnableMouse(false)
 
         row.bg = row:CreateTexture(nil, "BACKGROUND")
@@ -103,8 +103,8 @@ function ReagentPanel:Create(parent)
         row.count:SetShadowColor(0, 0, 0, 1)
 
         row.nameLabel = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-        row.nameLabel:SetPoint("LEFT", row.iconFrame, "RIGHT", 7, 1)
-        row.nameLabel:SetPoint("RIGHT", row, "RIGHT", -6, 1)
+        row.nameLabel:SetPoint("LEFT", row.iconFrame, "RIGHT", 8, 1)
+        row.nameLabel:SetPoint("RIGHT", row, "RIGHT", -8, 1)
         row.nameLabel:SetJustifyH("LEFT")
         row.nameLabel:SetTextColor(0.92, 0.90, 0.80)
 
