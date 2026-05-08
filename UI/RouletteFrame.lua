@@ -496,7 +496,11 @@ function RouletteFrame:CreateWheel()
     frame.centerUtilityButton.tooltipTitle = "Utility"
     frame.centerUtilityButton.tooltipDetail = nil
     frame.centerUtilityButton.pendingMacroText = nil
+    frame.centerUtilityButton.utilityEnabled = false
     frame.centerUtilityButton:SetScript("OnEnter", function(button)
+        if ns.Sound and RouletteFrame.mode == ns.Mode.TELEPORT and button.utilityEnabled then
+            ns.Sound:Play("HearthstoneHover", { hover = true })
+        end
         GameTooltip:SetOwner(button, "ANCHOR_TOP")
         GameTooltip:SetText(button.tooltipTitle or "Utility", 0.95, 0.97, 1)
         if button.tooltipDetail and button.tooltipDetail ~= "" then
@@ -506,6 +510,16 @@ function RouletteFrame:CreateWheel()
     end)
     frame.centerUtilityButton:SetScript("OnLeave", function()
         GameTooltip:Hide()
+    end)
+    frame.centerUtilityButton:SetScript("PreClick", function(button)
+        if RouletteFrame.mode ~= ns.Mode.TELEPORT or not ns.Sound then
+            return
+        end
+        if button.utilityEnabled then
+            ns.Sound:Play("HearthstoneClick")
+        else
+            ns.Sound:Play("Error")
+        end
     end)
     frame.centerUtilityButton:SetScript("PostClick", function()
         if ns.db and ns.db.utilityMode == ns.UtilityMode.RANDOM and not InCombatLockdown() then
@@ -729,6 +743,9 @@ function RouletteFrame:SetMode(mode)
 
     if InCombatLockdown() then
         ns.Print("Cannot switch modes in combat.")
+        if ns.Sound then
+            ns.Sound:Play("Error")
+        end
         return
     end
 
@@ -751,6 +768,8 @@ function RouletteFrame:BuildNodeState(destination, faction)
     local portalKnown = getSpellKnown(portalSpellID)
     local teleportReagents = GetItemCount(ns.Constants.ITEM_RUNE_TELEPORTATION, false, false) or 0
     local portalReagents   = GetItemCount(ns.Constants.ITEM_RUNE_PORTALS, false, false) or 0
+    local leftActionAvailable = teleportKnown and teleportReagents > 0
+    local rightActionAvailable = portalKnown and portalReagents > 0
     local enabled = (teleportKnown and teleportReagents > 0) or (portalKnown and portalReagents > 0)
 
     local detail = "Left-click: " .. (teleportSpellName or "Unavailable")
@@ -768,6 +787,9 @@ function RouletteFrame:BuildNodeState(destination, faction)
         tooltipDetail     = detail,
         teleportSpellName = teleportSpellName or "",
         portalSpellName   = portalSpellName   or "",
+        leftActionAvailable = leftActionAvailable,
+        rightActionAvailable = rightActionAvailable,
+        isKarazhan = false,
     }
 end
 
@@ -797,6 +819,9 @@ function RouletteFrame:BuildKarazhanState(faction)
         karazhanMacro   = "/use item:" .. ns.Constants.ITEM_ATIESH,
         teleportSpellName = "",
         portalSpellName   = "",
+        leftActionAvailable = enabled,
+        rightActionAvailable = enabled,
+        isKarazhan = true,
         normalTexture   = ns.Media.KARAZHAN_NODE,
         disabledTexture = ns.Media.KARAZHAN_NODE,
         disableActions  = not enabled,
@@ -834,6 +859,7 @@ function RouletteFrame:RefreshCenterUtility()
     if not isTeleportMode then
         centerButton:Hide()
         centerButton:EnableMouse(false)
+        centerButton.utilityEnabled = false
         centerButton.pendingMacroText = nil
         applySecureMacro(centerButton, nil)
         return
@@ -845,6 +871,7 @@ function RouletteFrame:RefreshCenterUtility()
 
     centerButton:Show()
     centerButton:EnableMouse(true)
+    centerButton.utilityEnabled = enabled
     centerButton.tooltipTitle = (source and source.label) or "Hearthstone"
     centerButton.tooltipDetail = enabled and "Click to use selected utility." or "Selected utility is unavailable."
     centerButton:SetAlpha(enabled and 1 or 0.55)
@@ -902,22 +929,32 @@ function RouletteFrame:IsShown()
 end
 
 function RouletteFrame:Open(mode)
+    local wasShown = self:IsShown()
     if not self.frame then
         self:Create()
     end
     if InCombatLockdown() then
         ns.Print("Cannot open roulette in combat.")
+        if ns.Sound then
+            ns.Sound:Play("Error")
+        end
         return
     end
     if mode then
         self:SetMode(mode)
     end
     self.frame:Show()
+    if not wasShown and ns.Sound then
+        ns.Sound:Play("Open")
+    end
 end
 
 function RouletteFrame:Close()
     if not self.frame or not self.frame:IsShown() then
         return
+    end
+    if ns.Sound then
+        ns.Sound:Play("Close")
     end
 
     self:PlayClosePresentation(function()

@@ -114,6 +114,9 @@ function DestinationNode:Create(parent, size)
     button.teleportSpellName = nil
     button.portalSpellName = nil
     button.portalMacroText = nil
+    button.leftActionAvailable = false
+    button.rightActionAvailable = false
+    button.isKarazhanNode = false
     button.visualEnabled = true
     button.linkTexture = nil
     button.linkNormalTexturePath = nil
@@ -123,6 +126,13 @@ function DestinationNode:Create(parent, size)
 
     button:SetScript("OnEnter", function(self)
         applyHoverState(self, true)
+        if ns.Sound and self.visualEnabled then
+            if self.isKarazhanNode then
+                ns.Sound:Play("KarazhanHover", { hover = true })
+            else
+                ns.Sound:Play("NodeHover", { hover = true })
+            end
+        end
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
         GameTooltip:SetText(self.tooltipTitle or "", 0.95, 0.97, 1)
         if self.tooltipDetail and self.tooltipDetail ~= "" then
@@ -138,14 +148,28 @@ function DestinationNode:Create(parent, size)
     end)
 
     button:SetScript("OnClick", function(self, mouseButton)
-        if mouseButton ~= "RightButton" or InCombatLockdown() then
-            return
-        end
+        if mouseButton == "RightButton" then
+            if self.rightActionAvailable and ns.Sound then
+                ns.Sound:Play("NodeClick")
+            elseif ns.Sound then
+                ns.Sound:Play("Error")
+            end
 
-        if self.portalSpellName and self.portalSpellName ~= "" then
-            CastSpellByName(self.portalSpellName)
-        elseif self.portalMacroText and self.portalMacroText ~= "" then
-            RunMacroText(self.portalMacroText)
+            if InCombatLockdown() then
+                return
+            end
+
+            if self.portalSpellName and self.portalSpellName ~= "" then
+                CastSpellByName(self.portalSpellName)
+            elseif self.portalMacroText and self.portalMacroText ~= "" then
+                RunMacroText(self.portalMacroText)
+            end
+        elseif mouseButton == "LeftButton" then
+            if self.leftActionAvailable and ns.Sound then
+                ns.Sound:Play("NodeClick")
+            elseif ns.Sound then
+                ns.Sound:Play("Error")
+            end
         end
     end)
 
@@ -176,6 +200,9 @@ function DestinationNode:ApplyState(button, state)
     button.teleportSpellName = state.teleportSpellName or ""
     button.portalSpellName   = state.portalSpellName   or ""
     button.portalMacroText   = state.portalMacroText   or ""
+    button.leftActionAvailable = state.leftActionAvailable and true or false
+    button.rightActionAvailable = state.rightActionAvailable and true or false
+    button.isKarazhanNode = state.isKarazhan and true or false
 
     local applied
     if state.disableActions then
