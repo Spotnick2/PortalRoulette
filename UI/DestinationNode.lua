@@ -3,31 +3,64 @@ local _, ns = ...
 local DestinationNode = {}
 ns.DestinationNode = DestinationNode
 
-local function setMacroAction(button, macroText)
+local function clearAction(button)
     if InCombatLockdown() then
         return false
     end
+
     button:SetAttribute("type", nil)
+    button:SetAttribute("type1", nil)
+    button:SetAttribute("type2", nil)
     button:SetAttribute("spell", nil)
+    button:SetAttribute("spell1", nil)
+    button:SetAttribute("spell2", nil)
     button:SetAttribute("macrotext", nil)
+    button:SetAttribute("macrotext1", nil)
+    button:SetAttribute("macrotext2", nil)
+    return true
+end
+
+local function setMacroAction(button, macroText)
+    if not clearAction(button) then
+        return false
+    end
+
     if macroText and macroText ~= "" then
         button:SetAttribute("type", "macro")
         button:SetAttribute("macrotext", macroText)
+        button:SetAttribute("type1", "macro")
+        button:SetAttribute("macrotext1", macroText)
+        button:SetAttribute("type2", "macro")
+        button:SetAttribute("macrotext2", macroText)
     end
     return true
 end
 
-local function buildMacro(teleportSpellName, portalSpellName)
+local function setSpellActions(button, teleportSpellName, portalSpellName)
+    if not clearAction(button) then
+        return false
+    end
+
     local hasTeleport = teleportSpellName and teleportSpellName ~= ""
     local hasPortal = portalSpellName and portalSpellName ~= ""
-    if hasTeleport and hasPortal then
-        return "/cast [btn:2] " .. portalSpellName .. "\n/cast [btn:1] " .. teleportSpellName
-    elseif hasTeleport then
-        return "/cast " .. teleportSpellName
-    elseif hasPortal then
-        return "/cast " .. portalSpellName
+
+    if hasTeleport then
+        button:SetAttribute("type", "spell")
+        button:SetAttribute("spell", teleportSpellName)
+        button:SetAttribute("type1", "spell")
+        button:SetAttribute("spell1", teleportSpellName)
     end
-    return nil
+
+    if hasPortal then
+        button:SetAttribute("type2", "spell")
+        button:SetAttribute("spell2", portalSpellName)
+        if not hasTeleport then
+            button:SetAttribute("type", "spell")
+            button:SetAttribute("spell", portalSpellName)
+        end
+    end
+
+    return true
 end
 
 local function applyHoverState(button, isHover)
@@ -94,7 +127,6 @@ function DestinationNode:Create(parent, size)
     button.tooltipDetail = nil
     button.teleportSpellName = nil
     button.portalSpellName = nil
-    button.combinedMacroText = nil
     button.visualEnabled = true
     button.linkTexture = nil
     button.linkNormalTexturePath = nil
@@ -144,17 +176,14 @@ end
 function DestinationNode:ApplyState(button, state)
     button.teleportSpellName = state.teleportSpellName or ""
     button.portalSpellName   = state.portalSpellName   or ""
-    button.combinedMacroText = state.combinedMacroText or ""
 
     local applied
     if state.disableActions then
         applied = setMacroAction(button, nil)
     elseif state.karazhanMacro then
         applied = setMacroAction(button, state.karazhanMacro)
-    elseif state.combinedMacroText and state.combinedMacroText ~= "" then
-        applied = setMacroAction(button, state.combinedMacroText)
     else
-        applied = setMacroAction(button, buildMacro(button.teleportSpellName, button.portalSpellName))
+        applied = setSpellActions(button, button.teleportSpellName, button.portalSpellName)
     end
 
     if not applied then

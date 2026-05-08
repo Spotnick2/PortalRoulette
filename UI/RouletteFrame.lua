@@ -768,9 +768,6 @@ function RouletteFrame:BuildNodeState(destination, faction)
         tooltipDetail     = detail,
         teleportSpellName = teleportSpellName or "",
         portalSpellName   = portalSpellName   or "",
-        combinedMacroText = (teleportSpellName and portalSpellName)
-                            and ("/cast [btn:2] " .. portalSpellName .. "\n/cast [btn:1] " .. teleportSpellName)
-                            or nil,
     }
 end
 
