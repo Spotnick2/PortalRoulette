@@ -18,12 +18,6 @@ local CameraMode = {
 }
 ns.CameraMode = CameraMode
 
-local function clamp(v, lo, hi, fallback)
-    v = tonumber(v)
-    if not v then return fallback end
-    return math.max(lo, math.min(hi, v))
-end
-
 local function inOutSine(t, b, e, d)
     return -(e - b) / 2 * (math.cos(math.pi * t / d) - 1) + b
 end
@@ -51,23 +45,20 @@ local MOUNTED_SHOULDER_F2 = -4.0
 
 -- Narcissus uses the ACTUAL zoom as the reference in the shoulder formula:
 --   offset = currentZoom * factor1 + factor2
--- For unmounted Human at zoom 2.1: offset = 2.1*0.3283 + (-0.02) = 0.669 → small left bias.
+-- For unmounted Human at zoom 2.5: offset = 2.5*0.3283 + (-0.02) = 0.801 → small left bias.
 -- We use the same convention.
-local UNMOUNTED_ZOOM         = 2.1   -- Narcissus default for human-baseline
+local UNMOUNTED_ZOOM         = 2.5   -- Narcissus close-up goal with dynamic pitch
 local MOUNTED_ZOOM           = 8.0   -- Narcissus default for mounted
--- Fast-forward: the entry yaw integrates to ~180° of rotation regardless of duration
--- (it's a function of YAW_DEGREES and the inOutSine averaging). At 0.5s the rotation
--- happens as a brief burst rather than a slow visible swing — the camera "starts" at
--- the facing position and the slow orbit continues from there indefinitely.
-local ENTER_DURATION         = 0.50
+-- Narcissus eases into its portrait angle instead of snapping through a full spin.
+local ENTER_DURATION         = 1.50
 local EXIT_DURATION          = 0.35
 local ORBIT_SPEED            = 0.005
 -- Ping-pong orbit: hold one direction for ORBIT_HALF_PERIOD, then reverse.
 -- At 0.005 speed × 180°/s × 30s ≈ 27° of swing per leg, so the character
 -- oscillates around the facing pose and is never far from facing the viewer.
 local ORBIT_HALF_PERIOD      = 30.0
-local YAW_DEGREES            = 360
-local YAW_DIRECTION          = -1    -- -1 = turn left (character faces toward camera)
+local ENTER_YAW_FROM_SPEED   = 1.0
+local YAW_DIRECTION          = 1     -- Narcissus uses MoveViewRightStart on entry
 local SAVED_VIEW_SLOT        = 5
 
 -- ── Helpers ──────────────────────────────────────────────────────────────────
@@ -157,6 +148,9 @@ function CameraMode:Enter()
             tonumber(GetCVar("test_cameraOverShoulder")) or 0
         self.capture.cameraDynamicPitch =
             tonumber(GetCVar("test_cameraDynamicPitch")) or 0
+        self.capture.cameraViewBlendStyle =
+            tonumber(GetCVar("cameraViewBlendStyle")) or 1
+        pcall(SetCVar, "cameraViewBlendStyle", "2")
         pcall(SetCVar, "test_cameraDynamicPitch", "1")
         pcall(SetCVar, "test_cameraOverShoulder", self:_GetShoulderOffset())
     end
@@ -165,16 +159,11 @@ function CameraMode:Enter()
     if type(SetView) == "function" then pcall(SetView, 2) end
     self:_SetZoom(self:_GetTargetZoom())
 
-    -- Compute entry yaw swing speed.
-    local yawMoveSpeed = tonumber(GetCVar and GetCVar("cameraYawMoveSpeed")) or 180
-    if yawMoveSpeed <= 0 then yawMoveSpeed = 180 end
-    local degrees  = math.abs(YAW_DEGREES)
-    local seconds  = math.max(0.05, ENTER_DURATION)
-    local rawSpeed = (degrees / yawMoveSpeed) / seconds
     local dir = YAW_DIRECTION < 0 and -1 or 1
     self.yawDir       = dir
-    self.yawFromSpeed = clamp(rawSpeed, 0.10, 4.0, 1.0)
+    self.yawFromSpeed = ENTER_YAW_FROM_SPEED
     self.yawToSpeed   = ORBIT_SPEED
+    self:_StopYaw()
     self:_ApplyYaw(dir * self.yawFromSpeed)
 
     if self.animFrame then self.animFrame:Show() end
@@ -213,6 +202,10 @@ function CameraMode:ForceRestore(reason)
                 pcall(SetCVar, "test_cameraDynamicPitch",
                       self.capture.cameraDynamicPitch)
             end
+            if self.capture.cameraViewBlendStyle then
+                pcall(SetCVar, "cameraViewBlendStyle",
+                      self.capture.cameraViewBlendStyle)
+            end
         end
     end
 
@@ -232,8 +225,7 @@ function CameraMode:UpdateAnimation(elapsed)
     if self.mode == "enter" then
         local entryDur = math.max(0.01, ENTER_DURATION)
         if self.elapsed < entryDur then
-            -- Entry burst: ease from initial fast yaw down to orbit speed.
-            -- Rotates ~180° in ~0.5s (the "fast-forward" to facing pose).
+            -- Narcissus-style entry: ease from the initial portrait turn down to orbit speed.
             if self.yawDir and self.yawFromSpeed and self.yawToSpeed then
                 self:_ApplyYaw(self.yawDir * inOutSine(self.elapsed, self.yawFromSpeed, self.yawToSpeed, entryDur))
             end
