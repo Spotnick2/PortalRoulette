@@ -74,6 +74,7 @@ local function applyHoverState(button, isHover)
         end
         if button.linkTexture and button.linkHoverTexturePath then
             button.linkTexture:SetTexture(button.linkHoverTexturePath)
+            button.linkTexture:SetAlpha(0.9)
         end
     else
         button.hoverTexture:SetAlpha(0)
@@ -85,6 +86,7 @@ local function applyHoverState(button, isHover)
         end
         if button.linkTexture and button.linkNormalTexturePath then
             button.linkTexture:SetTexture(button.linkNormalTexturePath)
+            button.linkTexture:SetAlpha(button.linkNormalAlpha or 0.62)
         end
     end
 end
@@ -137,6 +139,7 @@ function DestinationNode:Create(parent, size)
     button.linkTexture = nil
     button.linkNormalTexturePath = nil
     button.linkHoverTexturePath = nil
+    button.linkNormalAlpha = 0.62
     button.iconHoverTexturePath = nil
     button.nameplateHoverTexturePath = nil
 
@@ -172,6 +175,7 @@ function DestinationNode:SetLinkedTexture(button, texture, normalPath, hoverPath
     button.linkHoverTexturePath = hoverPath
     if texture and normalPath then
         texture:SetTexture(normalPath)
+        button.linkNormalAlpha = texture:GetAlpha()
     end
 end
 
