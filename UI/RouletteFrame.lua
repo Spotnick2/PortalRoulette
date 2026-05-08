@@ -206,6 +206,31 @@ local function createTab(parent, mode, xOffset, label)
     return tab
 end
 
+local function stopPlayerCastOrTargeting()
+    if SpellIsTargeting and SpellIsTargeting() then
+        if SpellStopTargeting then
+            SpellStopTargeting()
+        end
+        return true
+    end
+
+    if UnitCastingInfo and UnitCastingInfo("player") then
+        if SpellStopCasting then
+            SpellStopCasting()
+        end
+        return true
+    end
+
+    if UnitChannelInfo and UnitChannelInfo("player") then
+        if SpellStopCasting then
+            SpellStopCasting()
+        end
+        return true
+    end
+
+    return false
+end
+
 local function positionNameplateForAngle(button, angleDeg, isKarazhan)
     local angle = angleDeg % 360
     if isKarazhan then
@@ -479,12 +504,7 @@ function RouletteFrame:CreateMainFrame()
     frame:EnableKeyboard(false)
     frame:SetScript("OnKeyDown", function(_, key)
         if key == "ESCAPE" then
-            if SpellIsTargeting and SpellIsTargeting() then
-                SpellStopTargeting()
-                return
-            end
-            if SpellStopCasting and (UnitCastingInfo("player") or (UnitChannelInfo and UnitChannelInfo("player"))) then
-                SpellStopCasting()
+            if stopPlayerCastOrTargeting() then
                 return
             end
             RouletteFrame:Close()
@@ -529,12 +549,7 @@ function RouletteFrame:CreateMainFrame()
             end
         end
         if RouletteFrame.centerCore then
-            if RouletteFrame.mode == ns.Mode.TELEPORT then
-                RouletteFrame.centerCore:SetAlpha(0)
-            else
-                local pulse = 0.84 + (math.sin(GetTime() * 1.95) * 0.12)
-                RouletteFrame.centerCore:SetAlpha(pulse)
-            end
+            RouletteFrame.centerCore:SetAlpha(0)
         end
         if RouletteFrame.castBarStart then
             RouletteFrame:UpdateCastBar()
@@ -542,7 +557,6 @@ function RouletteFrame:CreateMainFrame()
     end)
 
     self.frame = frame
-    tinsert(UISpecialFrames, frame:GetName())
 end
 
 function RouletteFrame:CreateWheel()
@@ -589,7 +603,7 @@ function RouletteFrame:CreateWheel()
     self.centerCore:SetPoint("CENTER", frame.wheel, "CENTER")
     self.centerCore:SetTexture(ns.Media.CORE_VORTEX)
     self.centerCore:SetBlendMode("ADD")
-    self.centerCore:SetAlpha(1.0)
+    self.centerCore:SetAlpha(0)
 
     frame.centerUtilityButton = CreateFrame("Button", nil, frame.wheel, "SecureActionButtonTemplate")
     frame.centerUtilityButton:SetSize(100, 100)
@@ -603,6 +617,13 @@ function RouletteFrame:CreateWheel()
 
     frame.centerUtilityButton.cooldown = CreateFrame("Cooldown", nil, frame.centerUtilityButton, "CooldownFrameTemplate")
     frame.centerUtilityButton.cooldown:SetAllPoints(frame.centerUtilityButton)
+    frame.centerUtilityButton.cooldown:SetFrameLevel(frame.centerUtilityButton:GetFrameLevel() + 5)
+    if frame.centerUtilityButton.cooldown.SetDrawEdge then
+        frame.centerUtilityButton.cooldown:SetDrawEdge(false)
+    end
+    if frame.centerUtilityButton.cooldown.SetSwipeColor then
+        frame.centerUtilityButton.cooldown:SetSwipeColor(0, 0, 0, 0.72)
+    end
 
     local highlight = frame.centerUtilityButton:GetHighlightTexture()
     if highlight then
@@ -678,35 +699,18 @@ local function isTeleportConfirmArmed(self, destinationID, mouseButton)
         and self.teleportConfirmExpires > GetTime()
 end
 
-function RouletteFrame:CreateTabs()
+function RouletteFrame:CreateHeaderControls()
     local frame = self.frame
     local parent = frame.headerGroup
 
-    parent.teleportTab = createTab(parent, ns.Mode.TELEPORT, -56, "Teleports")
-    parent.portalTab = createTab(parent, ns.Mode.PORTAL, 56, "Portals")
-
-    parent.teleportTab:SetScript("OnClick", function()
-        RouletteFrame:SetMode(ns.Mode.TELEPORT)
-    end)
-    parent.portalTab:SetScript("OnClick", function()
-        RouletteFrame:SetMode(ns.Mode.PORTAL)
-    end)
-
     parent.gearButton = CreateFrame("Button", nil, parent)
     parent.gearButton:SetSize(34, 34)
-    parent.gearButton:SetPoint("LEFT", parent.portalTab, "RIGHT", 10, 0)
+    parent.gearButton:SetPoint("BOTTOM", frame.wheel, "TOP", 76, 10)
 
     parent.gearButton.bg = parent.gearButton:CreateTexture(nil, "BACKGROUND")
     parent.gearButton.bg:SetAllPoints()
     parent.gearButton.bg:SetTexture(ns.Media.ICON_GEAR)
     parent.gearButton.bg:SetTexCoord(0.04, 0.96, 0.04, 0.96)
-
-    parent.gearButton.highlight = parent.gearButton:CreateTexture(nil, "HIGHLIGHT")
-    parent.gearButton.highlight:SetAllPoints()
-    parent.gearButton.highlight:SetTexture("Interface\\Buttons\\WHITE8X8")
-    parent.gearButton.highlight:SetBlendMode("ADD")
-    parent.gearButton.highlight:SetVertexColor(1, 1, 1, 0.14)
-    parent.gearButton.highlight:SetAlpha(0)
 
     parent.gearButton:SetScript("OnClick", function()
         -- Close the roulette first so UIParent alpha is restored, otherwise the
@@ -725,19 +729,36 @@ function RouletteFrame:CreateTabs()
         selfButton.bg:SetTexCoord(0.04, 0.96, 0.04, 0.96)
     end)
     parent.gearButton:SetScript("OnEnter", function(selfButton)
-        selfButton.highlight:SetAlpha(1)
+        selfButton.bg:SetVertexColor(1.25, 1.1, 1.35, 1)
         GameTooltip:SetOwner(selfButton, "ANCHOR_RIGHT")
         GameTooltip:SetText("Options", 0.8, 0.95, 1)
         GameTooltip:Show()
     end)
     parent.gearButton:SetScript("OnLeave", function(selfButton)
-        selfButton.highlight:SetAlpha(0)
+        selfButton.bg:SetVertexColor(1, 1, 1, 1)
         GameTooltip:Hide()
     end)
 
-    frame.teleportTab = parent.teleportTab
-    frame.portalTab = parent.portalTab
     frame.gearButton = parent.gearButton
+
+    parent.closeButton = CreateFrame("Button", nil, parent)
+    parent.closeButton:SetSize(24, 24)
+    parent.closeButton:SetPoint("LEFT", parent.gearButton, "RIGHT", 8, 0)
+    parent.closeButton:SetNormalTexture("Interface\\Buttons\\UI-Panel-MinimizeButton-Up")
+    parent.closeButton:SetPushedTexture("Interface\\Buttons\\UI-Panel-MinimizeButton-Down")
+    parent.closeButton:SetHighlightTexture("Interface\\Buttons\\UI-Panel-MinimizeButton-Highlight", "ADD")
+    parent.closeButton:SetScript("OnClick", function()
+        RouletteFrame:Close()
+    end)
+    parent.closeButton:SetScript("OnEnter", function(selfButton)
+        GameTooltip:SetOwner(selfButton, "ANCHOR_RIGHT")
+        GameTooltip:SetText("Close", 0.8, 0.95, 1)
+        GameTooltip:Show()
+    end)
+    parent.closeButton:SetScript("OnLeave", function()
+        GameTooltip:Hide()
+    end)
+    frame.closeButton = parent.closeButton
 end
 
 function RouletteFrame:CreatePanels()
@@ -841,7 +862,7 @@ function RouletteFrame:Create()
     self:CreateMainFrame()
     self:CreateWheel()
     self:CreateHeader()
-    self:CreateTabs()
+    self:CreateHeaderControls()
     self:CreatePanels()
     self:CreateDestinationNodes()
     self:CreateKarazhanNode()
@@ -869,35 +890,20 @@ function RouletteFrame:UpdateTabVisuals()
     if not self.frame then
         return
     end
-    local teleportActive = self.mode == ns.Mode.TELEPORT
-    self.frame.teleportTab.bg:SetTexture(teleportActive and ns.Media.TAB_ACTIVE or ns.Media.TAB_INACTIVE)
-    self.frame.portalTab.bg:SetTexture(teleportActive and ns.Media.TAB_INACTIVE or ns.Media.TAB_ACTIVE)
-    self.frame.teleportTab.label:SetTextColor(teleportActive and 1.0 or 0.72, teleportActive and 0.95 or 0.70, teleportActive and 1.0 or 0.78)
-    self.frame.portalTab.label:SetTextColor(teleportActive and 0.72 or 1.0, teleportActive and 0.70 or 0.95, teleportActive and 0.78 or 1.0)
     if self.frame.hintText then
-        if teleportActive then
-            self.frame.hintText:SetText("|cFFFFCC55Left Click:|r Teleport  \124  |cFF88CCFFRight Click:|r Portal\n|cFF99AABBReagents are shared for all options.|r")
-        else
-            self.frame.hintText:SetText("|cFF88CCFFLeft Click:|r Portal  \124  |cFFFFCC55Right Click:|r Teleport\n|cFF99AABBReagents are shared for all options.|r")
-        end
+        self.frame.hintText:SetText("|cFFFFCC55Left Click:|r Teleport  \124  |cFF88CCFFRight Click:|r Portal\n|cFF99AABBReagents are shared for all options.|r")
     end
 end
 
 function RouletteFrame:SetMode(mode)
-    if mode ~= ns.Mode.TELEPORT and mode ~= ns.Mode.PORTAL then
-        mode = ns.Mode.TELEPORT
-    end
-
     if InCombatLockdown() then
-        ns.Print("Cannot switch modes in combat.")
-        if ns.Sound then
-            ns.Sound:Play("Error")
-        end
         return
     end
 
-    self.mode = mode
-    ns.db.lastMode = mode
+    self.mode = ns.Mode.TELEPORT
+    if ns.db then
+        ns.db.lastMode = ns.Mode.TELEPORT
+    end
     self:UpdateTabVisuals()
     self:UpdateUtilityModeVisuals()
     self:RefreshDestinationNodes()
@@ -915,26 +921,20 @@ function RouletteFrame:BuildNodeState(destination, faction)
     local portalKnown = getSpellKnown(portalSpellID)
     local teleportReagents = GetItemCount(ns.Constants.ITEM_RUNE_TELEPORTATION, false, false) or 0
     local portalReagents   = GetItemCount(ns.Constants.ITEM_RUNE_PORTALS, false, false) or 0
-    local primaryIsPortal = self.mode == ns.Mode.PORTAL
-    local leftSpellName = primaryIsPortal and portalSpellName or teleportSpellName
-    local rightSpellName = primaryIsPortal and teleportSpellName or portalSpellName
-    local leftActionAvailable = primaryIsPortal and (portalKnown and portalReagents > 0) or (teleportKnown and teleportReagents > 0)
-    local rightActionAvailable = primaryIsPortal and (teleportKnown and teleportReagents > 0) or (portalKnown and portalReagents > 0)
+    local leftSpellName = teleportSpellName
+    local rightSpellName = portalSpellName
+    local leftActionAvailable = teleportKnown and teleportReagents > 0
+    local rightActionAvailable = portalKnown and portalReagents > 0
     local enabled = (teleportKnown and teleportReagents > 0) or (portalKnown and portalReagents > 0)
 
-    local leftLabel = primaryIsPortal and "Portal" or "Teleport"
-    local rightLabel = primaryIsPortal and "Teleport" or "Portal"
-    local teleportMouseButton = primaryIsPortal and "RightButton" or "LeftButton"
+    local leftLabel = "Teleport"
+    local rightLabel = "Portal"
+    local teleportMouseButton = "LeftButton"
     local needsTeleportConfirm = ns.db and ns.db.confirmGroupedTeleport and isGrouped()
         and not isTeleportConfirmArmed(self, destination.id, teleportMouseButton)
     if needsTeleportConfirm then
-        if primaryIsPortal then
-            rightSpellName = ""
-            rightActionAvailable = false
-        else
-            leftSpellName = ""
-            leftActionAvailable = false
-        end
+        leftSpellName = ""
+        leftActionAvailable = false
     end
     local detail = "Left-click: " .. leftLabel .. " - " .. (leftSpellName or "Unavailable")
         .. "   Right-click: " .. rightLabel .. " - " .. (rightSpellName or "Unavailable")
@@ -955,9 +955,7 @@ function RouletteFrame:BuildNodeState(destination, faction)
         rightSpellName    = rightSpellName or "",
         leftActionAvailable = leftActionAvailable,
         rightActionAvailable = rightActionAvailable,
-        tooltipClickText = (primaryIsPortal
-            and "|cFF88CCFFLeft-click:|r Portal   |cFFFFCC55Right-click:|r Teleport"
-            or "|cFFFFCC55Left-click:|r Teleport   |cFF88CCFFRight-click:|r Portal"),
+        tooltipClickText = "|cFFFFCC55Left-click:|r Teleport   |cFF88CCFFRight-click:|r Portal",
         isKarazhan = false,
     }
 end
@@ -985,7 +983,7 @@ function RouletteFrame:HandleDestinationMouseUp(button, mouseButton)
     if not button or not button.destination or not ns.db or not ns.db.confirmGroupedTeleport or not isGrouped() then
         return
     end
-    local teleportMouseButton = (self.mode == ns.Mode.PORTAL) and "RightButton" or "LeftButton"
+    local teleportMouseButton = "LeftButton"
     if mouseButton ~= teleportMouseButton then
         return
     end
@@ -1024,11 +1022,12 @@ function RouletteFrame:BuildKarazhanState(faction)
         enabled         = enabled,
         tooltipTitle    = "Karazhan (Atiesh only)",
         tooltipDetail   = detail,
-        karazhanMacro   = "/use item:" .. ns.Constants.ITEM_ATIESH,
+        rightMacroText  = "/use item:" .. ns.Constants.ITEM_ATIESH,
         teleportSpellName = "",
         portalSpellName   = "",
-        leftActionAvailable = enabled,
+        leftActionAvailable = false,
         rightActionAvailable = enabled,
+        tooltipClickText = "|cFF777777Left-click:|r No teleport   |cFF88CCFFRight-click:|r Portal",
         isKarazhan = true,
         normalTexture   = ns.Media.KARAZHAN_NODE,
         disabledTexture = ns.Media.KARAZHAN_NODE,
@@ -1104,16 +1103,6 @@ function RouletteFrame:RefreshCenterUtility()
     end
 
     local centerButton = self.frame.centerUtilityButton
-    local isTeleportMode = self.mode == ns.Mode.TELEPORT
-    if not isTeleportMode then
-        centerButton:Hide()
-        centerButton:EnableMouse(false)
-        centerButton.utilityEnabled = false
-        centerButton.pendingMacroText = nil
-        applySecureMacro(centerButton, nil)
-        return
-    end
-
     local source = ns.UtilityItems:GetSourceForMode(ns.db.utilityMode)
     local enabled = source and source.available and true or false
     local cooldownActive = false
@@ -1160,14 +1149,8 @@ function RouletteFrame:UpdateUtilityModeVisuals()
         ns.UtilityButton.button:Hide()
     end
 
-    if self.mode == ns.Mode.TELEPORT then
-        if self.centerCore then
-            self.centerCore:SetAlpha(0)
-        end
-    else
-        if self.centerCore then
-            self.centerCore:SetAlpha(1)
-        end
+    if self.centerCore then
+        self.centerCore:SetAlpha(0)
     end
 
     self:RefreshCenterUtility()

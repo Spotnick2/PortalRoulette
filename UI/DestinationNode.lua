@@ -63,6 +63,18 @@ local function setSpellActions(button, leftSpellName, rightSpellName)
     return true
 end
 
+local function setRightMacroAction(button, macroText)
+    if not clearAction(button) then
+        return false
+    end
+
+    if macroText and macroText ~= "" then
+        button:SetAttribute("type2", "macro")
+        button:SetAttribute("macrotext2", macroText)
+    end
+    return true
+end
+
 local function applyHoverState(button, isHover)
     if isHover and button.visualEnabled then
         button.hoverTexture:SetAlpha(0.5)
@@ -213,6 +225,8 @@ function DestinationNode:ApplyState(button, state)
     local applied
     if state.disableActions then
         applied = setMacroAction(button, nil)
+    elseif state.rightMacroText then
+        applied = setRightMacroAction(button, state.rightMacroText)
     elseif state.karazhanMacro then
         applied = setMacroAction(button, state.karazhanMacro)
     else

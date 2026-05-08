@@ -45,6 +45,19 @@ local function addSpell(spellID, destination, mode)
     }
 end
 
+local function addUtilitySpell(name, destination)
+    local spellName = GetSpellInfo(name) or name
+    local key = normalizeSpellName(spellName)
+    if not key then
+        return
+    end
+    CastTracker.spellDestinations[key] = {
+        destination = destination,
+        mode = "utility",
+        spellName = spellName,
+    }
+end
+
 function CastTracker:RefreshSpellMap()
     self.spellDestinations = {}
     for _, faction in ipairs({ ns.Constants.FACTION_HORDE, ns.Constants.FACTION_ALLIANCE }) do
@@ -58,6 +71,9 @@ function CastTracker:RefreshSpellMap()
         mode = ns.Mode.PORTAL,
         spellName = "Atiesh",
     }
+    addUtilitySpell("Hearthstone", GetBindLocation and (GetBindLocation() or "your hearth location") or "your hearth location")
+    addUtilitySpell(ns.Constants.DARK_PORTAL_NAME, "the Dark Portal")
+    addUtilitySpell(ns.Constants.NAARU_EMBRACE_NAME, "Naaru's Embrace")
 end
 
 function CastTracker:GetInfoForSpell(spellName)
@@ -86,7 +102,9 @@ function CastTracker:MaybeBroadcast(info, timing)
         return
     end
     local message
-    if info.mode == ns.Mode.PORTAL then
+    if info.mode == "utility" then
+        return
+    elseif info.mode == ns.Mode.PORTAL then
         message = "Opening a portal to " .. info.destination .. "."
     else
         message = "Teleporting to " .. info.destination .. "."
@@ -133,6 +151,10 @@ function CastTracker:Initialize()
         if unit ~= "player" then return end
         local spellName = spellID and GetSpellInfo(spellID) or UnitCastingInfo("player")
         CastTracker:StartCast(spellName)
+    end)
+    ns.Events:Register("UNIT_SPELLCAST_SENT", function(_, unit, arg2, _, spellID)
+        if unit ~= "player" then return end
+        CastTracker:StartCast((spellID and GetSpellInfo(spellID)) or arg2)
     end)
     ns.Events:Register("UNIT_SPELLCAST_CHANNEL_START", function(_, unit, _, spellID)
         if unit ~= "player" then return end

@@ -185,6 +185,14 @@ local function initializeForMage()
         refreshVisualState()
     end)
 
+    ns.Events:Register("BAG_UPDATE_COOLDOWN", function()
+        refreshVisualState()
+    end)
+
+    ns.Events:Register("SPELL_UPDATE_COOLDOWN", function()
+        refreshVisualState()
+    end)
+
     ns.Events:Register("SPELLS_CHANGED", function()
         if ns.RouletteFrame then
             ns.RouletteFrame:RefreshDestinationNodes()
