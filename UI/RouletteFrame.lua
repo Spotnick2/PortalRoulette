@@ -10,13 +10,13 @@ local WHEEL_SIZE = 368
 local WHEEL_OFFSET_X = 30
 local WHEEL_OFFSET_Y = -166
 local HEADER_GAP = 54
-local NODE_SIZE = 56
-local NODE_RADIUS = 126
+local NODE_SIZE = 66
+local NODE_RADIUS = 128
 local NODE_NAMEPLATE_W = 104
 local NODE_NAMEPLATE_H = 27
-local KARAZHAN_SIZE = 48
-local KARAZHAN_RADIUS = 216
-local KARAZHAN_ATTACH_RADIUS = 158
+local KARAZHAN_SIZE = 64
+local KARAZHAN_RADIUS = 230
+local KARAZHAN_ATTACH_RADIUS = 164
 
 local atan2 = math.atan2
 if not atan2 then
@@ -198,7 +198,7 @@ end
 local function positionNameplateForAngle(button, angleDeg, isKarazhan)
     local angle = angleDeg % 360
     if isKarazhan then
-        ns.DestinationNode:SetNameplateAnchor(button, "TOPLEFT", "BOTTOMRIGHT", -28, 4, 112, 34)
+        ns.DestinationNode:SetNameplateAnchor(button, "TOP", "BOTTOM", 0, -4, 98, 52)
         return
     end
 
@@ -468,6 +468,14 @@ function RouletteFrame:CreateMainFrame()
     frame:EnableKeyboard(false)
     frame:SetScript("OnKeyDown", function(_, key)
         if key == "ESCAPE" then
+            if SpellIsTargeting and SpellIsTargeting() then
+                SpellStopTargeting()
+                return
+            end
+            if CastingBarFrame and CastingBarFrame:IsShown() and SpellStopCasting then
+                SpellStopCasting()
+                return
+            end
             RouletteFrame:Close()
             return
         end
