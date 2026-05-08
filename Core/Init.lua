@@ -15,6 +15,46 @@ local function openOptionsPanel()
     ns.OptionsPanel:Open()
 end
 
+local function valueToText(value)
+    if value == nil then
+        return "nil"
+    end
+    return tostring(value)
+end
+
+local function printButtonAttributes(label, button)
+    if not button then
+        printMessage(label .. ": missing")
+        return
+    end
+
+    local shown = button:IsShown() and "shown" or "hidden"
+    local enabled = button:IsEnabled() and "enabled" or "disabled"
+    printMessage(label .. ": " .. shown .. ", " .. enabled)
+    printMessage("  type=" .. valueToText(button:GetAttribute("type"))
+        .. " type1=" .. valueToText(button:GetAttribute("type1"))
+        .. " type2=" .. valueToText(button:GetAttribute("type2")))
+    printMessage("  spell=" .. valueToText(button:GetAttribute("spell"))
+        .. " spell1=" .. valueToText(button:GetAttribute("spell1"))
+        .. " spell2=" .. valueToText(button:GetAttribute("spell2")))
+    printMessage("  item=" .. valueToText(button:GetAttribute("item"))
+        .. " macro=" .. valueToText(button:GetAttribute("macrotext")))
+end
+
+local function printDebugState()
+    if not ns.RouletteFrame or not ns.RouletteFrame.frame then
+        printMessage("Roulette frame is not created.")
+        return
+    end
+
+    ns.RouletteFrame:RefreshAll()
+    printMessage("Debug: mode=" .. valueToText(ns.RouletteFrame.mode)
+        .. " combat=" .. valueToText(InCombatLockdown() and true or false))
+    printButtonAttributes("First city", ns.RouletteFrame.nodeButtons and ns.RouletteFrame.nodeButtons[1])
+    printButtonAttributes("Center utility", ns.RouletteFrame.frame.centerUtilityButton)
+    printButtonAttributes("Lower utility", ns.UtilityButton and ns.UtilityButton.button)
+end
+
 local function registerSlashCommands()
     SLASH_PORTALROULETTE1 = "/portalroulette"
     SLASH_PORTALROULETTE2 = "/proulette"
@@ -24,6 +64,11 @@ local function registerSlashCommands()
         local text = string.lower((commandText or ""):match("^%s*(.-)%s*$"))
         if text == "options" or text == "config" then
             openOptionsPanel()
+            return
+        end
+
+        if text == "debug" then
+            printDebugState()
             return
         end
 

@@ -6,6 +6,16 @@ local RouletteFrame = {
 }
 ns.RouletteFrame = RouletteFrame
 
+local WHEEL_SIZE = 392
+local WHEEL_OFFSET_X = 34
+local WHEEL_OFFSET_Y = -164
+local HEADER_GAP = 58
+local NODE_SIZE = 58
+local NODE_RADIUS = 138
+local KARAZHAN_SIZE = 50
+local KARAZHAN_RADIUS = 196
+local KARAZHAN_ATTACH_RADIUS = 148
+
 local atan2 = math.atan2
 if not atan2 then
     atan2 = function(y, x)
@@ -99,10 +109,77 @@ local function applySecureMacro(button, macroText)
     return true
 end
 
+local function applySecureUtilityAction(button, source)
+    if InCombatLockdown() then
+        return false
+    end
+
+    button:SetAttribute("type", nil)
+    button:SetAttribute("item", nil)
+    button:SetAttribute("macrotext", nil)
+
+    if not source then
+        return true
+    end
+
+    if source.actionType == "item" and source.actionValue then
+        button:SetAttribute("type", "item")
+        button:SetAttribute("item", source.actionValue)
+    elseif source.actionType == "macro" and source.actionValue then
+        button:SetAttribute("type", "macro")
+        button:SetAttribute("macrotext", source.actionValue)
+    elseif source.macro then
+        button:SetAttribute("type", "macro")
+        button:SetAttribute("macrotext", source.macro)
+    end
+
+    return true
+end
+
+local function setFrameAlpha(frame, alpha)
+    if not frame or not frame.SetAlpha then
+        return false
+    end
+    return pcall(frame.SetAlpha, frame, alpha)
+end
+
+local function getFrameAlpha(frame)
+    if not frame or not frame.GetAlpha then
+        return nil
+    end
+    local ok, alpha = pcall(frame.GetAlpha, frame)
+    if ok then
+        return alpha
+    end
+    return nil
+end
+
+function RouletteFrame:HideGameUI()
+    if UIParent and UIParent.GetAlpha then
+        self._savedUIParentAlpha = UIParent:GetAlpha()
+    end
+
+    if SetUIVisibility then
+        SetUIVisibility(false)
+    elseif UIParent and UIParent.SetAlpha then
+        UIParent:SetAlpha(0)
+    end
+end
+
+function RouletteFrame:RestoreGameUI()
+    if SetUIVisibility then
+        SetUIVisibility(true)
+    end
+    if UIParent and UIParent.SetAlpha then
+        UIParent:SetAlpha(self._savedUIParentAlpha or 1.0)
+    end
+    self._savedUIParentAlpha = nil
+end
+
 local function createTab(parent, mode, xOffset, texCoordLeft, texCoordRight)
     local tab = CreateFrame("Button", nil, parent)
     tab:SetSize(108, 54)
-    tab:SetPoint("TOP", parent.frameRef.wheel, "TOP", xOffset, 22)
+    tab:SetPoint("TOP", parent.frameRef.wheel, "TOP", xOffset, 20)
 
     tab.bg = tab:CreateTexture(nil, "BACKGROUND")
     tab.bg:SetAllPoints()
@@ -117,7 +194,7 @@ end
 local function positionNameplateForAngle(button, angleDeg, isKarazhan)
     local angle = angleDeg % 360
     if isKarazhan then
-        ns.DestinationNode:SetNameplateAnchor(button, "LEFT", "RIGHT", 8, -12, 132, 36)
+        ns.DestinationNode:SetNameplateAnchor(button, "LEFT", "RIGHT", 6, -10, 118, 32)
         return
     end
 
@@ -298,25 +375,20 @@ function RouletteFrame:CreateMainFrame()
         return
     end
 
-    local frame = CreateFrame("Frame", "PortalRouletteMainFrame", UIParent)
+    local overlayParent = WorldFrame or UIParent
+    local frame = CreateFrame("Frame", "PortalRouletteMainFrame", overlayParent)
     frame:SetSize(780, 760)
     frame:SetFrameStrata("FULLSCREEN")
     frame:EnableMouse(true)
     frame:SetMovable(true)
     frame:RegisterForDrag("LeftButton")
     frame:SetClampedToScreen(true)
-    -- Critical: ignore UIParent alpha so we remain visible while UIParent is
-    -- faded to 0 (Narcissus-style UI hiding). Without this our addon would
-    -- inherit the UIParent alpha and disappear along with the WoW UI.
     if frame.SetIgnoreParentAlpha then
         frame:SetIgnoreParentAlpha(true)
     end
 
-    -- Dimmer is ALSO parented to UIParent but ignores parent alpha, so it
-    -- remains visible. With UIParent itself at alpha 0, all standard + addon
-    -- UI is hidden; the dimmer just provides a dark backdrop over the 3D world.
-    frame.dimmer = CreateFrame("Frame", nil, UIParent)
-    frame.dimmer:SetAllPoints(UIParent)
+    frame.dimmer = CreateFrame("Frame", nil, overlayParent)
+    frame.dimmer:SetAllPoints(overlayParent)
     frame.dimmer:SetFrameStrata("FULLSCREEN")
     frame.dimmer:SetFrameLevel(1)
     frame.dimmer:EnableMouse(false)
@@ -387,15 +459,24 @@ function RouletteFrame:CreateMainFrame()
         ns.db.roulette.y = round(y)
     end)
 
-    frame:SetScript("OnShow", function()
-        RouletteFrame:RefreshAll()
-        -- Narcissus-style UI hiding: fade UIParent itself to 0. This hides ALL
-        -- standard WoW UI AND every addon UI parented to UIParent in one step.
-        -- Our own frames have SetIgnoreParentAlpha(true) so they stay visible.
-        if UIParent and UIParent.GetAlpha then
-            RouletteFrame._savedUIParentAlpha = UIParent:GetAlpha()
-            UIParent:SetAlpha(0)
+    frame:EnableKeyboard(false)
+    frame:SetScript("OnKeyDown", function(_, key)
+        if key == "ESCAPE" then
+            RouletteFrame:Close()
+            return
         end
+        if frame.SetPropagateKeyboardInput then
+            frame:SetPropagateKeyboardInput(true)
+        end
+    end)
+
+    frame:SetScript("OnShow", function()
+        frame:EnableKeyboard(true)
+        if frame.SetPropagateKeyboardInput then
+            frame:SetPropagateKeyboardInput(false)
+        end
+        RouletteFrame:RefreshAll()
+        RouletteFrame:HideGameUI()
         if ns.db and ns.db.cinematicCamera then
             ns.CameraMode:Enter()
         end
@@ -403,14 +484,11 @@ function RouletteFrame:CreateMainFrame()
     end)
 
     frame:SetScript("OnHide", function()
+        frame:EnableKeyboard(false)
         frame.dimmer:Hide()
         ns.CameraMode:Exit()
         RouletteFrame.presentationToken = (RouletteFrame.presentationToken or 0) + 1
-        -- Restore UIParent alpha so the normal WoW UI returns.
-        if UIParent and UIParent.SetAlpha then
-            UIParent:SetAlpha(RouletteFrame._savedUIParentAlpha or 1.0)
-            RouletteFrame._savedUIParentAlpha = nil
-        end
+        RouletteFrame:RestoreGameUI()
     end)
 
     frame:SetScript("OnUpdate", function(_, elapsed)
@@ -440,8 +518,8 @@ end
 function RouletteFrame:CreateWheel()
     local frame = self.frame
     frame.wheel = CreateFrame("Frame", nil, frame)
-    frame.wheel:SetSize(432, 432)
-    frame.wheel:SetPoint("TOP", frame, "TOP", 82, -122)
+    frame.wheel:SetSize(WHEEL_SIZE, WHEEL_SIZE)
+    frame.wheel:SetPoint("TOP", frame, "TOP", WHEEL_OFFSET_X, WHEEL_OFFSET_Y)
 
     self.wheelBase = frame.wheel:CreateTexture(nil, "BACKGROUND")
     self.wheelBase:SetAllPoints()
@@ -472,16 +550,16 @@ function RouletteFrame:CreateWheel()
     self.innerRing:SetAlpha(0.78)
 
     self.centerCore = frame.wheel:CreateTexture(nil, "OVERLAY")
-    self.centerCore:SetSize(164, 164)
+    self.centerCore:SetSize(148, 148)
     self.centerCore:SetPoint("CENTER", frame.wheel, "CENTER")
     self.centerCore:SetTexture(ns.Media.CORE_VORTEX)
     self.centerCore:SetBlendMode("ADD")
     self.centerCore:SetAlpha(1.0)
 
     frame.centerUtilityButton = CreateFrame("Button", nil, frame.wheel, "SecureActionButtonTemplate")
-    frame.centerUtilityButton:SetSize(118, 118)
+    frame.centerUtilityButton:SetSize(106, 106)
     frame.centerUtilityButton:SetPoint("CENTER", frame.wheel, "CENTER")
-    frame.centerUtilityButton:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+    frame.centerUtilityButton:RegisterForClicks("AnyDown", "AnyUp")
     frame.centerUtilityButton:EnableMouse(true)
 
     frame.centerUtilityButton:SetNormalTexture(ns.Media.HEARTHSTONE_ORB_NORMAL)
@@ -511,22 +589,6 @@ function RouletteFrame:CreateWheel()
     frame.centerUtilityButton:SetScript("OnLeave", function()
         GameTooltip:Hide()
     end)
-    frame.centerUtilityButton:SetScript("PreClick", function(button)
-        if RouletteFrame.mode ~= ns.Mode.TELEPORT or not ns.Sound then
-            return
-        end
-        if button.utilityEnabled then
-            ns.Sound:Play("HearthstoneClick")
-        else
-            ns.Sound:Play("Error")
-        end
-    end)
-    frame.centerUtilityButton:SetScript("PostClick", function()
-        if ns.db and ns.db.utilityMode == ns.UtilityMode.RANDOM and not InCombatLockdown() then
-            RouletteFrame:RefreshCenterUtility()
-        end
-    end)
-
     frame.wheel:SetScript("OnEnter", function()
         if RouletteFrame.wheelHover then
             RouletteFrame.wheelHover:SetAlpha(0.36)
@@ -545,7 +607,7 @@ function RouletteFrame:CreateHeader()
 
     parent.headerTex = parent:CreateTexture(nil, "ARTWORK")
     parent.headerTex:SetSize(300, 60)
-    parent.headerTex:SetPoint("BOTTOM", frame.wheel, "TOP", 0, 82)
+    parent.headerTex:SetPoint("BOTTOM", frame.wheel, "TOP", 0, HEADER_GAP)
     parent.headerTex:SetTexture(ns.Media.HEADER_TITLE)
 
     frame.headerTex = parent.headerTex
@@ -618,7 +680,7 @@ function RouletteFrame:CreatePanels()
 
     frame.hintFrame = CreateFrame("Frame", nil, frame.lowerGroup)
     frame.hintFrame:SetSize(336, 64)
-    frame.hintFrame:SetPoint("TOP", frame.wheel, "BOTTOM", 0, -8)
+    frame.hintFrame:SetPoint("TOP", frame.wheel, "BOTTOM", 0, -18)
 
     frame.hintBg = frame.hintFrame:CreateTexture(nil, "ARTWORK")
     frame.hintBg:SetAllPoints()
@@ -633,7 +695,7 @@ function RouletteFrame:CreatePanels()
     frame.hintText:SetTextColor(0.90, 0.95, 1.0)
 
     ns.ReagentPanel:Create(frame.sideGroup)
-    ns.ReagentPanel.frame:SetPoint("RIGHT", frame.wheel, "LEFT", -14, 14)
+    ns.ReagentPanel.frame:SetPoint("RIGHT", frame.wheel, "LEFT", -40, -8)
 
     ns.UtilityButton:Create(frame.lowerGroup)
     ns.UtilityButton.button:SetPoint("TOP", frame.hintFrame, "BOTTOM", 0, -9)
@@ -655,8 +717,8 @@ function RouletteFrame:CreateDestinationNodes()
     self.nodeLines = {}
 
     for index, destination in ipairs(destinations) do
-        local button = ns.DestinationNode:Create(wheel, 64)
-        local x, y = getPositionForAngle(destination.angleDeg, 152)
+        local button = ns.DestinationNode:Create(wheel, NODE_SIZE)
+        local x, y = getPositionForAngle(destination.angleDeg, NODE_RADIUS)
         button:SetPoint("CENTER", wheel, "CENTER", x, y)
         button.destination = destination
         positionNameplateForAngle(button, destination.angleDeg, false)
@@ -677,11 +739,11 @@ function RouletteFrame:CreateKarazhanNode()
     local wheel = self.frame.wheel
     local karazhan = ns.Destinations:GetKarazhanNode()
 
-    self.karazhanButton = ns.DestinationNode:Create(wheel, 54)
+    self.karazhanButton = ns.DestinationNode:Create(wheel, KARAZHAN_SIZE)
     self.karazhanButton.baseTexture:SetTexture(ns.Media.KARAZHAN_NODE)
     self.karazhanButton.hoverTexture:SetTexture(ns.Media.KARAZHAN_NODE)
 
-    local x, y = getPositionForAngle(karazhan.angleDeg, karazhan.radius)
+    local x, y = getPositionForAngle(karazhan.angleDeg, KARAZHAN_RADIUS)
     self.karazhanButton:SetPoint("CENTER", wheel, "CENTER", x, y)
     self.karazhanButton.destination = karazhan
     positionNameplateForAngle(self.karazhanButton, karazhan.angleDeg, true)
@@ -691,7 +753,7 @@ function RouletteFrame:CreateKarazhanNode()
     self.karazhanLine:SetTexture(karazhanLinkTextures.normal)
     self.karazhanLine:SetAlpha(0.82)
 
-    local attachX, attachY = getPositionForAngle(karazhan.angleDeg, karazhan.ringAttachRadius)
+    local attachX, attachY = getPositionForAngle(karazhan.angleDeg, KARAZHAN_ATTACH_RADIUS)
     setTextureLine(self.karazhanLine, wheel, attachX, attachY, x, y)
     ns.DestinationNode:SetLinkedTexture(self.karazhanButton, self.karazhanLine, karazhanLinkTextures.normal, karazhanLinkTextures.hover)
 end
@@ -867,7 +929,6 @@ function RouletteFrame:RefreshCenterUtility()
 
     local source = ns.UtilityItems:GetSourceForMode(ns.db.utilityMode)
     local enabled = source and source.available and true or false
-    local macroText = (source and source.macro) or nil
 
     centerButton:Show()
     centerButton:EnableMouse(true)
@@ -877,12 +938,12 @@ function RouletteFrame:RefreshCenterUtility()
     centerButton:SetAlpha(enabled and 1 or 0.55)
 
     if not enabled then
-        macroText = nil
+        source = nil
     end
 
-    local applied = applySecureMacro(centerButton, macroText)
+    local applied = applySecureUtilityAction(centerButton, source)
     if not applied then
-        centerButton.pendingMacroText = macroText
+        centerButton.pendingMacroText = source
     else
         centerButton.pendingMacroText = nil
     end

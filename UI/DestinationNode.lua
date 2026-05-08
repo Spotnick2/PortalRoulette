@@ -36,14 +36,28 @@ local function setMacroAction(button, macroText)
     return true
 end
 
-local function setTeleportAction(button, teleportSpellName)
+local function setSpellActions(button, teleportSpellName, portalSpellName)
     if not clearAction(button) then
         return false
     end
 
-    if teleportSpellName and teleportSpellName ~= "" then
+    local hasTeleport = teleportSpellName and teleportSpellName ~= ""
+    local hasPortal = portalSpellName and portalSpellName ~= ""
+
+    if hasTeleport then
         button:SetAttribute("type", "spell")
         button:SetAttribute("spell", teleportSpellName)
+        button:SetAttribute("type1", "spell")
+        button:SetAttribute("spell1", teleportSpellName)
+    end
+
+    if hasPortal then
+        button:SetAttribute("type2", "spell")
+        button:SetAttribute("spell2", portalSpellName)
+        if not hasTeleport then
+            button:SetAttribute("type", "spell")
+            button:SetAttribute("spell", portalSpellName)
+        end
     end
 
     return true
@@ -76,9 +90,11 @@ local function applyHoverState(button, isHover)
 end
 
 function DestinationNode:Create(parent, size)
+    local buttonSize = size or 64
+    local iconSize = math.max(buttonSize - 8, 34)
     local button = CreateFrame("Button", nil, parent, "SecureActionButtonTemplate")
-    button:SetSize(size or 64, size or 64)
-    button:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+    button:SetSize(buttonSize, buttonSize)
+    button:RegisterForClicks("AnyDown", "AnyUp")
     button:EnableMouse(true)
 
     button.baseTexture = button:CreateTexture(nil, "BACKGROUND")
@@ -86,12 +102,12 @@ function DestinationNode:Create(parent, size)
     button.baseTexture:SetTexture(ns.Media.NODE_NORMAL)
 
     button.iconTexture = button:CreateTexture(nil, "ARTWORK")
-    button.iconTexture:SetSize(56, 56)
+    button.iconTexture:SetSize(iconSize, iconSize)
     button.iconTexture:SetPoint("CENTER", button, "CENTER", 0, 1)
     button.iconTexture:SetAlpha(0)
 
     button.iconHoverTexture = button:CreateTexture(nil, "OVERLAY")
-    button.iconHoverTexture:SetSize(56, 56)
+    button.iconHoverTexture:SetSize(iconSize, iconSize)
     button.iconHoverTexture:SetPoint("CENTER", button, "CENTER", 0, 1)
     button.iconHoverTexture:SetAlpha(0)
 
@@ -147,32 +163,6 @@ function DestinationNode:Create(parent, size)
         GameTooltip:Hide()
     end)
 
-    button:SetScript("OnClick", function(self, mouseButton)
-        if mouseButton == "RightButton" then
-            if self.rightActionAvailable and ns.Sound then
-                ns.Sound:Play("NodeClick")
-            elseif ns.Sound then
-                ns.Sound:Play("Error")
-            end
-
-            if InCombatLockdown() then
-                return
-            end
-
-            if self.portalSpellName and self.portalSpellName ~= "" then
-                CastSpellByName(self.portalSpellName)
-            elseif self.portalMacroText and self.portalMacroText ~= "" then
-                RunMacroText(self.portalMacroText)
-            end
-        elseif mouseButton == "LeftButton" then
-            if self.leftActionAvailable and ns.Sound then
-                ns.Sound:Play("NodeClick")
-            elseif ns.Sound then
-                ns.Sound:Play("Error")
-            end
-        end
-    end)
-
     return button
 end
 
@@ -210,7 +200,7 @@ function DestinationNode:ApplyState(button, state)
     elseif state.karazhanMacro then
         applied = setMacroAction(button, state.karazhanMacro)
     else
-        applied = setTeleportAction(button, button.teleportSpellName)
+        applied = setSpellActions(button, button.teleportSpellName, button.portalSpellName)
     end
 
     if not applied then

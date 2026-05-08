@@ -44,7 +44,7 @@ end
 function UtilityButton:Create(parent)
     local button = CreateFrame("Button", nil, parent, "SecureActionButtonTemplate")
     button:SetSize(BUTTON_W, BUTTON_H)
-    button:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+    button:RegisterForClicks("AnyDown", "AnyUp")
     button:EnableMouse(true)
 
     -- Standard button state textures (frame art).
@@ -96,12 +96,6 @@ function UtilityButton:Create(parent)
         end
     end)
 
-    button:SetScript("PostClick", function()
-        if ns.db and ns.db.utilityMode == ns.UtilityMode.RANDOM and not InCombatLockdown() then
-            UtilityButton:Refresh()
-        end
-    end)
-
     self.button = button
     self:Refresh()
     return button
@@ -124,7 +118,9 @@ function UtilityButton:Refresh()
     button.tooltipDetail = enabled and "Click to use selected utility." or "Selected utility is unavailable."
 
     local action
-    if source and source.macro then
+    if source and source.actionType and source.actionValue then
+        action = { type = source.actionType, value = source.actionValue }
+    elseif source and source.macro then
         action = { type = "macro", value = source.macro }
     end
 

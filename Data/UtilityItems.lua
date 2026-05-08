@@ -138,6 +138,8 @@ function UtilityItems:ResolveNameBasedItemOrSpell(source, definition)
         source.itemID = foundItemID
         source.available = true
         source.icon = GetItemIcon(foundItemID)
+        source.actionType = "item"
+        source.actionValue = "item:" .. foundItemID
         source.macro = "/use item:" .. foundItemID
         return
     end
@@ -147,12 +149,16 @@ function UtilityItems:ResolveNameBasedItemOrSpell(source, definition)
         source.spellName = spellSource.spellName
         source.available = spellSource.available
         source.icon = spellSource.icon or "Interface\\ICONS\\INV_Misc_QuestionMark"
+        source.actionType = "macro"
+        source.actionValue = spellSource.macro
         source.macro = spellSource.macro
         return
     end
 
     source.available = false
     source.icon = "Interface\\ICONS\\INV_Misc_QuestionMark"
+    source.actionType = "macro"
+    source.actionValue = "/use " .. definition.itemName
     source.macro = "/use " .. definition.itemName
 end
 
@@ -172,6 +178,8 @@ function UtilityItems:ResolveSource(mode)
         source.itemID = definition.itemID
         source.available = self:HasItem(definition.itemID)
         source.icon = definition.customIcon or GetItemIcon(definition.itemID)
+        source.actionType = "item"
+        source.actionValue = "item:" .. definition.itemID
         source.macro = "/use item:" .. definition.itemID
     else
         self:ResolveNameBasedItemOrSpell(source, definition)
@@ -210,6 +218,8 @@ function UtilityItems:GetSourceForMode(mode)
             itemName = chosen.itemName,
             spellName = chosen.spellName,
             icon = chosen.icon,
+            actionType = chosen.actionType,
+            actionValue = chosen.actionValue,
             macro = chosen.macro,
         }
         return chosen

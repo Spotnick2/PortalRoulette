@@ -65,13 +65,6 @@ function ReagentPanel:Create(parent)
         row.count:SetWidth(ICON_SIZE)
         row.count:SetJustifyH("CENTER")
 
-        -- Item name from GetItemInfo (localized, correct for all locales).
-        row.nameLabel = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-        row.nameLabel:SetPoint("LEFT", row.icon, "RIGHT", 5, 0)
-        row.nameLabel:SetWidth(ROW_W - ICON_SIZE - 14)
-        row.nameLabel:SetJustifyH("LEFT")
-        row.nameLabel:SetTextColor(0.90, 0.88, 0.76)
-
         row.itemID      = rowData.itemID
         row.fallbackLabel = rowData.itemID == ns.Constants.ITEM_RUNE_TELEPORTATION
                             and "Rune of Teleportation" or "Rune of Portals"
@@ -94,12 +87,6 @@ function ReagentPanel:Refresh()
             row.count:SetTextColor(1, 1, 1)
         else
             row.count:SetTextColor(1, 0.3, 0.3)
-        end
-
-        -- Populate label from game data the first time (or if empty).
-        if not row.nameLabel:GetText() or row.nameLabel:GetText() == "" then
-            local name = GetItemInfo and GetItemInfo(row.itemID)
-            row.nameLabel:SetText(name or row.fallbackLabel)
         end
     end
 end
