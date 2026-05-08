@@ -178,18 +178,20 @@ function RouletteFrame:RestoreGameUI()
     self._savedUIParentAlpha = nil
 end
 
-local function createTab(parent, mode, xOffset, texCoordLeft, texCoordRight)
+local function createTab(parent, mode, xOffset, label)
     local tab = CreateFrame("Button", nil, parent)
-    tab:SetSize(108, 54)
-    tab:SetPoint("TOP", parent.frameRef.wheel, "TOP", xOffset, 16)
+    tab:SetSize(112, 32)
+    tab:SetPoint("BOTTOM", parent.frameRef.wheel, "TOP", xOffset, 8)
 
     tab.bg = tab:CreateTexture(nil, "BACKGROUND")
     tab.bg:SetAllPoints()
-    tab.bg:SetTexCoord(texCoordLeft, texCoordRight, 0, 1)
+
+    tab.label = tab:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    tab.label:SetPoint("CENTER", tab, "CENTER", 0, 1)
+    tab.label:SetText(label)
+    tab.label:SetJustifyH("CENTER")
 
     tab.mode = mode
-    tab.tcLeft = texCoordLeft
-    tab.tcRight = texCoordRight
     return tab
 end
 
@@ -609,20 +611,36 @@ function RouletteFrame:CreateHeader()
     local frame = self.frame
     local parent = frame.headerGroup
 
-    parent.headerTex = parent:CreateTexture(nil, "ARTWORK")
-    parent.headerTex:SetSize(300, 60)
-    parent.headerTex:SetPoint("BOTTOM", frame.wheel, "TOP", 0, HEADER_GAP)
-    parent.headerTex:SetTexture(ns.Media.HEADER_TITLE)
+    parent.headerText = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge")
+    parent.headerText:SetPoint("BOTTOM", frame.wheel, "TOP", 0, HEADER_GAP)
+    parent.headerText:SetText("PORTAL ROULETTE")
+    parent.headerText:SetTextColor(0.92, 0.88, 1.0)
+    parent.headerText:SetShadowColor(0.35, 0.0, 0.85, 0.95)
+    parent.headerText:SetShadowOffset(0, -2)
 
-    frame.headerTex = parent.headerTex
+    parent.headerLeft = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    parent.headerLeft:SetPoint("RIGHT", parent.headerText, "LEFT", -10, 0)
+    parent.headerLeft:SetText("*")
+    parent.headerLeft:SetTextColor(0.50, 0.35, 1.0)
+    parent.headerLeft:SetShadowColor(0.15, 0, 0.35, 1)
+    parent.headerLeft:SetShadowOffset(0, -1)
+
+    parent.headerRight = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    parent.headerRight:SetPoint("LEFT", parent.headerText, "RIGHT", 10, 0)
+    parent.headerRight:SetText("*")
+    parent.headerRight:SetTextColor(0.50, 0.35, 1.0)
+    parent.headerRight:SetShadowColor(0.15, 0, 0.35, 1)
+    parent.headerRight:SetShadowOffset(0, -1)
+
+    frame.headerText = parent.headerText
 end
 
 function RouletteFrame:CreateTabs()
     local frame = self.frame
     local parent = frame.headerGroup
 
-    parent.teleportTab = createTab(parent, ns.Mode.TELEPORT, -54, 0, 0.5)
-    parent.portalTab = createTab(parent, ns.Mode.PORTAL, 54, 0.5, 1.0)
+    parent.teleportTab = createTab(parent, ns.Mode.TELEPORT, -56, "Teleports")
+    parent.portalTab = createTab(parent, ns.Mode.PORTAL, 56, "Portals")
 
     parent.teleportTab:SetScript("OnClick", function()
         RouletteFrame:SetMode(ns.Mode.TELEPORT)
@@ -632,8 +650,8 @@ function RouletteFrame:CreateTabs()
     end)
 
     parent.gearButton = CreateFrame("Button", nil, parent)
-    parent.gearButton:SetSize(40, 40)
-    parent.gearButton:SetPoint("LEFT", parent.portalTab, "RIGHT", 8, 0)
+    parent.gearButton:SetSize(34, 34)
+    parent.gearButton:SetPoint("LEFT", parent.portalTab, "RIGHT", 10, 0)
 
     parent.gearButton.bg = parent.gearButton:CreateTexture(nil, "BACKGROUND")
     parent.gearButton.bg:SetAllPoints()
@@ -787,11 +805,10 @@ function RouletteFrame:UpdateTabVisuals()
         return
     end
     local teleportActive = self.mode == ns.Mode.TELEPORT
-    local tabTex = teleportActive and ns.Media.TABS_TELEPORT_ACTIVE or ns.Media.TABS_PORTAL_ACTIVE
-    self.frame.teleportTab.bg:SetTexture(tabTex)
-    self.frame.teleportTab.bg:SetTexCoord(0, 0.5, 0, 1)
-    self.frame.portalTab.bg:SetTexture(tabTex)
-    self.frame.portalTab.bg:SetTexCoord(0.5, 1.0, 0, 1)
+    self.frame.teleportTab.bg:SetTexture(teleportActive and ns.Media.TAB_ACTIVE or ns.Media.TAB_INACTIVE)
+    self.frame.portalTab.bg:SetTexture(teleportActive and ns.Media.TAB_INACTIVE or ns.Media.TAB_ACTIVE)
+    self.frame.teleportTab.label:SetTextColor(teleportActive and 1.0 or 0.72, teleportActive and 0.95 or 0.70, teleportActive and 1.0 or 0.78)
+    self.frame.portalTab.label:SetTextColor(teleportActive and 0.72 or 1.0, teleportActive and 0.70 or 0.95, teleportActive and 0.78 or 1.0)
 end
 
 function RouletteFrame:SetMode(mode)
