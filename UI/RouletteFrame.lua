@@ -982,17 +982,15 @@ function RouletteFrame:UpdateUtilityModeVisuals()
         return
     end
 
+    if ns.UtilityButton and ns.UtilityButton.button then
+        ns.UtilityButton.button:Hide()
+    end
+
     if self.mode == ns.Mode.TELEPORT then
-        if ns.UtilityButton and ns.UtilityButton.button then
-            ns.UtilityButton.button:Hide()
-        end
         if self.centerCore then
             self.centerCore:SetAlpha(0)
         end
     else
-        if ns.UtilityButton and ns.UtilityButton.button then
-            ns.UtilityButton.button:Show()
-        end
         if self.centerCore then
             self.centerCore:SetAlpha(1)
         end
