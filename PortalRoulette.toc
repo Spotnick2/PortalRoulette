@@ -23,4 +23,3 @@ UI\LauncherButton.lua
 UI\MinimapButton.lua
 Options\OptionsPanel.lua
 Core\Init.lua
-Bindings.xml
