@@ -12,11 +12,11 @@ local WHEEL_OFFSET_Y = -166
 local HEADER_GAP = 54
 local NODE_SIZE = 56
 local NODE_RADIUS = 126
-local NODE_NAMEPLATE_W = 108
-local NODE_NAMEPLATE_H = 28
+local NODE_NAMEPLATE_W = 104
+local NODE_NAMEPLATE_H = 27
 local KARAZHAN_SIZE = 48
-local KARAZHAN_RADIUS = 184
-local KARAZHAN_ATTACH_RADIUS = 140
+local KARAZHAN_RADIUS = 216
+local KARAZHAN_ATTACH_RADIUS = 158
 
 local atan2 = math.atan2
 if not atan2 then
@@ -200,14 +200,16 @@ local function positionNameplateForAngle(button, angleDeg, isKarazhan)
         return
     end
 
-    if angle == 150 or angle == 210 then
+    if angle == 90 then
+        ns.DestinationNode:SetNameplateAnchor(button, "BOTTOM", "TOP", 0, 3, NODE_NAMEPLATE_W, NODE_NAMEPLATE_H)
+    elseif angle == 270 then
         ns.DestinationNode:SetNameplateAnchor(button, "TOP", "BOTTOM", 0, -3, NODE_NAMEPLATE_W, NODE_NAMEPLATE_H)
-    elseif angle >= 330 or angle <= 30 then
-        ns.DestinationNode:SetNameplateAnchor(button, "LEFT", "RIGHT", 4, 0, NODE_NAMEPLATE_W, NODE_NAMEPLATE_H)
+    elseif angle == 30 or angle == 150 or angle == 210 or angle == 330 then
+        ns.DestinationNode:SetNameplateAnchor(button, "TOP", "BOTTOM", 0, -2, NODE_NAMEPLATE_W, NODE_NAMEPLATE_H)
     elseif angle > 30 and angle < 150 then
-        ns.DestinationNode:SetNameplateAnchor(button, "BOTTOM", "TOP", 0, 4, NODE_NAMEPLATE_W, NODE_NAMEPLATE_H)
+        ns.DestinationNode:SetNameplateAnchor(button, "BOTTOM", "TOP", 0, 3, NODE_NAMEPLATE_W, NODE_NAMEPLATE_H)
     else
-        ns.DestinationNode:SetNameplateAnchor(button, "TOP", "BOTTOM", 0, -4, NODE_NAMEPLATE_W, NODE_NAMEPLATE_H)
+        ns.DestinationNode:SetNameplateAnchor(button, "TOP", "BOTTOM", 0, -3, NODE_NAMEPLATE_W, NODE_NAMEPLATE_H)
     end
 end
 
@@ -737,7 +739,7 @@ function RouletteFrame:CreateKarazhanNode()
     self.karazhanButton.baseTexture:SetTexture(ns.Media.KARAZHAN_NODE)
     self.karazhanButton.hoverTexture:SetTexture(ns.Media.KARAZHAN_NODE)
 
-    local x, y = getPositionForAngle(325, KARAZHAN_RADIUS)
+    local x, y = getPositionForAngle(328, KARAZHAN_RADIUS)
     self.karazhanButton:SetPoint("CENTER", wheel, "CENTER", x, y)
     self.karazhanButton.destination = karazhan
     positionNameplateForAngle(self.karazhanButton, karazhan.angleDeg, true)
@@ -747,7 +749,7 @@ function RouletteFrame:CreateKarazhanNode()
     self.karazhanLine:SetTexture(karazhanLinkTextures.normal)
     self.karazhanLine:SetAlpha(0.82)
 
-    local attachX, attachY = getPositionForAngle(325, KARAZHAN_ATTACH_RADIUS)
+    local attachX, attachY = getPositionForAngle(328, KARAZHAN_ATTACH_RADIUS)
     setTextureLine(self.karazhanLine, wheel, attachX, attachY, x, y)
     ns.DestinationNode:SetLinkedTexture(self.karazhanButton, self.karazhanLine, karazhanLinkTextures.normal, karazhanLinkTextures.hover)
 end

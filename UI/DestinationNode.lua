@@ -262,11 +262,15 @@ function DestinationNode:ApplyState(button, state)
         button.baseTexture:SetVertexColor(1, 1, 1, 1)
         button.iconTexture:SetDesaturated(false)
         button.nameplateTexture:SetDesaturated(false)
+        button.iconTexture:SetAlpha(1)
+        button.nameplateTexture:SetAlpha(state.nameplateNormalTexture and 1 or 0)
     else
-        button.baseTexture:SetTexture(state.disabledTexture or state.normalTexture or ns.Media.NODE_DISABLED)
-        button.baseTexture:SetVertexColor(1, 1, 1, 0.68)
-        button.iconTexture:SetDesaturated(true)
-        button.nameplateTexture:SetDesaturated(true)
+        button.baseTexture:SetTexture(state.normalTexture or ns.Media.NODE_NORMAL)
+        button.baseTexture:SetVertexColor(0.72, 0.72, 0.78, 0.68)
+        button.iconTexture:SetDesaturated(false)
+        button.nameplateTexture:SetDesaturated(false)
+        button.iconTexture:SetAlpha(0.56)
+        button.nameplateTexture:SetAlpha(state.nameplateNormalTexture and 0.62 or 0)
     end
 
     return true
