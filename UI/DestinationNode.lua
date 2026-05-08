@@ -65,7 +65,7 @@ end
 
 local function applyHoverState(button, isHover)
     if isHover and button.visualEnabled then
-        button.hoverTexture:SetAlpha(0.8)
+        button.hoverTexture:SetAlpha(0.5)
         if button.iconHoverTexture and button.iconHoverTexturePath then
             button.iconHoverTexture:SetAlpha(1)
         end
@@ -74,8 +74,8 @@ local function applyHoverState(button, isHover)
         end
         if button.linkTexture and button.linkHoverTexturePath then
             button.linkTexture:SetTexture(button.linkHoverTexturePath)
-            button.linkTexture:SetVertexColor(0.68, 0.84, 1.0, 1)
-            button.linkTexture:SetAlpha(0.9)
+            button.linkTexture:SetVertexColor(0.58, 0.78, 1.0, 1)
+            button.linkTexture:SetAlpha(0.78)
         end
     else
         button.hoverTexture:SetAlpha(0)
