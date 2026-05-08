@@ -14,8 +14,8 @@ local NODE_SIZE = 66
 local NODE_RADIUS = 128
 local NODE_NAMEPLATE_W = 104
 local NODE_NAMEPLATE_H = 27
-local KARAZHAN_SIZE = 64
-local KARAZHAN_RADIUS = 230
+local KARAZHAN_SIZE = 88
+local KARAZHAN_RADIUS = 238
 local KARAZHAN_ATTACH_RADIUS = 164
 
 local atan2 = math.atan2
@@ -198,7 +198,7 @@ end
 local function positionNameplateForAngle(button, angleDeg, isKarazhan)
     local angle = angleDeg % 360
     if isKarazhan then
-        ns.DestinationNode:SetNameplateAnchor(button, "TOP", "BOTTOM", 0, -4, 98, 52)
+        ns.DestinationNode:SetNameplateAnchor(button, "TOP", "BOTTOM", 0, -6, 104, 54)
         return
     end
 
