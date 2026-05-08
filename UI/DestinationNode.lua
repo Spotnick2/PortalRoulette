@@ -74,6 +74,7 @@ local function applyHoverState(button, isHover)
         end
         if button.linkTexture and button.linkHoverTexturePath then
             button.linkTexture:SetTexture(button.linkHoverTexturePath)
+            button.linkTexture:SetVertexColor(0.68, 0.84, 1.0, 1)
             button.linkTexture:SetAlpha(0.9)
         end
     else
@@ -86,6 +87,7 @@ local function applyHoverState(button, isHover)
         end
         if button.linkTexture and button.linkNormalTexturePath then
             button.linkTexture:SetTexture(button.linkNormalTexturePath)
+            button.linkTexture:SetVertexColor(0.54, 0.70, 1.0, 1)
             button.linkTexture:SetAlpha(button.linkNormalAlpha or 0.62)
         end
     end
