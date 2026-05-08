@@ -9,6 +9,7 @@
 Core\Constants.lua
 Core\DB.lua
 Core\Events.lua
+Core\Sound.lua
 Data\Destinations.lua
 Data\UtilityItems.lua
 UI\Animations.lua
