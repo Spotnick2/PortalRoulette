@@ -10,6 +10,7 @@ Core\Constants.lua
 Core\DB.lua
 Core\Events.lua
 Core\Sound.lua
+Core\CastTracker.lua
 Data\Destinations.lua
 Data\UtilityItems.lua
 UI\Animations.lua
@@ -22,3 +23,4 @@ UI\LauncherButton.lua
 UI\MinimapButton.lua
 Options\OptionsPanel.lua
 Core\Init.lua
+Bindings.xml

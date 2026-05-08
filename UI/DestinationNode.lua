@@ -170,6 +170,12 @@ function DestinationNode:Create(parent, size)
         GameTooltip:Hide()
     end)
 
+    button:SetScript("OnMouseUp", function(self, mouseButton)
+        if ns.RouletteFrame and ns.RouletteFrame.HandleDestinationMouseUp then
+            ns.RouletteFrame:HandleDestinationMouseUp(self, mouseButton)
+        end
+    end)
+
     return button
 end
 

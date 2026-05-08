@@ -133,8 +133,16 @@ function Destinations:GetFactionDestinations(faction)
     return factions[faction] or factions[ALLIANCE]
 end
 
+function Destinations:GetPlayerFaction()
+    local override = ns.db and ns.db.debugFaction
+    if override == HORDE or override == ALLIANCE then
+        return override
+    end
+    return UnitFactionGroup("player")
+end
+
 function Destinations:GetPlayerDestinations()
-    local faction = UnitFactionGroup("player")
+    local faction = self:GetPlayerFaction()
     return self:GetFactionDestinations(faction)
 end
 

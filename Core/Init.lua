@@ -8,6 +8,29 @@ end
 
 ns.Print = printMessage
 
+BINDING_HEADER_PORTALROULETTE = "Portal Roulette"
+BINDING_NAME_PORTALROULETTE_TOGGLE = "Open Portal Roulette"
+BINDING_NAME_PORTALROULETTE_TELEPORTS = "Open Teleports"
+BINDING_NAME_PORTALROULETTE_PORTALS = "Open Portals"
+
+function PortalRoulette_Toggle()
+    if ns.RouletteFrame then
+        ns.RouletteFrame:Toggle()
+    end
+end
+
+function PortalRoulette_OpenTeleports()
+    if ns.RouletteFrame then
+        ns.RouletteFrame:Open(ns.Mode.TELEPORT)
+    end
+end
+
+function PortalRoulette_OpenPortals()
+    if ns.RouletteFrame then
+        ns.RouletteFrame:Open(ns.Mode.PORTAL)
+    end
+end
+
 local function openOptionsPanel()
     if not ns.OptionsPanel or not ns.OptionsPanel.Open then
         return
@@ -55,6 +78,46 @@ local function printDebugState()
     printButtonAttributes("Lower utility", ns.UtilityButton and ns.UtilityButton.button)
 end
 
+local refreshVisualState
+
+local function handleDebugCommand(parts)
+    local target = parts[2]
+    local value = parts[3]
+    if target == "atiesh" then
+        if value == "on" or value == "off" or value == "auto" then
+            ns.db.debugAtiesh = value
+            printMessage("Debug Atiesh override: " .. value)
+            refreshVisualState()
+        else
+            printMessage("Usage: /pr debug atiesh on|off|auto")
+        end
+        return true
+    elseif target == "faction" then
+        if value == "horde" then
+            ns.db.debugFaction = ns.Constants.FACTION_HORDE
+        elseif value == "alliance" then
+            ns.db.debugFaction = ns.Constants.FACTION_ALLIANCE
+        elseif value == "auto" then
+            ns.db.debugFaction = "auto"
+        else
+            printMessage("Usage: /pr debug faction horde|alliance|auto")
+            return true
+        end
+        printMessage("Debug faction override: " .. tostring(ns.db.debugFaction))
+        if ns.RouletteFrame and ns.RouletteFrame.RebuildDestinations then
+            ns.RouletteFrame:RebuildDestinations()
+        else
+            refreshVisualState()
+        end
+        return true
+    elseif target == "state" then
+        printMessage("Debug Atiesh: " .. tostring(ns.db.debugAtiesh or "auto"))
+        printMessage("Debug faction: " .. tostring(ns.db.debugFaction or "auto"))
+        return true
+    end
+    return false
+end
+
 local function registerSlashCommands()
     SLASH_PORTALROULETTE1 = "/portalroulette"
     SLASH_PORTALROULETTE2 = "/proulette"
@@ -70,6 +133,16 @@ local function registerSlashCommands()
         if text == "debug" then
             printDebugState()
             return
+        end
+
+        if text:match("^debug%s+") then
+            local parts = {}
+            for part in text:gmatch("%S+") do
+                parts[#parts + 1] = part
+            end
+            if handleDebugCommand(parts) then
+                return
+            end
         end
 
         if text == "reset" then
@@ -91,7 +164,7 @@ local function registerSlashCommands()
     end
 end
 
-local function refreshVisualState()
+function refreshVisualState()
     if ns.RouletteFrame then
         ns.RouletteFrame:RefreshAll()
     end
@@ -105,6 +178,7 @@ local function initializeForMage()
     ns.RouletteFrame:Initialize()
     ns.LauncherButton:Initialize()
     ns.MinimapButton:Initialize()
+    ns.CastTracker:Initialize()
     registerSlashCommands()
 
     ns.Events:Register("BAG_UPDATE_DELAYED", function()

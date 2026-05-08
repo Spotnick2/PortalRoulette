@@ -138,6 +138,17 @@ local function applySecureUtilityAction(button, source)
     return true
 end
 
+local function setCooldown(cooldown, start, duration, enable)
+    if not cooldown then
+        return
+    end
+    if CooldownFrame_Set then
+        CooldownFrame_Set(cooldown, start or 0, duration or 0, enable and 1 or 0)
+    elseif cooldown.SetCooldown then
+        cooldown:SetCooldown(start or 0, duration or 0)
+    end
+end
+
 local function setFrameAlpha(frame, alpha)
     if not frame or not frame.SetAlpha then
         return false
@@ -472,7 +483,7 @@ function RouletteFrame:CreateMainFrame()
                 SpellStopTargeting()
                 return
             end
-            if CastingBarFrame and CastingBarFrame:IsShown() and SpellStopCasting then
+            if SpellStopCasting and (UnitCastingInfo("player") or (UnitChannelInfo and UnitChannelInfo("player"))) then
                 SpellStopCasting()
                 return
             end
@@ -509,11 +520,13 @@ function RouletteFrame:CreateMainFrame()
         RouletteFrame.outerAngle = (RouletteFrame.outerAngle or 0) + elapsed * 0.055
         RouletteFrame.innerAngle = (RouletteFrame.innerAngle or 0) - elapsed * 0.04
 
-        if RouletteFrame.outerRing and RouletteFrame.outerRing.SetRotation then
-            RouletteFrame.outerRing:SetRotation(RouletteFrame.outerAngle)
-        end
-        if RouletteFrame.innerRing and RouletteFrame.innerRing.SetRotation then
-            RouletteFrame.innerRing:SetRotation(RouletteFrame.innerAngle)
+        if not (ns.db and ns.db.enableWheelAnimation == false) then
+            if RouletteFrame.outerRing and RouletteFrame.outerRing.SetRotation then
+                RouletteFrame.outerRing:SetRotation(RouletteFrame.outerAngle)
+            end
+            if RouletteFrame.innerRing and RouletteFrame.innerRing.SetRotation then
+                RouletteFrame.innerRing:SetRotation(RouletteFrame.innerAngle)
+            end
         end
         if RouletteFrame.centerCore then
             if RouletteFrame.mode == ns.Mode.TELEPORT then
@@ -522,6 +535,9 @@ function RouletteFrame:CreateMainFrame()
                 local pulse = 0.84 + (math.sin(GetTime() * 1.95) * 0.12)
                 RouletteFrame.centerCore:SetAlpha(pulse)
             end
+        end
+        if RouletteFrame.castBarStart then
+            RouletteFrame:UpdateCastBar()
         end
     end)
 
@@ -585,6 +601,9 @@ function RouletteFrame:CreateWheel()
     frame.centerUtilityButton:SetHighlightTexture(ns.Media.HEARTHSTONE_ORB_HOVER, "BLEND")
     frame.centerUtilityButton:SetPushedTexture(ns.Media.HEARTHSTONE_ORB_PRESSED)
 
+    frame.centerUtilityButton.cooldown = CreateFrame("Cooldown", nil, frame.centerUtilityButton, "CooldownFrameTemplate")
+    frame.centerUtilityButton.cooldown:SetAllPoints(frame.centerUtilityButton)
+
     local highlight = frame.centerUtilityButton:GetHighlightTexture()
     if highlight then
         highlight:SetAlpha(0.9)
@@ -646,6 +665,17 @@ function RouletteFrame:CreateHeader()
     parent.headerRight:SetVertexColor(0.62, 0.40, 1.0, 0.95)
 
     frame.headerText = parent.headerText
+end
+
+local function isGrouped()
+    return IsInGroup and IsInGroup()
+end
+
+local function isTeleportConfirmArmed(self, destinationID, mouseButton)
+    return self.teleportConfirmDestination == destinationID
+        and self.teleportConfirmButton == mouseButton
+        and self.teleportConfirmExpires
+        and self.teleportConfirmExpires > GetTime()
 end
 
 function RouletteFrame:CreateTabs()
@@ -728,6 +758,26 @@ function RouletteFrame:CreatePanels()
     frame.hintText:SetJustifyH("CENTER")
     frame.hintText:SetText("|cFFFFCC55Left Click:|r Teleport  \124  |cFF88CCFFRight Click:|r Portal\n|cFF99AABBReagents are shared for all options.|r")
     frame.hintText:SetTextColor(0.90, 0.95, 1.0)
+
+    frame.castBar = CreateFrame("Frame", nil, frame.lowerGroup)
+    frame.castBar:SetSize(286, 22)
+    frame.castBar:SetPoint("TOP", frame.wheel, "BOTTOM", 0, -4)
+    frame.castBar:Hide()
+
+    frame.castBar.bg = frame.castBar:CreateTexture(nil, "BACKGROUND")
+    frame.castBar.bg:SetAllPoints()
+    frame.castBar.bg:SetTexture("Interface\\Buttons\\WHITE8X8")
+    frame.castBar.bg:SetVertexColor(0.02, 0.025, 0.04, 0.72)
+
+    frame.castBar.fill = frame.castBar:CreateTexture(nil, "ARTWORK")
+    frame.castBar.fill:SetPoint("LEFT", frame.castBar, "LEFT", 1, 0)
+    frame.castBar.fill:SetHeight(18)
+    frame.castBar.fill:SetWidth(1)
+    frame.castBar.fill:SetTexture("Interface\\Buttons\\WHITE8X8")
+    frame.castBar.fill:SetVertexColor(0.35, 0.65, 1.0, 0.72)
+
+    frame.castBar.text = frame.castBar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    frame.castBar.text:SetPoint("CENTER", frame.castBar, "CENTER")
 
     ns.ReagentPanel:Create(frame.sideGroup)
     ns.ReagentPanel.frame:SetPoint("RIGHT", frame.wheel, "LEFT", -24, -2)
@@ -874,6 +924,18 @@ function RouletteFrame:BuildNodeState(destination, faction)
 
     local leftLabel = primaryIsPortal and "Portal" or "Teleport"
     local rightLabel = primaryIsPortal and "Teleport" or "Portal"
+    local teleportMouseButton = primaryIsPortal and "RightButton" or "LeftButton"
+    local needsTeleportConfirm = ns.db and ns.db.confirmGroupedTeleport and isGrouped()
+        and not isTeleportConfirmArmed(self, destination.id, teleportMouseButton)
+    if needsTeleportConfirm then
+        if primaryIsPortal then
+            rightSpellName = ""
+            rightActionAvailable = false
+        else
+            leftSpellName = ""
+            leftActionAvailable = false
+        end
+    end
     local detail = "Left-click: " .. leftLabel .. " - " .. (leftSpellName or "Unavailable")
         .. "   Right-click: " .. rightLabel .. " - " .. (rightSpellName or "Unavailable")
 
@@ -898,6 +960,45 @@ function RouletteFrame:BuildNodeState(destination, faction)
             or "|cFFFFCC55Left-click:|r Teleport   |cFF88CCFFRight-click:|r Portal"),
         isKarazhan = false,
     }
+end
+
+StaticPopupDialogs = StaticPopupDialogs or {}
+StaticPopupDialogs.PORTALROULETTE_CONFIRM_TELEPORT = {
+    text = "Teleport to %s while grouped?",
+    button1 = YES,
+    button2 = NO,
+    timeout = 0,
+    whileDead = true,
+    hideOnEscape = true,
+    OnAccept = function(_, data)
+        if ns.RouletteFrame then
+            ns.RouletteFrame.teleportConfirmDestination = data.destinationID
+            ns.RouletteFrame.teleportConfirmButton = data.mouseButton
+            ns.RouletteFrame.teleportConfirmExpires = GetTime() + 8
+            ns.RouletteFrame:RefreshDestinationNodes()
+            ns.Print("Teleport armed for " .. data.label .. ". Click again to cast.")
+        end
+    end,
+}
+
+function RouletteFrame:HandleDestinationMouseUp(button, mouseButton)
+    if not button or not button.destination or not ns.db or not ns.db.confirmGroupedTeleport or not isGrouped() then
+        return
+    end
+    local teleportMouseButton = (self.mode == ns.Mode.PORTAL) and "RightButton" or "LeftButton"
+    if mouseButton ~= teleportMouseButton then
+        return
+    end
+    if isTeleportConfirmArmed(self, button.destination.id, mouseButton) then
+        return
+    end
+    if StaticPopup_Show then
+        StaticPopup_Show("PORTALROULETTE_CONFIRM_TELEPORT", button.destination.label, nil, {
+            destinationID = button.destination.id,
+            mouseButton = mouseButton,
+            label = button.destination.label,
+        })
+    end
 end
 
 function RouletteFrame:BuildKarazhanState(faction)
@@ -940,7 +1041,7 @@ function RouletteFrame:RefreshDestinationNodes()
         return
     end
 
-    local faction = UnitFactionGroup("player")
+    local faction = ns.Destinations:GetPlayerFaction()
     self.factionAccent:SetTexture((faction == ns.Constants.FACTION_HORDE) and ns.Media.FACTION_HORDE or ns.Media.FACTION_ALLIANCE)
 
     for _, button in ipairs(self.nodeButtons) do
@@ -954,6 +1055,47 @@ function RouletteFrame:RefreshDestinationNodes()
     if shouldShowKarazhan and karazhanState then
         ns.DestinationNode:ApplyState(self.karazhanButton, karazhanState)
     end
+end
+
+function RouletteFrame:RebuildDestinations()
+    if not self.frame or not self.nodeButtons then
+        return
+    end
+    local destinations = ns.Destinations:GetPlayerDestinations()
+    for index, button in ipairs(self.nodeButtons) do
+        button.destination = destinations[index]
+    end
+    self:RefreshDestinationNodes()
+end
+
+function RouletteFrame:ShowCastBar(info, startMS, endMS)
+    if not self.frame or not self.frame.castBar then
+        return
+    end
+    local startTime = (startMS and startMS / 1000) or GetTime()
+    local endTime = (endMS and endMS / 1000) or (startTime + 1.5)
+    self.castBarStart = startTime
+    self.castBarEnd = endTime
+    self.frame.castBar.text:SetText((info.spellName or "Casting") .. " - " .. (info.destination or ""))
+    self.frame.castBar:Show()
+    self:UpdateCastBar()
+end
+
+function RouletteFrame:UpdateCastBar()
+    if not self.frame or not self.frame.castBar or not self.castBarStart or not self.castBarEnd then
+        return
+    end
+    local duration = math.max(self.castBarEnd - self.castBarStart, 0.01)
+    local progress = math.min(math.max((GetTime() - self.castBarStart) / duration, 0), 1)
+    self.frame.castBar.fill:SetWidth(math.max(1, 284 * progress))
+end
+
+function RouletteFrame:HideCastBar()
+    if self.frame and self.frame.castBar then
+        self.frame.castBar:Hide()
+    end
+    self.castBarStart = nil
+    self.castBarEnd = nil
 end
 
 function RouletteFrame:RefreshCenterUtility()
@@ -974,15 +1116,30 @@ function RouletteFrame:RefreshCenterUtility()
 
     local source = ns.UtilityItems:GetSourceForMode(ns.db.utilityMode)
     local enabled = source and source.available and true or false
+    local cooldownActive = false
+    local cooldownStart, cooldownDuration = 0, 0
+    if source and source.itemID and GetItemCooldown then
+        cooldownStart, cooldownDuration = GetItemCooldown(source.itemID)
+        cooldownActive = cooldownStart and cooldownDuration and cooldownDuration > 1 and (cooldownStart + cooldownDuration) > GetTime()
+    end
 
     centerButton:Show()
     centerButton:EnableMouse(true)
     centerButton.utilityEnabled = enabled
     centerButton.tooltipTitle = (source and source.label) or "Hearthstone"
-    centerButton.tooltipDetail = enabled and "Click to use selected utility." or "Selected utility is unavailable."
-    centerButton:SetAlpha(enabled and 1 or 0.55)
+    if source and source.itemID == ns.Constants.ITEM_HEARTHSTONE and GetBindLocation then
+        local bindLocation = GetBindLocation()
+        centerButton.tooltipDetail = bindLocation and ("Bound to: " .. bindLocation) or "Hearthstone bind location unavailable."
+    else
+        centerButton.tooltipDetail = enabled and "Click to use selected utility." or "Selected utility is unavailable."
+    end
+    if cooldownActive then
+        centerButton.tooltipDetail = (centerButton.tooltipDetail or "") .. "\nOn cooldown."
+    end
+    centerButton:SetAlpha((enabled and not cooldownActive) and 1 or 0.55)
+    setCooldown(centerButton.cooldown, cooldownStart, cooldownDuration, cooldownActive)
 
-    if not enabled then
+    if not enabled or cooldownActive then
         source = nil
     end
 

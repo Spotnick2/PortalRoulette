@@ -93,6 +93,12 @@ function OptionsPanel:RefreshControls()
     self.minimapVisibilityCheckbox:SetChecked(ns.db.showMinimapButton)
     self.soundsEnabledCheckbox:SetChecked(ns.db.soundsEnabled)
     self.hoverSoundsEnabledCheckbox:SetChecked(ns.db.hoverSoundsEnabled)
+    self.wheelAnimationCheckbox:SetChecked(ns.db.enableWheelAnimation)
+    self.broadcastPortalsCheckbox:SetChecked(ns.db.broadcastPortals)
+    self.broadcastTeleportsCheckbox:SetChecked(ns.db.broadcastTeleports)
+    self.broadcastStartCheckbox:SetChecked(ns.db.broadcastOnStart)
+    self.broadcastSuccessCheckbox:SetChecked(ns.db.broadcastOnSuccess)
+    self.confirmTeleportCheckbox:SetChecked(ns.db.confirmGroupedTeleport)
 
     self.scaleSlider:SetValue(ns.db.uiScale or 1)
     self.scaleValueText:SetText(string.format("%.2f", ns.db.uiScale or 1))
@@ -170,8 +176,38 @@ function OptionsPanel:Create()
         ns.db.hoverSoundsEnabled = selfButton:GetChecked() and true or false
     end)
 
+    self.wheelAnimationCheckbox = createCheckbox(panel, "Enable subtle wheel animation", 16, -386)
+    self.wheelAnimationCheckbox:SetScript("OnClick", function(selfButton)
+        ns.db.enableWheelAnimation = selfButton:GetChecked() and true or false
+    end)
+
+    self.broadcastPortalsCheckbox = createCheckbox(panel, "Broadcast portals to group", 16, -414)
+    self.broadcastPortalsCheckbox:SetScript("OnClick", function(selfButton)
+        ns.db.broadcastPortals = selfButton:GetChecked() and true or false
+    end)
+
+    self.broadcastTeleportsCheckbox = createCheckbox(panel, "Broadcast teleports to group", 16, -442)
+    self.broadcastTeleportsCheckbox:SetScript("OnClick", function(selfButton)
+        ns.db.broadcastTeleports = selfButton:GetChecked() and true or false
+    end)
+
+    self.broadcastStartCheckbox = createCheckbox(panel, "Broadcast when cast starts", 16, -470)
+    self.broadcastStartCheckbox:SetScript("OnClick", function(selfButton)
+        ns.db.broadcastOnStart = selfButton:GetChecked() and true or false
+    end)
+
+    self.broadcastSuccessCheckbox = createCheckbox(panel, "Broadcast when cast succeeds", 16, -498)
+    self.broadcastSuccessCheckbox:SetScript("OnClick", function(selfButton)
+        ns.db.broadcastOnSuccess = selfButton:GetChecked() and true or false
+    end)
+
+    self.confirmTeleportCheckbox = createCheckbox(panel, "Confirm teleports while grouped", 16, -526)
+    self.confirmTeleportCheckbox:SetScript("OnClick", function(selfButton)
+        ns.db.confirmGroupedTeleport = selfButton:GetChecked() and true or false
+    end)
+
     local slider = CreateFrame("Slider", "PortalRouletteScaleSlider", panel, "OptionsSliderTemplate")
-    slider:SetPoint("TOPLEFT", panel, "TOPLEFT", 20, -410)
+    slider:SetPoint("TOPLEFT", panel, "TOPLEFT", 20, -578)
     slider:SetWidth(220)
     slider:SetMinMaxValues(0.75, 1.35)
     slider:SetValueStep(0.01)

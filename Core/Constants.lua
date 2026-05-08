@@ -16,7 +16,7 @@ ns.UtilityMode = {
 }
 
 ns.Constants = {
-    VERSION = 2,
+    VERSION = 3,
     CLASS_MAGE = "MAGE",
     FACTION_HORDE = "Horde",
     FACTION_ALLIANCE = "Alliance",
@@ -35,6 +35,14 @@ ns.Constants = {
         showMinimapButton = true,
         soundsEnabled = true,
         hoverSoundsEnabled = true,
+        enableWheelAnimation = true,
+        broadcastPortals = true,
+        broadcastTeleports = false,
+        broadcastOnStart = true,
+        broadcastOnSuccess = false,
+        confirmGroupedTeleport = true,
+        debugAtiesh = "auto",
+        debugFaction = "auto",
         soundChannel = "SFX",
         uiScale = 1.0,
         lastMode = "teleport",

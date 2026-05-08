@@ -121,6 +121,13 @@ function UtilityItems:HasItem(itemID)
     if not itemID then
         return false
     end
+    if itemID == ns.Constants.ITEM_ATIESH and ns.db then
+        if ns.db.debugAtiesh == "on" then
+            return true
+        elseif ns.db.debugAtiesh == "off" then
+            return false
+        end
+    end
     local count = GetItemCount(itemID, false, false) or 0
     if count > 0 then
         return true
