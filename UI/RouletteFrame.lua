@@ -702,14 +702,6 @@ function RouletteFrame:CreatePanels()
     ns.UtilityButton:Create(frame.lowerGroup)
     ns.UtilityButton.button:SetPoint("TOP", frame.hintFrame, "BOTTOM", 0, -9)
 
-    frame.helpButton = CreateFrame("Button", nil, frame.lowerGroup)
-    frame.helpButton:SetSize(18, 18)
-    frame.helpButton:SetPoint("RIGHT", frame.hintFrame, "RIGHT", -8, 0)
-    frame.helpButton:SetNormalTexture(ns.Media.ICON_HELP)
-    frame.helpButton:SetHighlightTexture(ns.Media.ICON_HELP, "ADD")
-    frame.helpButton:SetScript("OnClick", function()
-        ns.Print("Use /pr options to open settings. ALT-drag the wheel to move it.")
-    end)
 end
 
 function RouletteFrame:CreateDestinationNodes()
