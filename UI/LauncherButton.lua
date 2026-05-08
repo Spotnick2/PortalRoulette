@@ -25,7 +25,7 @@ function LauncherButton:Create()
     button.back = button:CreateTexture(nil, "BACKGROUND")
     button.back:SetAllPoints()
     button.back:SetTexture("Interface\\Buttons\\WHITE8X8")
-    button.back:SetVertexColor(0.05, 0.05, 0.1, 0.45)
+    button.back:SetVertexColor(0, 0, 0, 0)
 
     button.icon = button:CreateTexture(nil, "ARTWORK")
     button.icon:SetSize(38, 38)
@@ -40,9 +40,9 @@ function LauncherButton:Create()
 
     button.highlight = button:CreateTexture(nil, "HIGHLIGHT")
     button.highlight:SetAllPoints()
-    button.highlight:SetTexture("Interface\\Buttons\\WHITE8X8")
+    button.highlight:SetTexture(ns.Media.NODE_HOVER)
     button.highlight:SetBlendMode("ADD")
-    button.highlight:SetVertexColor(0.35, 0.55, 1, 0.2)
+    button.highlight:SetVertexColor(0.55, 0.75, 1, 0.55)
 
     button:SetScript("OnClick", function(_, mouseButton)
         if mouseButton == "RightButton" then

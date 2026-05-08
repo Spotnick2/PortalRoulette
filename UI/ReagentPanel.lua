@@ -4,10 +4,10 @@ local ReagentPanel = {}
 ns.ReagentPanel = ReagentPanel
 
 local PANEL_W = 170
-local PANEL_H = 96
+local PANEL_H = 108
 local ROW_W = 148
-local ROW_H = 34
-local ICON_SIZE = 28
+local ROW_H = 38
+local ICON_SIZE = 30
 
 local reagentRows = {
     {
@@ -71,7 +71,7 @@ function ReagentPanel:Create(parent)
     for index, rowData in ipairs(reagentRows) do
         local row = CreateFrame("Frame", nil, frame)
         row:SetSize(ROW_W, ROW_H)
-        row:SetPoint("TOP", frame, "TOP", 0, -24 - ((index - 1) * (ROW_H + 4)))
+        row:SetPoint("TOP", frame, "TOP", 0, -26 - ((index - 1) * (ROW_H + 5)))
         row:EnableMouse(false)
 
         row.bg = row:CreateTexture(nil, "BACKGROUND")
