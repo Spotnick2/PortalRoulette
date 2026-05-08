@@ -1,0 +1,105 @@
+local addonName, ns = ...
+
+ns.AddonName = addonName
+ns.MediaRoot = "Interface\\AddOns\\" .. addonName .. "\\Media\\"
+
+ns.Mode = {
+    TELEPORT = "teleport",
+    PORTAL = "portal",
+}
+
+ns.UtilityMode = {
+    HEARTHSTONE = "hearthstone",
+    DARK_PORTAL = "dark_portal",
+    NAARU_EMBRACE = "naaru_embrace",
+    RANDOM = "random",
+}
+
+ns.Constants = {
+    VERSION = 2,
+    CLASS_MAGE = "MAGE",
+    FACTION_HORDE = "Horde",
+    FACTION_ALLIANCE = "Alliance",
+    ITEM_RUNE_TELEPORTATION = 17031,
+    ITEM_RUNE_PORTALS = 17032,
+    ITEM_HEARTHSTONE = 6948,
+    ITEM_ATIESH = 22589,
+    DARK_PORTAL_NAME = "Dark Portal",
+    NAARU_EMBRACE_NAME = "Naaru's Embrace",
+    DEFAULTS = {
+        version = 1,
+        utilityMode = "hearthstone",
+        showUnavailableKarazhan = true,
+        cinematicCamera = true,
+        lockLauncher = false,
+        showMinimapButton = true,
+        uiScale = 1.0,
+        lastMode = "teleport",
+        launcher = {
+            point = "CENTER",
+            x = -230,
+            y = -20,
+        },
+        roulette = {
+            point = "CENTER",
+            x = 320,
+            y = 60,
+        },
+        minimap = {
+            angle = 220,
+        },
+    },
+}
+
+ns.Media = {
+    RUNE_WHEEL_BASE = ns.MediaRoot .. "RuneWheel_Base_1024.tga",
+    RUNE_WHEEL_OUTER = ns.MediaRoot .. "RuneWheel_OuterRotating_1024.tga",
+    RUNE_WHEEL_INNER = ns.MediaRoot .. "RuneWheel_InnerRotating_1024.tga",
+    CORE_VORTEX = ns.MediaRoot .. "CenterCore_Vortex_256.tga",
+    NODE_NORMAL = ns.MediaRoot .. "DestinationNode_Normal_128.tga",
+    NODE_HOVER = ns.MediaRoot .. "DestinationNode_Hover_128.tga",
+    NODE_DISABLED = ns.MediaRoot .. "DestinationNode_Disabled_128.tga",
+    KARAZHAN_NODE = ns.MediaRoot .. "KarazhanBonusNode_160.tga",
+    REAGENT_PANEL = ns.MediaRoot .. "ReagentPanel_Vertical_180x260.tga",
+    REAGENT_PANEL_BACKPLATE = ns.MediaRoot .. "ReagentPanel_Backplate_1122x1402.tga",
+    REAGENT_ROW_TELEPORT = ns.MediaRoot .. "ReagentRow_RuneOfTeleportation_NoCount_2172x724.tga",
+    REAGENT_ROW_PORTAL = ns.MediaRoot .. "ReagentRow_RuneOfPortals_NoCount_2172x724.tga",
+    REAGENT_ICON_TELEPORT = ns.MediaRoot .. "ReagentIcon_RuneOfTeleportation_NoCount_1254x1254.tga",
+    REAGENT_ICON_PORTAL = ns.MediaRoot .. "ReagentIcon_RuneOfPortals_NoCount_1254x1254.tga",
+    HINT_PANEL = ns.MediaRoot .. "HintPanel_360x64.tga",
+    -- Final Hearthstone button asset pack (3:1 button + 1:1 orb, three states each)
+    HEARTHSTONE_BUTTON_NORMAL = ns.MediaRoot .. "HearthstoneButton_Normal_2172x724.tga",
+    HEARTHSTONE_BUTTON_HOVER = ns.MediaRoot .. "HearthstoneButton_Hover_2172x724.tga",
+    HEARTHSTONE_BUTTON_PRESSED = ns.MediaRoot .. "HearthstoneButton_Pressed_2172x724.tga",
+    HEARTHSTONE_ORB_NORMAL = ns.MediaRoot .. "HearthstoneOrb_Normal_1254x1254.tga",
+    HEARTHSTONE_ORB_HOVER = ns.MediaRoot .. "HearthstoneOrb_Hover_1254x1254.tga",
+    HEARTHSTONE_ORB_PRESSED = ns.MediaRoot .. "HearthstoneOrb_Pressed_1254x1254.tga",
+    TAB_ACTIVE = ns.MediaRoot .. "Tab_Active_220x54.tga",
+    TAB_INACTIVE = ns.MediaRoot .. "Tab_Inactive_220x54.tga",
+    TABS_TELEPORT_ACTIVE = ns.MediaRoot .. "Tabs_TeleportsActive_PortalsInactive_2508x627.tga",
+    TABS_PORTAL_ACTIVE = ns.MediaRoot .. "Tabs_TeleportsInactive_PortalsActive_2508x627.tga",
+    HEADER_TITLE = ns.MediaRoot .. "Header_PortalRoulette_2804x561.tga",
+    FACTION_HORDE = ns.MediaRoot .. "FactionAccent_Horde_Outer_1024.tga",
+    FACTION_ALLIANCE = ns.MediaRoot .. "FactionAccent_Alliance_Outer_1024.tga",
+    ICON_GEAR = ns.MediaRoot .. "GearButton_Settings_1254x1254.tga",
+    ICON_HELP = ns.MediaRoot .. "Icon_Help_64.tga",
+    ICON_RANDOM = ns.MediaRoot .. "Icon_Random_64.tga",
+    ICON_HEARTHSTONE_CUSTOM = ns.MediaRoot .. "Icon_Hearthstone_Custom_128.tga",
+    ICON_RUNE_TELEPORT_CUSTOM = ns.MediaRoot .. "Icon_RuneTeleport_Custom_128.tga",
+    ICON_RUNE_PORTAL_CUSTOM = ns.MediaRoot .. "Icon_RunePortal_Custom_128.tga",
+    ICON_PORTAL_ROULETTE = ns.MediaRoot .. "Icon_PortalRoulette_128.tga",
+    ICON_PORTAL_ROULETTE_64 = ns.MediaRoot .. "Icon_PortalRoulette_64.tga",
+    ICON_MINIMAP = ns.MediaRoot .. "Icon_Minimap_PortalRoulette_128.tga",
+    ICON_CITY_ORGRIMMAR = ns.MediaRoot .. "CityIcons\\Orgrimmar_128.tga",
+    ICON_CITY_UNDERCITY = ns.MediaRoot .. "CityIcons\\Undercity_128.tga",
+    ICON_CITY_THUNDER_BLUFF = ns.MediaRoot .. "CityIcons\\ThunderBluff_128.tga",
+    ICON_CITY_SILVERMOON = ns.MediaRoot .. "CityIcons\\Silvermoon_128.tga",
+    ICON_CITY_STONARD = ns.MediaRoot .. "CityIcons\\Stonard_128.tga",
+    ICON_CITY_SHATTRATH = ns.MediaRoot .. "CityIcons\\Shattrath_128.tga",
+    ICON_CITY_STORMWIND = ns.MediaRoot .. "CityIcons\\Stormwind_128.tga",
+    ICON_CITY_IRONFORGE = ns.MediaRoot .. "CityIcons\\Ironforge_128.tga",
+    ICON_CITY_DARNASSUS = ns.MediaRoot .. "CityIcons\\Darnassus_128.tga",
+    ICON_CITY_THE_EXODAR = ns.MediaRoot .. "CityIcons\\TheExodar_128.tga",
+    ICON_CITY_THERAMORE = ns.MediaRoot .. "CityIcons\\Theramore_128.tga",
+    ICON_CITY_KARAZHAN = ns.MediaRoot .. "CityIcons\\Karazhan_128.tga",
+}

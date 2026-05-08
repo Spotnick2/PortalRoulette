@@ -1,0 +1,23 @@
+## Interface: 20505
+## Title: Portal Roulette
+## IconTexture: Interface\AddOns\PortalRoulette\Media\Icon_PortalRoulette_128
+## Notes: Mage-only floating portal and teleport roulette for TBC Classic Anniversary.
+## Author: nicol
+## Version: 0.1.0
+## SavedVariables: PortalRouletteDB
+
+Core\Constants.lua
+Core\DB.lua
+Core\Events.lua
+Data\Destinations.lua
+Data\UtilityItems.lua
+UI\Animations.lua
+Camera\CameraMode.lua
+UI\DestinationNode.lua
+UI\ReagentPanel.lua
+UI\UtilityButton.lua
+UI\RouletteFrame.lua
+UI\LauncherButton.lua
+UI\MinimapButton.lua
+Options\OptionsPanel.lua
+Core\Init.lua
