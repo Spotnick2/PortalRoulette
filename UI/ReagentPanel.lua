@@ -3,11 +3,11 @@ local _, ns = ...
 local ReagentPanel = {}
 ns.ReagentPanel = ReagentPanel
 
-local PANEL_W = 178
-local PANEL_H = 122
-local ROW_W = 156
-local ROW_H = 43
-local ICON_SIZE = 34
+local PANEL_W = 164
+local PANEL_H = 112
+local ROW_W = 144
+local ROW_H = 39
+local ICON_SIZE = 31
 
 local reagentRows = {
     {
@@ -59,8 +59,8 @@ function ReagentPanel:Create(parent)
     frame.bg = frame:CreateTexture(nil, "BACKGROUND")
     frame.bg:SetAllPoints()
     frame.bg:SetTexture("Interface\\Buttons\\WHITE8X8")
-    frame.bg:SetVertexColor(0.02, 0.025, 0.035, 0.78)
-    addBorder(frame, 0.72, 0.55, 0.24, 0.78)
+    frame.bg:SetVertexColor(0.02, 0.025, 0.035, 0.64)
+    addBorder(frame, 0.72, 0.55, 0.24, 0.62)
 
     frame.title = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     frame.title:SetPoint("TOP", frame, "TOP", 0, -7)
@@ -71,14 +71,14 @@ function ReagentPanel:Create(parent)
     for index, rowData in ipairs(reagentRows) do
         local row = CreateFrame("Frame", nil, frame)
         row:SetSize(ROW_W, ROW_H)
-        row:SetPoint("TOP", frame, "TOP", 0, -28 - ((index - 1) * (ROW_H + 6)))
+        row:SetPoint("TOP", frame, "TOP", 0, -27 - ((index - 1) * (ROW_H + 5)))
         row:EnableMouse(false)
 
         row.bg = row:CreateTexture(nil, "BACKGROUND")
         row.bg:SetAllPoints()
         row.bg:SetTexture("Interface\\Buttons\\WHITE8X8")
-        row.bg:SetVertexColor(0.04, 0.045, 0.06, 0.52)
-        addBorder(row, 0.55, 0.42, 0.20, 0.42)
+        row.bg:SetVertexColor(0.04, 0.045, 0.06, 0.38)
+        addBorder(row, 0.55, 0.42, 0.20, 0.34)
 
         row.iconFrame = CreateFrame("Frame", nil, row)
         row.iconFrame:SetSize(ICON_SIZE + 4, ICON_SIZE + 4)
@@ -87,8 +87,8 @@ function ReagentPanel:Create(parent)
         row.iconFrame.bg = row.iconFrame:CreateTexture(nil, "BACKGROUND")
         row.iconFrame.bg:SetAllPoints()
         row.iconFrame.bg:SetTexture("Interface\\Buttons\\WHITE8X8")
-        row.iconFrame.bg:SetVertexColor(0, 0, 0, 0.46)
-        addBorder(row.iconFrame, 0.74, 0.58, 0.26, 0.6)
+        row.iconFrame.bg:SetVertexColor(0, 0, 0, 0.34)
+        addBorder(row.iconFrame, 0.74, 0.58, 0.26, 0.5)
 
         row.icon = row:CreateTexture(nil, "ARTWORK")
         row.icon:SetSize(ICON_SIZE, ICON_SIZE)

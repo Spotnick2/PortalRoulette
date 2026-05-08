@@ -15,8 +15,8 @@ local NODE_RADIUS = 128
 local NODE_NAMEPLATE_W = 104
 local NODE_NAMEPLATE_H = 27
 local KARAZHAN_SIZE = 88
-local KARAZHAN_RADIUS = 238
-local KARAZHAN_ATTACH_RADIUS = 164
+local KARAZHAN_RADIUS = 216
+local KARAZHAN_ATTACH_RADIUS = 154
 
 local atan2 = math.atan2
 if not atan2 then
@@ -180,13 +180,13 @@ end
 
 local function createTab(parent, mode, xOffset, label)
     local tab = CreateFrame("Button", nil, parent)
-    tab:SetSize(112, 32)
-    tab:SetPoint("BOTTOM", parent.frameRef.wheel, "TOP", xOffset, 8)
+    tab:SetSize(104, 28)
+    tab:SetPoint("BOTTOM", parent.frameRef.wheel, "TOP", xOffset, 10)
 
     tab.bg = tab:CreateTexture(nil, "BACKGROUND")
     tab.bg:SetAllPoints()
 
-    tab.label = tab:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    tab.label = tab:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     tab.label:SetPoint("CENTER", tab, "CENTER", 0, 1)
     tab.label:SetText(label)
     tab.label:SetJustifyH("CENTER")
@@ -198,7 +198,7 @@ end
 local function positionNameplateForAngle(button, angleDeg, isKarazhan)
     local angle = angleDeg % 360
     if isKarazhan then
-        ns.DestinationNode:SetNameplateAnchor(button, "TOP", "BOTTOM", 0, -6, 104, 54)
+        ns.DestinationNode:SetNameplateAnchor(button, "TOP", "BOTTOM", 0, -2, 88, 46)
         return
     end
 
@@ -632,15 +632,15 @@ function RouletteFrame:CreateHeader()
     parent.headerText:SetShadowOffset(0, -2)
 
     parent.headerLeft = parent:CreateTexture(nil, "OVERLAY")
-    parent.headerLeft:SetSize(28, 28)
-    parent.headerLeft:SetPoint("RIGHT", parent.headerText, "LEFT", -10, 0)
+    parent.headerLeft:SetSize(20, 20)
+    parent.headerLeft:SetPoint("RIGHT", parent.headerText, "LEFT", -12, 0)
     parent.headerLeft:SetTexture("Interface\\Cooldown\\star4")
     parent.headerLeft:SetBlendMode("ADD")
     parent.headerLeft:SetVertexColor(0.62, 0.40, 1.0, 0.95)
 
     parent.headerRight = parent:CreateTexture(nil, "OVERLAY")
-    parent.headerRight:SetSize(28, 28)
-    parent.headerRight:SetPoint("LEFT", parent.headerText, "RIGHT", 10, 0)
+    parent.headerRight:SetSize(20, 20)
+    parent.headerRight:SetPoint("LEFT", parent.headerText, "RIGHT", 12, 0)
     parent.headerRight:SetTexture("Interface\\Cooldown\\star4")
     parent.headerRight:SetBlendMode("ADD")
     parent.headerRight:SetVertexColor(0.62, 0.40, 1.0, 0.95)
@@ -730,7 +730,7 @@ function RouletteFrame:CreatePanels()
     frame.hintText:SetTextColor(0.90, 0.95, 1.0)
 
     ns.ReagentPanel:Create(frame.sideGroup)
-    ns.ReagentPanel.frame:SetPoint("RIGHT", frame.wheel, "LEFT", -40, -8)
+    ns.ReagentPanel.frame:SetPoint("RIGHT", frame.wheel, "LEFT", -24, -2)
 
     ns.UtilityButton:Create(frame.lowerGroup)
     ns.UtilityButton.button:SetPoint("TOP", frame.hintFrame, "BOTTOM", 0, -9)
@@ -771,7 +771,7 @@ function RouletteFrame:CreateKarazhanNode()
     self.karazhanButton.baseTexture:SetTexture(ns.Media.KARAZHAN_NODE)
     self.karazhanButton.hoverTexture:SetTexture(ns.Media.KARAZHAN_NODE)
 
-    local x, y = getPositionForAngle(328, KARAZHAN_RADIUS)
+    local x, y = getPositionForAngle(336, KARAZHAN_RADIUS)
     self.karazhanButton:SetPoint("CENTER", wheel, "CENTER", x, y)
     self.karazhanButton.destination = karazhan
     positionNameplateForAngle(self.karazhanButton, karazhan.angleDeg, true)
@@ -782,7 +782,7 @@ function RouletteFrame:CreateKarazhanNode()
     self.karazhanLine:SetVertexColor(0.54, 0.70, 1.0, 1)
     self.karazhanLine:SetAlpha(0.68)
 
-    local attachX, attachY = getPositionForAngle(328, KARAZHAN_ATTACH_RADIUS)
+    local attachX, attachY = getPositionForAngle(336, KARAZHAN_ATTACH_RADIUS)
     setTextureLine(self.karazhanLine, wheel, attachX, attachY, x, y)
     ns.DestinationNode:SetLinkedTexture(self.karazhanButton, self.karazhanLine, karazhanLinkTextures.normal, karazhanLinkTextures.hover)
 end
