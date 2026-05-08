@@ -824,6 +824,13 @@ function RouletteFrame:UpdateTabVisuals()
     self.frame.portalTab.bg:SetTexture(teleportActive and ns.Media.TAB_INACTIVE or ns.Media.TAB_ACTIVE)
     self.frame.teleportTab.label:SetTextColor(teleportActive and 1.0 or 0.72, teleportActive and 0.95 or 0.70, teleportActive and 1.0 or 0.78)
     self.frame.portalTab.label:SetTextColor(teleportActive and 0.72 or 1.0, teleportActive and 0.70 or 0.95, teleportActive and 0.78 or 1.0)
+    if self.frame.hintText then
+        if teleportActive then
+            self.frame.hintText:SetText("|cFFFFCC55Left Click:|r Teleport  \124  |cFF88CCFFRight Click:|r Portal\n|cFF99AABBReagents are shared for all options.|r")
+        else
+            self.frame.hintText:SetText("|cFF88CCFFLeft Click:|r Portal  \124  |cFFFFCC55Right Click:|r Teleport\n|cFF99AABBReagents are shared for all options.|r")
+        end
+    end
 end
 
 function RouletteFrame:SetMode(mode)
@@ -858,12 +865,17 @@ function RouletteFrame:BuildNodeState(destination, faction)
     local portalKnown = getSpellKnown(portalSpellID)
     local teleportReagents = GetItemCount(ns.Constants.ITEM_RUNE_TELEPORTATION, false, false) or 0
     local portalReagents   = GetItemCount(ns.Constants.ITEM_RUNE_PORTALS, false, false) or 0
-    local leftActionAvailable = teleportKnown and teleportReagents > 0
-    local rightActionAvailable = portalKnown and portalReagents > 0
+    local primaryIsPortal = self.mode == ns.Mode.PORTAL
+    local leftSpellName = primaryIsPortal and portalSpellName or teleportSpellName
+    local rightSpellName = primaryIsPortal and teleportSpellName or portalSpellName
+    local leftActionAvailable = primaryIsPortal and (portalKnown and portalReagents > 0) or (teleportKnown and teleportReagents > 0)
+    local rightActionAvailable = primaryIsPortal and (teleportKnown and teleportReagents > 0) or (portalKnown and portalReagents > 0)
     local enabled = (teleportKnown and teleportReagents > 0) or (portalKnown and portalReagents > 0)
 
-    local detail = "Left-click: " .. (teleportSpellName or "Unavailable")
-        .. "   Right-click: " .. (portalSpellName or "Unavailable")
+    local leftLabel = primaryIsPortal and "Portal" or "Teleport"
+    local rightLabel = primaryIsPortal and "Teleport" or "Portal"
+    local detail = "Left-click: " .. leftLabel .. " - " .. (leftSpellName or "Unavailable")
+        .. "   Right-click: " .. rightLabel .. " - " .. (rightSpellName or "Unavailable")
 
     return {
         label             = destination.label,
@@ -877,8 +889,13 @@ function RouletteFrame:BuildNodeState(destination, faction)
         tooltipDetail     = detail,
         teleportSpellName = teleportSpellName or "",
         portalSpellName   = portalSpellName   or "",
+        leftSpellName     = leftSpellName or "",
+        rightSpellName    = rightSpellName or "",
         leftActionAvailable = leftActionAvailable,
         rightActionAvailable = rightActionAvailable,
+        tooltipClickText = (primaryIsPortal
+            and "|cFF88CCFFLeft-click:|r Portal   |cFFFFCC55Right-click:|r Teleport"
+            or "|cFFFFCC55Left-click:|r Teleport   |cFF88CCFFRight-click:|r Portal"),
         isKarazhan = false,
     }
 end

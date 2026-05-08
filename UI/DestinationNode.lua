@@ -36,27 +36,27 @@ local function setMacroAction(button, macroText)
     return true
 end
 
-local function setSpellActions(button, teleportSpellName, portalSpellName)
+local function setSpellActions(button, leftSpellName, rightSpellName)
     if not clearAction(button) then
         return false
     end
 
-    local hasTeleport = teleportSpellName and teleportSpellName ~= ""
-    local hasPortal = portalSpellName and portalSpellName ~= ""
+    local hasLeft = leftSpellName and leftSpellName ~= ""
+    local hasRight = rightSpellName and rightSpellName ~= ""
 
-    if hasTeleport then
+    if hasLeft then
         button:SetAttribute("type", "spell")
-        button:SetAttribute("spell", teleportSpellName)
+        button:SetAttribute("spell", leftSpellName)
         button:SetAttribute("type1", "spell")
-        button:SetAttribute("spell1", teleportSpellName)
+        button:SetAttribute("spell1", leftSpellName)
     end
 
-    if hasPortal then
+    if hasRight then
         button:SetAttribute("type2", "spell")
-        button:SetAttribute("spell2", portalSpellName)
-        if not hasTeleport then
+        button:SetAttribute("spell2", rightSpellName)
+        if not hasLeft then
             button:SetAttribute("type", "spell")
-            button:SetAttribute("spell", portalSpellName)
+            button:SetAttribute("spell", rightSpellName)
         end
     end
 
@@ -134,6 +134,8 @@ function DestinationNode:Create(parent, size)
     button.teleportSpellName = nil
     button.portalSpellName = nil
     button.portalMacroText = nil
+    button.leftSpellName = nil
+    button.rightSpellName = nil
     button.leftActionAvailable = false
     button.rightActionAvailable = false
     button.isKarazhanNode = false
@@ -159,7 +161,7 @@ function DestinationNode:Create(parent, size)
         if self.tooltipDetail and self.tooltipDetail ~= "" then
             GameTooltip:AddLine(self.tooltipDetail, 0.78, 0.82, 0.92, true)
         end
-        GameTooltip:AddLine("|cFFFFCC55Left-click:|r Teleport   |cFF88CCFFRight-click:|r Portal", 0.68, 0.68, 0.68)
+        GameTooltip:AddLine(self.tooltipClickText or "|cFFFFCC55Left-click:|r Teleport   |cFF88CCFFRight-click:|r Portal", 0.68, 0.68, 0.68)
         GameTooltip:Show()
     end)
 
@@ -196,6 +198,8 @@ function DestinationNode:ApplyState(button, state)
     button.teleportSpellName = state.teleportSpellName or ""
     button.portalSpellName   = state.portalSpellName   or ""
     button.portalMacroText   = state.portalMacroText   or ""
+    button.leftSpellName     = state.leftSpellName or button.teleportSpellName
+    button.rightSpellName    = state.rightSpellName or button.portalSpellName
     button.leftActionAvailable = state.leftActionAvailable and true or false
     button.rightActionAvailable = state.rightActionAvailable and true or false
     button.isKarazhanNode = state.isKarazhan and true or false
@@ -206,7 +210,7 @@ function DestinationNode:ApplyState(button, state)
     elseif state.karazhanMacro then
         applied = setMacroAction(button, state.karazhanMacro)
     else
-        applied = setSpellActions(button, button.teleportSpellName, button.portalSpellName)
+        applied = setSpellActions(button, button.leftSpellName, button.rightSpellName)
     end
 
     if not applied then
@@ -218,6 +222,7 @@ function DestinationNode:ApplyState(button, state)
     button.visualEnabled = (state.enabled and not state.disableActions) and true or false
     button.tooltipTitle  = state.tooltipTitle or state.label or ""
     button.tooltipDetail = state.tooltipDetail
+    button.tooltipClickText = state.tooltipClickText
     applyHoverState(button, false)
 
     if state.iconNormalTexture or state.icon then
