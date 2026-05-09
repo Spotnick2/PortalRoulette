@@ -666,15 +666,27 @@ function RouletteFrame:CreateMainFrame()
     end)
 
     frame:SetScript("OnUpdate", function(_, elapsed)
-        RouletteFrame.outerAngle = (RouletteFrame.outerAngle or 0) + elapsed * 0.055
-        RouletteFrame.innerAngle = (RouletteFrame.innerAngle or 0) - elapsed * 0.04
+        local idleEnabled = animationEnabled("idleAnimationsEnabled") and not (ns.db and ns.db.enableWheelAnimation == false)
+        local intensity = clampAnimationIntensity()
 
-        if not (ns.db and ns.db.enableWheelAnimation == false) then
+        if idleEnabled then
+            local speed = 0.35 + (0.65 * intensity)
+            RouletteFrame.outerAngle = (RouletteFrame.outerAngle or 0) + elapsed * 0.07 * speed
+            RouletteFrame.innerAngle = (RouletteFrame.innerAngle or 0) - elapsed * 0.045 * speed
+            RouletteFrame.idlePulse = (RouletteFrame.idlePulse or 0) + elapsed
+
             if RouletteFrame.outerRing and RouletteFrame.outerRing.SetRotation then
                 RouletteFrame.outerRing:SetRotation(RouletteFrame.outerAngle)
             end
             if RouletteFrame.innerRing and RouletteFrame.innerRing.SetRotation then
                 RouletteFrame.innerRing:SetRotation(RouletteFrame.innerAngle)
+            end
+            if RouletteFrame.factionAccent then
+                RouletteFrame.factionAccent:SetAlpha(0.25 + (math.sin(RouletteFrame.idlePulse * 1.25) * 0.035 * intensity))
+            end
+        else
+            if RouletteFrame.factionAccent then
+                RouletteFrame.factionAccent:SetAlpha(0.28)
             end
         end
         if RouletteFrame.centerCore then
