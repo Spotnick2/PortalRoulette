@@ -8,6 +8,19 @@ ns.OptionsPanel = OptionsPanel
 local function registerOptionsCategory(panel)
     if Settings and Settings.RegisterCanvasLayoutCategory then
         local category = Settings.RegisterCanvasLayoutCategory(panel, panel.name or "Portal Roulette")
+        if category then
+            -- Classic clients are inconsistent about whether OpenToCategory wants
+            -- category.ID or category:GetID(). Use a stable name ID like AceConfig.
+            category.ID = panel.name or "Portal Roulette"
+            panel._category = category
+            panel._categoryID = category.ID
+            if category.GetID then
+                local ok, id = pcall(category.GetID, category)
+                if ok and id then
+                    panel._registeredCategoryID = id
+                end
+            end
+        end
         if Settings.RegisterAddOnCategory then
             Settings.RegisterAddOnCategory(category)
         end
@@ -23,25 +36,38 @@ local function registerOptionsCategory(panel)
 end
 
 local function openOptionsCategory(panel, categoryRef)
-    if Settings and Settings.OpenToCategory and categoryRef then
-        local categoryID = categoryRef
-        if type(categoryRef) == "table" and categoryRef.GetID then
-            categoryID = categoryRef:GetID()
+    if Settings and Settings.OpenToCategory then
+        local categoryID = panel and (panel._categoryID or panel._registeredCategoryID or panel.name)
+        if not categoryID and categoryRef then
+            if type(categoryRef) == "table" then
+                categoryID = categoryRef.ID
+                if not categoryID and categoryRef.GetID then
+                    local ok, id = pcall(categoryRef.GetID, categoryRef)
+                    if ok then
+                        categoryID = id
+                    end
+                end
+            else
+                categoryID = categoryRef
+            end
         end
         if categoryID then
             Settings.OpenToCategory(categoryID)
-            Settings.OpenToCategory(categoryID)
+            if C_Timer and C_Timer.After then
+                C_Timer.After(0, function()
+                    Settings.OpenToCategory(categoryID)
+                end)
+            end
+            return
+        elseif panel and panel.name then
+            Settings.OpenToCategory(panel.name)
             return
         end
     end
 
-    if Settings and Settings.OpenToCategory then
-        return
-    end
-
     if InterfaceOptionsFrame_OpenToCategory then
-        InterfaceOptionsFrame_OpenToCategory(panel)
-        InterfaceOptionsFrame_OpenToCategory(panel)
+        InterfaceOptionsFrame_OpenToCategory(panel.name or panel)
+        InterfaceOptionsFrame_OpenToCategory(panel.name or panel)
     end
 end
 
@@ -420,6 +446,9 @@ function OptionsPanel:Create()
 end
 
 function OptionsPanel:Open()
+    if not self.panel then
+        self:Create()
+    end
     if not self.panel then
         return
     end

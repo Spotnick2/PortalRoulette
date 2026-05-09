@@ -115,7 +115,7 @@ function UtilityButton:Refresh()
     else
         button.tooltipTitle = "Hearthstone"
     end
-    button.tooltipDetail = enabled and "Click to use selected utility." or "Selected utility is unavailable."
+    button.tooltipDetail = (source and source.tooltipDetail) or (enabled and "Click to use selected utility." or "Selected utility is unavailable.")
 
     local action
     if source and source.actionType and source.actionValue then

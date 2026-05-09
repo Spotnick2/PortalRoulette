@@ -16,11 +16,13 @@ local utilityDefinitions = {
         key = ns.UtilityMode.DARK_PORTAL,
         label = "Dark Portal",
         itemName = ns.Constants.DARK_PORTAL_NAME,
+        tooltipDetail = "Teleport to the Dark Portal.",
     },
     [ns.UtilityMode.NAARU_EMBRACE] = {
         key = ns.UtilityMode.NAARU_EMBRACE,
         label = "Naaru's Embrace",
         itemName = ns.Constants.NAARU_EMBRACE_NAME,
+        tooltipDetail = "Return to Scryer's Tier.",
     },
 }
 
@@ -219,6 +221,7 @@ function UtilityItems:ResolveSource(mode)
     local source = {
         key = definition.key,
         label = definition.label,
+        tooltipDetail = definition.tooltipDetail,
         available = false,
     }
 
@@ -265,6 +268,7 @@ function UtilityItems:GetSourceForMode(mode)
             itemID = chosen.itemID,
             itemName = chosen.itemName,
             spellName = chosen.spellName,
+            tooltipDetail = chosen.tooltipDetail,
             icon = chosen.icon,
             actionType = chosen.actionType,
             actionValue = chosen.actionValue,
