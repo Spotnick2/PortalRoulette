@@ -925,8 +925,8 @@ function RouletteFrame:CreatePanels()
     local frame = self.frame
 
     frame.hintFrame = CreateFrame("Frame", nil, frame.lowerGroup)
-    frame.hintFrame:SetSize(336, 64)
-    frame.hintFrame:SetPoint("TOP", frame.wheel, "BOTTOM", 0, -36)
+    frame.hintFrame:SetSize(356, 70)
+    frame.hintFrame:SetPoint("TOP", frame.wheel, "BOTTOM", 0, -40)
 
     frame.hintBg = frame.hintFrame:CreateTexture(nil, "ARTWORK")
     frame.hintBg:SetAllPoints()
@@ -934,11 +934,14 @@ function RouletteFrame:CreatePanels()
     frame.hintBg:SetAlpha(1.0)
 
     frame.hintText = frame.hintFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    frame.hintText:SetPoint("CENTER", frame.hintFrame, "CENTER")
-    frame.hintText:SetWidth(316)
+    frame.hintText:SetPoint("CENTER", frame.hintFrame, "CENTER", 0, 3)
+    frame.hintText:SetWidth(334)
     frame.hintText:SetJustifyH("CENTER")
     frame.hintText:SetText("|cFFFFCC55Left Click:|r Teleport  \124  |cFF88CCFFRight Click:|r Portal\n|cFF99AABBReagents are shared for all options.|r")
     frame.hintText:SetTextColor(0.90, 0.95, 1.0)
+    if frame.hintText.SetSpacing then
+        frame.hintText:SetSpacing(3)
+    end
 
     frame.castBar = CreateFrame("Frame", nil, frame.lowerGroup)
     frame.castBar:SetSize(286, 22)
@@ -977,7 +980,7 @@ function RouletteFrame:CreatePanels()
     frame.utilityTooltip.detail:SetJustifyH("CENTER")
 
     ns.ReagentPanel:Create(frame.sideGroup)
-    ns.ReagentPanel.frame:SetPoint("RIGHT", frame.wheel, "LEFT", -24, -2)
+    ns.ReagentPanel.frame:SetPoint("RIGHT", frame.wheel, "LEFT", -26, -2)
 
     ns.UtilityButton:Create(frame.lowerGroup)
     ns.UtilityButton.button:SetPoint("TOP", frame.hintFrame, "BOTTOM", 0, -9)

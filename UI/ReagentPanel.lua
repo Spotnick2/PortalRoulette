@@ -3,11 +3,11 @@ local _, ns = ...
 local ReagentPanel = {}
 ns.ReagentPanel = ReagentPanel
 
-local PANEL_W = 164
-local PANEL_H = 118
-local ROW_W = 144
-local ROW_H = 39
-local ICON_SIZE = 31
+local PANEL_W = 170
+local PANEL_H = 126
+local ROW_W = 150
+local ROW_H = 42
+local ICON_SIZE = 33
 
 local reagentRows = {
     {
@@ -59,30 +59,30 @@ function ReagentPanel:Create(parent)
     frame.bg = frame:CreateTexture(nil, "BACKGROUND")
     frame.bg:SetAllPoints()
     frame.bg:SetTexture("Interface\\Buttons\\WHITE8X8")
-    frame.bg:SetVertexColor(0.02, 0.025, 0.035, 0.64)
-    addBorder(frame, 0.72, 0.55, 0.24, 0.62)
+    frame.bg:SetVertexColor(0.018, 0.022, 0.032, 0.68)
+    addBorder(frame, 0.72, 0.55, 0.24, 0.58)
 
     frame.title = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    frame.title:SetPoint("TOP", frame, "TOP", 0, -7)
+    frame.title:SetPoint("TOP", frame, "TOP", 0, -8)
     frame.title:SetText("Reagents")
-    frame.title:SetTextColor(0.90, 0.82, 0.55)
+    frame.title:SetTextColor(0.88, 0.80, 0.54)
 
     frame.rows = {}
     for index, rowData in ipairs(reagentRows) do
         local row = CreateFrame("Frame", nil, frame)
         row:SetSize(ROW_W, ROW_H)
-        row:SetPoint("TOP", frame, "TOP", 0, -27 - ((index - 1) * (ROW_H + 7)))
+        row:SetPoint("TOP", frame, "TOP", 0, -29 - ((index - 1) * (ROW_H + 8)))
         row:EnableMouse(false)
 
         row.bg = row:CreateTexture(nil, "BACKGROUND")
         row.bg:SetAllPoints()
         row.bg:SetTexture("Interface\\Buttons\\WHITE8X8")
-        row.bg:SetVertexColor(0.04, 0.045, 0.06, 0.38)
-        addBorder(row, 0.55, 0.42, 0.20, 0.34)
+        row.bg:SetVertexColor(0.04, 0.045, 0.058, 0.34)
+        addBorder(row, 0.55, 0.42, 0.20, 0.30)
 
         row.iconFrame = CreateFrame("Frame", nil, row)
         row.iconFrame:SetSize(ICON_SIZE + 4, ICON_SIZE + 4)
-        row.iconFrame:SetPoint("LEFT", row, "LEFT", 4, 0)
+        row.iconFrame:SetPoint("LEFT", row, "LEFT", 6, 0)
         row.iconFrame:EnableMouse(false)
         row.iconFrame.bg = row.iconFrame:CreateTexture(nil, "BACKGROUND")
         row.iconFrame.bg:SetAllPoints()
@@ -103,8 +103,8 @@ function ReagentPanel:Create(parent)
         row.count:SetShadowColor(0, 0, 0, 1)
 
         row.nameLabel = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-        row.nameLabel:SetPoint("LEFT", row.iconFrame, "RIGHT", 8, 1)
-        row.nameLabel:SetPoint("RIGHT", row, "RIGHT", -8, 1)
+        row.nameLabel:SetPoint("LEFT", row.iconFrame, "RIGHT", 9, 1)
+        row.nameLabel:SetPoint("RIGHT", row, "RIGHT", -10, 1)
         row.nameLabel:SetJustifyH("LEFT")
         row.nameLabel:SetTextColor(0.92, 0.90, 0.80)
 
