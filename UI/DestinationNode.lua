@@ -370,11 +370,15 @@ function DestinationNode:ApplyState(button, state)
         button.nameplateTexture:SetAlpha(state.nameplateNormalTexture and 1 or 0)
     else
         button.baseTexture:SetTexture(state.normalTexture or ns.Media.NODE_NORMAL)
-        button.baseTexture:SetVertexColor(0.72, 0.72, 0.78, 0.68)
+        if button.isKarazhanNode then
+            button.baseTexture:SetVertexColor(0.78, 0.72, 0.92, 0.76)
+        else
+            button.baseTexture:SetVertexColor(0.72, 0.72, 0.78, 0.68)
+        end
         button.iconTexture:SetDesaturated(false)
         button.nameplateTexture:SetDesaturated(false)
-        button.iconTexture:SetAlpha(0.56)
-        button.nameplateTexture:SetAlpha(state.nameplateNormalTexture and 0.62 or 0)
+        button.iconTexture:SetAlpha(button.isKarazhanNode and 0.66 or 0.56)
+        button.nameplateTexture:SetAlpha(state.nameplateNormalTexture and (button.isKarazhanNode and 0.70 or 0.62) or 0)
     end
 
     return true
