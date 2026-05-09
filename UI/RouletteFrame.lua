@@ -465,17 +465,6 @@ function RouletteFrame:PlayVortexOpen()
     end
 end
 
-function RouletteFrame:FadeVortexOut(duration)
-    if not self.vortex then
-        return
-    end
-    for _, texture in pairs(self.vortex) do
-        if type(texture) == "table" and texture.GetAlpha then
-            ns.Animations:Play(texture, texture:GetAlpha(), 0, texture.GetScale and texture:GetScale() or 1, texture.GetScale and texture:GetScale() or 1, duration or 0.16)
-        end
-    end
-end
-
 function RouletteFrame:PlayVortexCollapse()
     if not self.vortex then
         return
@@ -786,6 +775,7 @@ function RouletteFrame:CreateMainFrame()
         if ClearOverrideBindings then
             ClearOverrideBindings(frame)
         end
+        RouletteFrame:ResetVortexState(false)
         if frame.cancelButton then
             frame.cancelButton:Hide()
         end
