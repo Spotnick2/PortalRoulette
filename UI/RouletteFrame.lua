@@ -143,9 +143,12 @@ local function setCooldown(cooldown, start, duration, enable)
         return
     end
     if CooldownFrame_Set then
-        CooldownFrame_Set(cooldown, start or 0, duration or 0, enable and 1 or 0)
+        CooldownFrame_Set(cooldown, start or 0, duration or 0, enable and true or false)
     elseif cooldown.SetCooldown then
         cooldown:SetCooldown(start or 0, duration or 0)
+        if cooldown.SetShown then
+            cooldown:SetShown(enable and true or false)
+        end
     end
 end
 
@@ -229,6 +232,46 @@ local function stopPlayerCastOrTargeting()
     end
 
     return false
+end
+
+local function nudgeMovementToBreakCast()
+    if JumpOrAscendStart then
+        JumpOrAscendStart()
+        if C_Timer and C_Timer.After and JumpOrAscendStop then
+            C_Timer.After(0, JumpOrAscendStop)
+        elseif JumpOrAscendStop then
+            JumpOrAscendStop()
+        end
+    end
+end
+
+local function isPlayerCastingOrChanneling()
+    return (UnitCastingInfo and UnitCastingInfo("player"))
+        or (UnitChannelInfo and UnitChannelInfo("player"))
+end
+
+local function getUtilityCooldown(source)
+    if not source then
+        return 0, 0, false
+    end
+
+    local start, duration = 0, 0
+    if source.itemID and GetItemCooldown then
+        start, duration = GetItemCooldown(source.itemID)
+    end
+
+    local active = start and duration and duration > 1 and (start + duration) > GetTime()
+    if (not active) and GetSpellCooldown and (source.spellName or source.label) then
+        local spellStart, spellDuration = GetSpellCooldown(source.spellName or source.label)
+        if spellStart and spellDuration and spellDuration > 1 and (spellStart + spellDuration) > GetTime() then
+            start, duration = spellStart, spellDuration
+            active = true
+        end
+    elseif source.spellName and GetSpellCooldown then
+        start, duration = GetSpellCooldown(source.spellName)
+        active = start and duration and duration > 1 and (start + duration) > GetTime()
+    end
+    return start or 0, duration or 0, active and true or false
 end
 
 local function positionNameplateForAngle(button, angleDeg, isKarazhan)
@@ -502,23 +545,11 @@ function RouletteFrame:CreateMainFrame()
     end)
 
     frame:EnableKeyboard(false)
-    frame:SetScript("OnKeyDown", function(_, key)
-        if key == "ESCAPE" then
-            RouletteFrame:HandleEscape()
-            return
-        end
-        if frame.SetPropagateKeyboardInput then
-            frame:SetPropagateKeyboardInput(true)
-        end
-    end)
 
     frame:SetScript("OnShow", function()
-        frame:EnableKeyboard(true)
         if SetOverrideBinding then
             SetOverrideBinding(frame, true, "ESCAPE", "PORTALROULETTE_ESCAPE")
-        end
-        if frame.SetPropagateKeyboardInput then
-            frame:SetPropagateKeyboardInput(false)
+            SetOverrideBinding(frame, true, "SPACE", "PORTALROULETTE_CANCEL_CAST")
         end
         RouletteFrame:RefreshAll()
         RouletteFrame:HideGameUI()
@@ -532,7 +563,6 @@ function RouletteFrame:CreateMainFrame()
         if ClearOverrideBindings then
             ClearOverrideBindings(frame)
         end
-        frame:EnableKeyboard(false)
         frame.dimmer:Hide()
         ns.CameraMode:Exit()
         RouletteFrame.presentationToken = (RouletteFrame.presentationToken or 0) + 1
@@ -648,6 +678,7 @@ function RouletteFrame:CreateWheel()
         if ns.Sound and RouletteFrame.mode == ns.Mode.TELEPORT and button.utilityEnabled then
             ns.Sound:Play("HearthstoneHover", { hover = true })
         end
+        RouletteFrame:RefreshCenterUtility()
         GameTooltip:SetOwner(button, "ANCHOR_TOP")
         GameTooltip:SetText(button.tooltipTitle or "Utility", 0.95, 0.97, 1)
         if button.tooltipDetail and button.tooltipDetail ~= "" then
@@ -657,6 +688,11 @@ function RouletteFrame:CreateWheel()
     end)
     frame.centerUtilityButton:SetScript("OnLeave", function()
         GameTooltip:Hide()
+    end)
+    frame.centerUtilityButton:SetScript("OnUpdate", function(button)
+        if button:IsMouseOver() then
+            RouletteFrame:RefreshCenterUtility()
+        end
     end)
     frame.wheel:SetScript("OnEnter", function()
         if RouletteFrame.wheelHover then
@@ -776,7 +812,7 @@ function RouletteFrame:CreatePanels()
 
     frame.hintFrame = CreateFrame("Frame", nil, frame.lowerGroup)
     frame.hintFrame:SetSize(336, 64)
-    frame.hintFrame:SetPoint("TOP", frame.wheel, "BOTTOM", 0, -18)
+    frame.hintFrame:SetPoint("TOP", frame.wheel, "BOTTOM", 0, -42)
 
     frame.hintBg = frame.hintFrame:CreateTexture(nil, "ARTWORK")
     frame.hintBg:SetAllPoints()
@@ -792,7 +828,7 @@ function RouletteFrame:CreatePanels()
 
     frame.castBar = CreateFrame("Frame", nil, frame.lowerGroup)
     frame.castBar:SetSize(286, 22)
-    frame.castBar:SetPoint("BOTTOM", frame.hintFrame, "TOP", 0, 4)
+    frame.castBar:SetPoint("TOP", frame.wheel, "BOTTOM", 0, -10)
     frame.castBar:Hide()
 
     frame.castBar.bg = frame.castBar:CreateTexture(nil, "BACKGROUND")
@@ -971,10 +1007,23 @@ function RouletteFrame:BuildNodeState(destination, faction)
 end
 
 function RouletteFrame:HandleEscape()
+    local wasCasting = isPlayerCastingOrChanneling()
     if stopPlayerCastOrTargeting() then
+        if wasCasting then
+            nudgeMovementToBreakCast()
+        end
         return
     end
     self:Close()
+end
+
+function RouletteFrame:HandleCancelCastOnly()
+    local wasCasting = isPlayerCastingOrChanneling()
+    if stopPlayerCastOrTargeting() and wasCasting then
+        nudgeMovementToBreakCast()
+    elseif not wasCasting then
+        nudgeMovementToBreakCast()
+    end
 end
 
 StaticPopupDialogs = StaticPopupDialogs or {}
@@ -1122,12 +1171,7 @@ function RouletteFrame:RefreshCenterUtility()
     local centerButton = self.frame.centerUtilityButton
     local source = ns.UtilityItems:GetSourceForMode(ns.db.utilityMode)
     local enabled = source and source.available and true or false
-    local cooldownActive = false
-    local cooldownStart, cooldownDuration = 0, 0
-    if source and source.itemID and GetItemCooldown then
-        cooldownStart, cooldownDuration = GetItemCooldown(source.itemID)
-        cooldownActive = cooldownStart and cooldownDuration and cooldownDuration > 1 and (cooldownStart + cooldownDuration) > GetTime()
-    end
+    local cooldownStart, cooldownDuration, cooldownActive = getUtilityCooldown(source)
 
     centerButton:Show()
     centerButton:EnableMouse(true)
@@ -1144,6 +1188,11 @@ function RouletteFrame:RefreshCenterUtility()
     end
     centerButton:SetAlpha((enabled and not cooldownActive) and 1 or 0.55)
     setCooldown(centerButton.cooldown, cooldownStart, cooldownDuration, cooldownActive)
+    if cooldownActive then
+        centerButton.cooldown:Show()
+    else
+        centerButton.cooldown:Hide()
+    end
 
     if not enabled or cooldownActive then
         source = nil

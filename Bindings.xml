@@ -11,4 +11,7 @@
     <Binding name="PORTALROULETTE_ESCAPE">
         PortalRoulette_Escape()
     </Binding>
+    <Binding name="PORTALROULETTE_CANCEL_CAST">
+        PortalRoulette_CancelCast()
+    </Binding>
 </Bindings>
