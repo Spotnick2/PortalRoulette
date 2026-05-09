@@ -392,6 +392,27 @@ function RouletteFrame:SetNodeVisualAlpha(alpha)
     end
 end
 
+function RouletteFrame:SetInteractionEnabled(enabled)
+    if not self.frame then
+        return
+    end
+
+    local locked = InCombatLockdown and InCombatLockdown()
+    local function setMouse(frame, secure)
+        if frame and frame.EnableMouse and not (secure and locked) then
+            frame:EnableMouse(enabled and true or false)
+        end
+    end
+
+    for _, button in ipairs(self.nodeButtons or {}) do
+        setMouse(button, true)
+    end
+    setMouse(self.karazhanButton, true)
+    setMouse(self.frame.centerUtilityButton, true)
+    setMouse(self.frame.gearButton, false)
+    setMouse(self.frame.closeButton, false)
+end
+
 function RouletteFrame:ResetPresentationState()
     if not self.frame then
         return
@@ -807,6 +828,8 @@ function RouletteFrame:CreateMainFrame()
     frame:EnableKeyboard(false)
 
     frame:SetScript("OnShow", function()
+        RouletteFrame.isClosing = false
+        RouletteFrame.optionsOpenToken = (RouletteFrame.optionsOpenToken or 0) + 1
         if frame.cancelButton then
             frame.cancelButton:Show()
         end
@@ -815,6 +838,7 @@ function RouletteFrame:CreateMainFrame()
             SetOverrideBindingClick(frame, true, "SPACE", "PortalRouletteCancelCastButton", "RightButton")
         end
         RouletteFrame:RefreshAll()
+        RouletteFrame:SetInteractionEnabled(true)
         RouletteFrame:HideGameUI()
         if ns.db and ns.db.cinematicCamera then
             ns.CameraMode:Enter()
@@ -823,6 +847,7 @@ function RouletteFrame:CreateMainFrame()
     end)
 
     frame:SetScript("OnHide", function()
+        RouletteFrame.isClosing = false
         if ClearOverrideBindings then
             ClearOverrideBindings(frame)
         end
@@ -833,13 +858,14 @@ function RouletteFrame:CreateMainFrame()
         frame.dimmer:Hide()
         ns.CameraMode:Exit()
         RouletteFrame.presentationToken = (RouletteFrame.presentationToken or 0) + 1
+        RouletteFrame:SetInteractionEnabled(true)
         RouletteFrame:RestoreGameUI()
     end)
 
     frame:SetScript("OnUpdate", function(_, elapsed)
-        local idleEnabled = animationEnabled("idleAnimationsEnabled") and not (ns.db and ns.db.enableWheelAnimation == false)
+        local idleEnabled = animationEnabled("idleAnimationsEnabled") and not RouletteFrame.isClosing and not (ns.db and ns.db.enableWheelAnimation == false)
         local intensity = clampAnimationIntensity()
-        local vortexIdle = vortexEnabled() and not (ns.db and ns.db.portalVortexIdleEnabled == false)
+        local vortexIdle = vortexEnabled() and not RouletteFrame.isClosing and not (ns.db and ns.db.portalVortexIdleEnabled == false)
         local vortexIntensity = clampVortexIntensity()
 
         if idleEnabled then
@@ -1136,9 +1162,15 @@ function RouletteFrame:CreateHeaderControls()
     parent.gearButton:SetScript("OnClick", function()
         -- Close the roulette first so UIParent alpha is restored, otherwise the
         -- standard options panel would be hidden by our UIParent fade.
+        local openToken = (RouletteFrame.optionsOpenToken or 0) + 1
+        RouletteFrame.optionsOpenToken = openToken
         RouletteFrame:Close()
         if C_Timer and C_Timer.After then
-            C_Timer.After(0.96, function() ns.OptionsPanel:Open() end)
+            C_Timer.After(0.96, function()
+                if RouletteFrame.optionsOpenToken == openToken and not RouletteFrame:IsShown() then
+                    ns.OptionsPanel:Open()
+                end
+            end)
         else
             ns.OptionsPanel:Open()
         end
@@ -1684,6 +1716,9 @@ function RouletteFrame:Open(mode)
     if not self.frame then
         self:Create()
     end
+    if self.isClosing then
+        return
+    end
     if InCombatLockdown() then
         ns.Print("Cannot open roulette in combat.")
         if ns.Sound then
@@ -1704,6 +1739,17 @@ function RouletteFrame:Close()
     if not self.frame or not self.frame:IsShown() then
         return
     end
+    if self.isClosing then
+        return
+    end
+    self.isClosing = true
+    if ClearOverrideBindings then
+        ClearOverrideBindings(self.frame)
+    end
+    if self.frame.cancelButton then
+        self.frame.cancelButton:Hide()
+    end
+    self:SetInteractionEnabled(false)
     if ns.Sound then
         ns.Sound:Play("Close")
     end
