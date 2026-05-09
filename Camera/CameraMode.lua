@@ -202,14 +202,24 @@ function CameraMode:ResetOrbitForCast()
     end
 
     local dir = YAW_DIRECTION < 0 and -1 or 1
-    self.yawDir       = dir
-    self.yawFromSpeed = ENTER_YAW_FROM_SPEED
-    self.yawToSpeed   = ORBIT_SPEED
-    self.entryDuration = CAST_RESET_DURATION
-    self.mode = "enter"
+    self.yawDir = dir
+    self.castResetDuration = CAST_RESET_DURATION
+    self.mode = "castReset"
     self.elapsed = 0
-    self:_ApplyYaw(dir * self.yawFromSpeed)
     if self.animFrame then self.animFrame:Show() end
+end
+
+function CameraMode:ResumeOrbitAfterCast()
+    if not self.active or self.mode == "exit" then return end
+    if self.mode ~= "castReset" and self.mode ~= "castHold" then return end
+
+    self:_StopYaw()
+    self.yawDir = YAW_DIRECTION < 0 and -1 or 1
+    self:_ApplyYaw(self.yawDir * ORBIT_SPEED)
+    self.mode = "orbit"
+    self.elapsed = 0
+    self.castResetDuration = nil
+    if self.animFrame then self.animFrame:Hide() end
 end
 
 function CameraMode:ForceRestore(reason)
@@ -273,6 +283,22 @@ function CameraMode:UpdateAnimation(elapsed)
         return
     end
 
+    if self.mode == "castReset" then
+        local resetDur = math.max(0.01, self.castResetDuration or CAST_RESET_DURATION)
+        if self.elapsed >= resetDur then
+            self:_StopYaw()
+            self.mode = "castHold"
+            self.castResetDuration = nil
+            if self.animFrame then self.animFrame:Hide() end
+        end
+        return
+    end
+
+    if self.mode == "castHold" then
+        if self.animFrame then self.animFrame:Hide() end
+        return
+    end
+
     if self.mode == "orbit" then
         return
     end
@@ -298,11 +324,25 @@ CameraMode.eventFrame:RegisterEvent("PLAYER_LOGOUT")
 CameraMode.eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 CameraMode.eventFrame:RegisterEvent("UNIT_SPELLCAST_START")
 CameraMode.eventFrame:RegisterEvent("UNIT_SPELLCAST_CHANNEL_START")
+CameraMode.eventFrame:RegisterEvent("UNIT_SPELLCAST_STOP")
+CameraMode.eventFrame:RegisterEvent("UNIT_SPELLCAST_CHANNEL_STOP")
+CameraMode.eventFrame:RegisterEvent("UNIT_SPELLCAST_FAILED")
+CameraMode.eventFrame:RegisterEvent("UNIT_SPELLCAST_INTERRUPTED")
 CameraMode.eventFrame:SetScript("OnEvent", function(_, event, unit)
     if CameraMode.active then
         if event == "UNIT_SPELLCAST_START" or event == "UNIT_SPELLCAST_CHANNEL_START" then
             if unit == "player" then
                 CameraMode:ResetOrbitForCast()
+            end
+            return
+        end
+        if event == "UNIT_SPELLCAST_STOP"
+            or event == "UNIT_SPELLCAST_CHANNEL_STOP"
+            or event == "UNIT_SPELLCAST_FAILED"
+            or event == "UNIT_SPELLCAST_INTERRUPTED"
+        then
+            if unit == "player" then
+                CameraMode:ResumeOrbitAfterCast()
             end
             return
         end
