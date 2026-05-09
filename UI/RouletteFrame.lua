@@ -143,7 +143,7 @@ local function setCooldown(cooldown, start, duration, enable)
         return
     end
     if CooldownFrame_Set then
-        CooldownFrame_Set(cooldown, start or 0, duration or 0, enable and true or false)
+        CooldownFrame_Set(cooldown, start or 0, duration or 0, enable and 1 or 0)
     elseif cooldown.SetCooldown then
         cooldown:SetCooldown(start or 0, duration or 0)
         if cooldown.SetShown then
@@ -207,42 +207,6 @@ local function createTab(parent, mode, xOffset, label)
 
     tab.mode = mode
     return tab
-end
-
-local function stopPlayerCastOrTargeting()
-    if SpellIsTargeting and SpellIsTargeting() then
-        if SpellStopTargeting then
-            SpellStopTargeting()
-        end
-        return true
-    end
-
-    if UnitCastingInfo and UnitCastingInfo("player") then
-        if SpellStopCasting then
-            SpellStopCasting()
-        end
-        return true
-    end
-
-    if UnitChannelInfo and UnitChannelInfo("player") then
-        if SpellStopCasting then
-            SpellStopCasting()
-        end
-        return true
-    end
-
-    return false
-end
-
-local function nudgeMovementToBreakCast()
-    if JumpOrAscendStart then
-        JumpOrAscendStart()
-        if C_Timer and C_Timer.After and JumpOrAscendStop then
-            C_Timer.After(0, JumpOrAscendStop)
-        elseif JumpOrAscendStop then
-            JumpOrAscendStop()
-        end
-    end
 end
 
 local function isPlayerCastingOrChanneling()
@@ -516,6 +480,25 @@ function RouletteFrame:CreateMainFrame()
     end
     frame.dimmer:Hide()
 
+    frame.cancelButton = CreateFrame("Button", "PortalRouletteCancelCastButton", frame, "SecureActionButtonTemplate")
+    frame.cancelButton:SetSize(1, 1)
+    frame.cancelButton:SetPoint("TOPLEFT", frame, "TOPLEFT", -10, 10)
+    frame.cancelButton:RegisterForClicks("AnyUp")
+    frame.cancelButton:Hide()
+    frame.cancelButton:SetAttribute("type1", "macro")
+    frame.cancelButton:SetAttribute("macrotext1", "/stopcasting\n/stopspelltarget")
+    frame.cancelButton:SetAttribute("type2", "macro")
+    frame.cancelButton:SetAttribute("macrotext2", "/stopcasting\n/stopspelltarget")
+    frame.cancelButton:SetScript("PreClick", function(button)
+        button.wasCasting = isPlayerCastingOrChanneling() and true or false
+        button.wasTargeting = SpellIsTargeting and SpellIsTargeting()
+    end)
+    frame.cancelButton:SetScript("PostClick", function(button, mouseButton)
+        if mouseButton == "LeftButton" and not button.wasCasting and not button.wasTargeting then
+            RouletteFrame:Close()
+        end
+    end)
+
     frame.headerGroup = CreateFrame("Frame", nil, frame)
     frame.headerGroup:SetAllPoints()
     frame.headerGroup.frameRef = frame
@@ -547,9 +530,12 @@ function RouletteFrame:CreateMainFrame()
     frame:EnableKeyboard(false)
 
     frame:SetScript("OnShow", function()
-        if SetOverrideBinding then
-            SetOverrideBinding(frame, true, "ESCAPE", "PORTALROULETTE_ESCAPE")
-            SetOverrideBinding(frame, true, "SPACE", "PORTALROULETTE_CANCEL_CAST")
+        if frame.cancelButton then
+            frame.cancelButton:Show()
+        end
+        if SetOverrideBindingClick then
+            SetOverrideBindingClick(frame, true, "ESCAPE", "PortalRouletteCancelCastButton", "LeftButton")
+            SetOverrideBindingClick(frame, true, "SPACE", "PortalRouletteCancelCastButton", "RightButton")
         end
         RouletteFrame:RefreshAll()
         RouletteFrame:HideGameUI()
@@ -562,6 +548,9 @@ function RouletteFrame:CreateMainFrame()
     frame:SetScript("OnHide", function()
         if ClearOverrideBindings then
             ClearOverrideBindings(frame)
+        end
+        if frame.cancelButton then
+            frame.cancelButton:Hide()
         end
         frame.dimmer:Hide()
         ns.CameraMode:Exit()
@@ -658,12 +647,27 @@ function RouletteFrame:CreateWheel()
     frame.centerUtilityButton.cooldown = CreateFrame("Cooldown", nil, frame.centerUtilityButton, "CooldownFrameTemplate")
     frame.centerUtilityButton.cooldown:SetAllPoints(frame.centerUtilityButton)
     frame.centerUtilityButton.cooldown:SetFrameLevel(frame.centerUtilityButton:GetFrameLevel() + 5)
+    if frame.centerUtilityButton.cooldown.SetDrawSwipe then
+        frame.centerUtilityButton.cooldown:SetDrawSwipe(true)
+    end
     if frame.centerUtilityButton.cooldown.SetDrawEdge then
         frame.centerUtilityButton.cooldown:SetDrawEdge(false)
     end
     if frame.centerUtilityButton.cooldown.SetSwipeColor then
         frame.centerUtilityButton.cooldown:SetSwipeColor(0, 0, 0, 0.72)
     end
+
+    frame.centerUtilityButton.cooldownShade = frame.centerUtilityButton:CreateTexture(nil, "OVERLAY")
+    frame.centerUtilityButton.cooldownShade:SetAllPoints(frame.centerUtilityButton)
+    frame.centerUtilityButton.cooldownShade:SetTexture("Interface\\Buttons\\WHITE8X8")
+    frame.centerUtilityButton.cooldownShade:SetVertexColor(0, 0, 0, 0.48)
+    frame.centerUtilityButton.cooldownShade:Hide()
+
+    frame.centerUtilityButton.cooldownText = frame.centerUtilityButton:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    frame.centerUtilityButton.cooldownText:SetPoint("CENTER", frame.centerUtilityButton, "CENTER", 0, 0)
+    frame.centerUtilityButton.cooldownText:SetShadowColor(0, 0, 0, 1)
+    frame.centerUtilityButton.cooldownText:SetShadowOffset(1, -1)
+    frame.centerUtilityButton.cooldownText:Hide()
 
     local highlight = frame.centerUtilityButton:GetHighlightTexture()
     if highlight then
@@ -679,19 +683,15 @@ function RouletteFrame:CreateWheel()
             ns.Sound:Play("HearthstoneHover", { hover = true })
         end
         RouletteFrame:RefreshCenterUtility()
-        GameTooltip:SetOwner(button, "ANCHOR_TOP")
-        GameTooltip:SetText(button.tooltipTitle or "Utility", 0.95, 0.97, 1)
-        if button.tooltipDetail and button.tooltipDetail ~= "" then
-            GameTooltip:AddLine(button.tooltipDetail, 0.78, 0.82, 0.92, true)
-        end
-        GameTooltip:Show()
+        RouletteFrame:ShowUtilityTooltip()
     end)
     frame.centerUtilityButton:SetScript("OnLeave", function()
-        GameTooltip:Hide()
+        RouletteFrame:HideUtilityTooltip()
     end)
     frame.centerUtilityButton:SetScript("OnUpdate", function(button)
         if button:IsMouseOver() then
             RouletteFrame:RefreshCenterUtility()
+            RouletteFrame:UpdateUtilityTooltip()
         end
     end)
     frame.wheel:SetScript("OnEnter", function()
@@ -812,7 +812,7 @@ function RouletteFrame:CreatePanels()
 
     frame.hintFrame = CreateFrame("Frame", nil, frame.lowerGroup)
     frame.hintFrame:SetSize(336, 64)
-    frame.hintFrame:SetPoint("TOP", frame.wheel, "BOTTOM", 0, -42)
+    frame.hintFrame:SetPoint("TOP", frame.wheel, "BOTTOM", 0, -36)
 
     frame.hintBg = frame.hintFrame:CreateTexture(nil, "ARTWORK")
     frame.hintBg:SetAllPoints()
@@ -828,7 +828,7 @@ function RouletteFrame:CreatePanels()
 
     frame.castBar = CreateFrame("Frame", nil, frame.lowerGroup)
     frame.castBar:SetSize(286, 22)
-    frame.castBar:SetPoint("TOP", frame.wheel, "BOTTOM", 0, -10)
+    frame.castBar:SetPoint("TOP", frame.wheel, "BOTTOM", 0, -6)
     frame.castBar:Hide()
 
     frame.castBar.bg = frame.castBar:CreateTexture(nil, "BACKGROUND")
@@ -845,6 +845,22 @@ function RouletteFrame:CreatePanels()
 
     frame.castBar.text = frame.castBar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     frame.castBar.text:SetPoint("CENTER", frame.castBar, "CENTER")
+
+    frame.utilityTooltip = CreateFrame("Frame", nil, frame.lowerGroup)
+    frame.utilityTooltip:SetSize(220, 54)
+    frame.utilityTooltip:SetPoint("BOTTOM", frame.wheel, "CENTER", 0, 62)
+    frame.utilityTooltip:SetFrameLevel(frame:GetFrameLevel() + 40)
+    frame.utilityTooltip:Hide()
+    frame.utilityTooltip.bg = frame.utilityTooltip:CreateTexture(nil, "BACKGROUND")
+    frame.utilityTooltip.bg:SetAllPoints()
+    frame.utilityTooltip.bg:SetTexture("Interface\\Buttons\\WHITE8X8")
+    frame.utilityTooltip.bg:SetVertexColor(0.02, 0.025, 0.04, 0.88)
+    frame.utilityTooltip.title = frame.utilityTooltip:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    frame.utilityTooltip.title:SetPoint("TOP", frame.utilityTooltip, "TOP", 0, -8)
+    frame.utilityTooltip.detail = frame.utilityTooltip:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    frame.utilityTooltip.detail:SetPoint("TOP", frame.utilityTooltip.title, "BOTTOM", 0, -4)
+    frame.utilityTooltip.detail:SetWidth(202)
+    frame.utilityTooltip.detail:SetJustifyH("CENTER")
 
     ns.ReagentPanel:Create(frame.sideGroup)
     ns.ReagentPanel.frame:SetPoint("RIGHT", frame.wheel, "LEFT", -24, -2)
@@ -1006,26 +1022,6 @@ function RouletteFrame:BuildNodeState(destination, faction)
     }
 end
 
-function RouletteFrame:HandleEscape()
-    local wasCasting = isPlayerCastingOrChanneling()
-    if stopPlayerCastOrTargeting() then
-        if wasCasting then
-            nudgeMovementToBreakCast()
-        end
-        return
-    end
-    self:Close()
-end
-
-function RouletteFrame:HandleCancelCastOnly()
-    local wasCasting = isPlayerCastingOrChanneling()
-    if stopPlayerCastOrTargeting() and wasCasting then
-        nudgeMovementToBreakCast()
-    elseif not wasCasting then
-        nudgeMovementToBreakCast()
-    end
-end
-
 StaticPopupDialogs = StaticPopupDialogs or {}
 StaticPopupDialogs.PORTALROULETTE_CONFIRM_TELEPORT = {
     text = "Teleport to %s while grouped?",
@@ -1163,6 +1159,29 @@ function RouletteFrame:HideCastBar()
     self.castBarEnd = nil
 end
 
+function RouletteFrame:UpdateUtilityTooltip()
+    if not self.frame or not self.frame.utilityTooltip or not self.frame.centerUtilityButton then
+        return
+    end
+    local button = self.frame.centerUtilityButton
+    self.frame.utilityTooltip.title:SetText(button.tooltipTitle or "Utility")
+    self.frame.utilityTooltip.detail:SetText(button.tooltipDetail or "")
+end
+
+function RouletteFrame:ShowUtilityTooltip()
+    if not self.frame or not self.frame.utilityTooltip then
+        return
+    end
+    self:UpdateUtilityTooltip()
+    self.frame.utilityTooltip:Show()
+end
+
+function RouletteFrame:HideUtilityTooltip()
+    if self.frame and self.frame.utilityTooltip then
+        self.frame.utilityTooltip:Hide()
+    end
+end
+
 function RouletteFrame:RefreshCenterUtility()
     if not self.frame or not self.frame.centerUtilityButton or not ns.db then
         return
@@ -1190,8 +1209,26 @@ function RouletteFrame:RefreshCenterUtility()
     setCooldown(centerButton.cooldown, cooldownStart, cooldownDuration, cooldownActive)
     if cooldownActive then
         centerButton.cooldown:Show()
+        if centerButton.cooldownShade then
+            centerButton.cooldownShade:Show()
+        end
+        if centerButton.cooldownText then
+            local remaining = math.max(0, (cooldownStart + cooldownDuration) - GetTime())
+            if remaining >= 60 then
+                centerButton.cooldownText:SetText(math.ceil(remaining / 60) .. "m")
+            else
+                centerButton.cooldownText:SetText(math.ceil(remaining))
+            end
+            centerButton.cooldownText:Show()
+        end
     else
         centerButton.cooldown:Hide()
+        if centerButton.cooldownShade then
+            centerButton.cooldownShade:Hide()
+        end
+        if centerButton.cooldownText then
+            centerButton.cooldownText:Hide()
+        end
     end
 
     if not enabled or cooldownActive then
@@ -1203,6 +1240,9 @@ function RouletteFrame:RefreshCenterUtility()
         centerButton.pendingMacroText = source
     else
         centerButton.pendingMacroText = nil
+    end
+    if centerButton:IsMouseOver() then
+        self:UpdateUtilityTooltip()
     end
 end
 
