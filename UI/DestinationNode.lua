@@ -20,6 +20,60 @@ local function clearAction(button)
     return true
 end
 
+local function animationIntensity()
+    local value = tonumber(ns.db and ns.db.animationIntensity) or 1
+    if value < 0 then
+        return 0
+    elseif value > 1 then
+        return 1
+    end
+    return value
+end
+
+local function customAnimationEnabled(setting)
+    local db = ns.db or {}
+    if db.animationsEnabled == false then
+        return false
+    end
+    if setting and db[setting] == false then
+        return false
+    end
+    return animationIntensity() > 0
+end
+
+local function animateNodeScale(button, targetScale, duration)
+    if not ns.Animations or not ns.Animations.Play or not button or not button.GetScale then
+        if button and button.SetScale then
+            button:SetScale(targetScale)
+        end
+        return
+    end
+    ns.Animations:Play(button, button:GetAlpha(), button:GetAlpha(), button:GetScale(), targetScale, duration or 0.1)
+end
+
+local function pulseNode(button)
+    if not ns.Animations or not ns.Animations.Pulse or not button then
+        return
+    end
+    ns.Animations:Pulse(button, button:GetScale() * (1 + (0.035 * animationIntensity())), 0.14)
+end
+
+local function flashLink(button)
+    if not button or not button.linkTexture or not ns.Animations or not ns.Animations.Play then
+        return
+    end
+
+    local texture = button.linkTexture
+    local normalAlpha = button.linkNormalAlpha or 0.62
+    ns.Animations:Play(texture, texture:GetAlpha(), 0.95, 1, 1, 0.06, function()
+        local targetAlpha = normalAlpha
+        if button.IsMouseOver and button:IsMouseOver() and button.visualEnabled then
+            targetAlpha = 0.84
+        end
+        ns.Animations:Play(texture, texture:GetAlpha(), targetAlpha, 1, 1, 0.12)
+    end)
+end
+
 local function setMacroAction(button, macroText)
     if not clearAction(button) then
         return false
@@ -88,6 +142,16 @@ local function applyHoverState(button, isHover)
             button.linkTexture:SetTexture(button.linkHoverTexturePath)
             button.linkTexture:SetVertexColor(0.58, 0.78, 1.0, 1)
             button.linkTexture:SetAlpha(0.78)
+            if customAnimationEnabled("hoverAnimationsEnabled") then
+                ns.Animations:Play(button.linkTexture, 0.78, 0.84, 1, 1, 0.12)
+            end
+        end
+        if customAnimationEnabled("hoverAnimationsEnabled") then
+            local scaleUp = 1 + (0.045 * animationIntensity())
+            if button.isKarazhanNode then
+                scaleUp = 1 + (0.035 * animationIntensity())
+            end
+            animateNodeScale(button, scaleUp, 0.12)
         end
     else
         button.hoverTexture:SetAlpha(0)
@@ -100,7 +164,16 @@ local function applyHoverState(button, isHover)
         if button.linkTexture and button.linkNormalTexturePath then
             button.linkTexture:SetTexture(button.linkNormalTexturePath)
             button.linkTexture:SetVertexColor(0.54, 0.70, 1.0, 1)
-            button.linkTexture:SetAlpha(button.linkNormalAlpha or 0.62)
+            if customAnimationEnabled("hoverAnimationsEnabled") then
+                ns.Animations:Play(button.linkTexture, button.linkTexture:GetAlpha(), button.linkNormalAlpha or 0.62, 1, 1, 0.1)
+            else
+                button.linkTexture:SetAlpha(button.linkNormalAlpha or 0.62)
+            end
+        end
+        if customAnimationEnabled("hoverAnimationsEnabled") then
+            animateNodeScale(button, 1, 0.1)
+        elseif button.SetScale then
+            button:SetScale(1)
         end
     end
 end
@@ -185,6 +258,10 @@ function DestinationNode:Create(parent, size)
     button:SetScript("OnMouseUp", function(self, mouseButton)
         if ns.RouletteFrame and ns.RouletteFrame.HandleDestinationMouseUp then
             ns.RouletteFrame:HandleDestinationMouseUp(self, mouseButton)
+        end
+        if self.visualEnabled and customAnimationEnabled("clickPulseEnabled") then
+            pulseNode(self)
+            flashLink(self)
         end
     end)
 
