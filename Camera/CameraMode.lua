@@ -53,10 +53,6 @@ local MOUNTED_ZOOM           = 8.0   -- Narcissus default for mounted
 local ENTER_DURATION         = 1.50
 local EXIT_DURATION          = 0.35
 local ORBIT_SPEED            = 0.005
--- Ping-pong orbit: hold one direction for ORBIT_HALF_PERIOD, then reverse.
--- At 0.005 speed × 180°/s × 30s ≈ 27° of swing per leg, so the character
--- oscillates around the facing pose and is never far from facing the viewer.
-local ORBIT_HALF_PERIOD      = 30.0
 local ENTER_YAW_FROM_SPEED   = 1.0
 local YAW_DIRECTION          = 1     -- Narcissus uses MoveViewRightStart on entry
 local SAVED_VIEW_SLOT        = 5
@@ -240,26 +236,16 @@ function CameraMode:UpdateAnimation(elapsed)
                 self:_ApplyYaw(self.yawDir * inOutSine(self.elapsed, self.yawFromSpeed, self.yawToSpeed, entryDur))
             end
         else
-            -- Transition to ping-pong orbit. Keep the animFrame running so
-            -- we can flip direction every ORBIT_HALF_PERIOD seconds.
+            -- Transition to a very slow one-way drift. Casting exits this mode
+            -- gracefully so the spell animation can play without camera motion.
             self:_StopYaw()
             self:_ApplyYaw(self.yawDir * ORBIT_SPEED)
             self.mode = "orbit"
-            self.orbitElapsed = 0
         end
         return
     end
 
     if self.mode == "orbit" then
-        self.orbitElapsed = (self.orbitElapsed or 0) + (elapsed or 0)
-        if self.orbitElapsed >= ORBIT_HALF_PERIOD then
-            -- Reverse direction so the character orbits back toward facing.
-            self.orbitElapsed = self.orbitElapsed - ORBIT_HALF_PERIOD
-            local oldDir = self.yawDir
-            self.yawDir = -self.yawDir
-            self:_StopYawDirection(oldDir)
-            self:_ApplyYaw(self.yawDir * ORBIT_SPEED)
-        end
         return
     end
 
@@ -282,8 +268,16 @@ CameraMode.eventFrame = CreateFrame("Frame")
 CameraMode.eventFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
 CameraMode.eventFrame:RegisterEvent("PLAYER_LOGOUT")
 CameraMode.eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
-CameraMode.eventFrame:SetScript("OnEvent", function(_, event)
+CameraMode.eventFrame:RegisterEvent("UNIT_SPELLCAST_START")
+CameraMode.eventFrame:RegisterEvent("UNIT_SPELLCAST_CHANNEL_START")
+CameraMode.eventFrame:SetScript("OnEvent", function(_, event, unit)
     if CameraMode.active then
+        if event == "UNIT_SPELLCAST_START" or event == "UNIT_SPELLCAST_CHANNEL_START" then
+            if unit == "player" then
+                CameraMode:Exit()
+            end
+            return
+        end
         CameraMode:ForceRestore(event)
     end
 end)
