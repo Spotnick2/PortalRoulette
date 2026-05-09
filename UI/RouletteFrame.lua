@@ -775,28 +775,6 @@ function RouletteFrame:CreateMainFrame()
     end
     frame.dimmer:Hide()
 
-    frame.cancelButton = CreateFrame("Button", "PortalRouletteCancelCastButton", frame, "SecureActionButtonTemplate")
-    frame.cancelButton:SetSize(1, 1)
-    frame.cancelButton:SetPoint("TOPLEFT", frame, "TOPLEFT", -10, 10)
-    frame.cancelButton:RegisterForClicks("AnyDown", "AnyUp")
-    frame.cancelButton:Hide()
-    frame.cancelButton:SetAttribute("type", "macro")
-    frame.cancelButton:SetAttribute("macrotext", "/stopcasting")
-    frame.cancelButton:SetAttribute("type2", "macro")
-    frame.cancelButton:SetAttribute("macrotext2", "/stopcasting")
-    frame.cancelButton:SetScript("PreClick", function(button, _, down)
-        if down then
-            button.wasCasting = isPlayerCastingOrChanneling() and true or false
-            button.wasTargeting = SpellIsTargeting and SpellIsTargeting()
-        end
-    end)
-    frame.cancelButton:SetScript("PostClick", function(button, mouseButton, down)
-        if down then return end
-        if mouseButton == "LeftButton" and not button.wasCasting and not button.wasTargeting then
-            RouletteFrame:Close()
-        end
-    end)
-
     frame.headerGroup = CreateFrame("Frame", nil, frame)
     frame.headerGroup:SetAllPoints()
     frame.headerGroup.frameRef = frame
@@ -830,13 +808,6 @@ function RouletteFrame:CreateMainFrame()
     frame:SetScript("OnShow", function()
         RouletteFrame.isClosing = false
         RouletteFrame.optionsOpenToken = (RouletteFrame.optionsOpenToken or 0) + 1
-        if frame.cancelButton then
-            frame.cancelButton:Show()
-        end
-        if SetOverrideBindingClick then
-            SetOverrideBindingClick(frame, true, "ESCAPE", "PortalRouletteCancelCastButton", "LeftButton")
-            SetOverrideBindingClick(frame, true, "SPACE", "PortalRouletteCancelCastButton", "RightButton")
-        end
         RouletteFrame:RefreshAll()
         RouletteFrame:SetInteractionEnabled(true)
         RouletteFrame:HideGameUI()
@@ -848,13 +819,7 @@ function RouletteFrame:CreateMainFrame()
 
     frame:SetScript("OnHide", function()
         RouletteFrame.isClosing = false
-        if ClearOverrideBindings then
-            ClearOverrideBindings(frame)
-        end
         RouletteFrame:ResetVortexState(false)
-        if frame.cancelButton then
-            frame.cancelButton:Hide()
-        end
         frame.dimmer:Hide()
         ns.CameraMode:Exit()
         RouletteFrame.presentationToken = (RouletteFrame.presentationToken or 0) + 1
@@ -1743,12 +1708,6 @@ function RouletteFrame:Close()
         return
     end
     self.isClosing = true
-    if ClearOverrideBindings then
-        ClearOverrideBindings(self.frame)
-    end
-    if self.frame.cancelButton then
-        self.frame.cancelButton:Hide()
-    end
     self:SetInteractionEnabled(false)
     if ns.Sound then
         ns.Sound:Play("Close")

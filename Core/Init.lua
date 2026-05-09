@@ -10,8 +10,6 @@ ns.Print = printMessage
 
 BINDING_HEADER_PORTALROULETTE = "Portal Roulette"
 BINDING_NAME_PORTALROULETTE_TOGGLE = "Open Portal Roulette"
-BINDING_NAME_PORTALROULETTE_TELEPORTS = "Open Teleports"
-BINDING_NAME_PORTALROULETTE_PORTALS = "Open Portals"
 
 function PortalRoulette_Toggle()
     if ns.RouletteFrame then

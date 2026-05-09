@@ -1,11 +1,5 @@
 <Bindings>
-    <Binding name="PORTALROULETTE_TOGGLE" header="PORTALROULETTE">
+    <Binding name="PORTALROULETTE_TOGGLE" category="Portal Roulette">
         PortalRoulette_Toggle()
-    </Binding>
-    <Binding name="PORTALROULETTE_TELEPORTS">
-        PortalRoulette_OpenTeleports()
-    </Binding>
-    <Binding name="PORTALROULETTE_PORTALS">
-        PortalRoulette_OpenPortals()
     </Binding>
 </Bindings>
