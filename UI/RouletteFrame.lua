@@ -319,6 +319,25 @@ local function animationEnabled(key)
     return clampAnimationIntensity() > 0
 end
 
+local function clampVortexIntensity()
+    local db = ns.db or {}
+    local value = tonumber(db.portalVortexIntensity) or 1
+    if value < 0 then
+        return 0
+    elseif value > 1 then
+        return 1
+    end
+    return value
+end
+
+local function vortexEnabled()
+    local db = ns.db or {}
+    if db.animationsEnabled == false or db.portalVortexEnabled == false then
+        return false
+    end
+    return clampVortexIntensity() > 0
+end
+
 local function resetVisual(frame, alpha, scale)
     if ns.Animations and ns.Animations.Reset then
         ns.Animations:Reset(frame, alpha, scale)
@@ -331,6 +350,13 @@ local function resetVisual(frame, alpha, scale)
         if scale ~= nil and frame.SetScale then
             frame:SetScale(scale)
         end
+    end
+end
+
+local function resetTextureVisual(texture, alpha, scale, rotation)
+    resetVisual(texture, alpha, scale)
+    if texture and texture.SetRotation and rotation then
+        texture:SetRotation(rotation)
     end
 end
 
@@ -380,6 +406,7 @@ function RouletteFrame:ResetPresentationState()
         resetVisual(frame.dimmer, 0.86, 1)
         frame.dimmer:Show()
     end
+    self:ResetVortexState(false)
 
     for _, line in ipairs(self.nodeLines or {}) do
         resetVisual(line, 1, nil)
@@ -393,6 +420,24 @@ function RouletteFrame:ResetPresentationState()
     if self.karazhanButton then
         resetVisual(self.karazhanButton, 1, 1)
     end
+end
+
+function RouletteFrame:ResetVortexState(visible)
+    local vortex = self.vortex
+    if not vortex then
+        return
+    end
+
+    local alpha = visible and 1 or 0
+    resetTextureVisual(vortex.backSmoke, 0.18 * alpha, 1, 0)
+    resetTextureVisual(vortex.outerWisps, 0.22 * alpha, 1, 0)
+    resetTextureVisual(vortex.innerSpiral, 0.24 * alpha, 1, 0)
+    resetTextureVisual(vortex.glowBloom, 0.14 * alpha, 1, 0)
+    resetTextureVisual(vortex.motes, 0.18 * alpha, 1, 0)
+    vortex.outerAngle = 0
+    vortex.innerAngle = 0
+    vortex.moteAngle = 0
+    vortex.collapseBoost = 0
 end
 
 function RouletteFrame:PlayOpenPresentation()
@@ -716,6 +761,34 @@ function RouletteFrame:CreateWheel()
     frame.wheel = CreateFrame("Frame", nil, frame)
     frame.wheel:SetSize(WHEEL_SIZE, WHEEL_SIZE)
     frame.wheel:SetPoint("TOP", frame, "TOP", WHEEL_OFFSET_X, WHEEL_OFFSET_Y)
+
+    self.vortex = {
+        outerAngle = 0,
+        innerAngle = 0,
+        moteAngle = 0,
+        collapseBoost = 0,
+    }
+
+    local function createVortexTexture(path, size, layer, blendMode, color)
+        local texture = frame.wheel:CreateTexture(nil, layer or "BACKGROUND")
+        texture:SetSize(size, size)
+        texture:SetPoint("CENTER", frame.wheel, "CENTER")
+        texture:SetTexture(path)
+        texture:SetAlpha(0)
+        if blendMode then
+            texture:SetBlendMode(blendMode)
+        end
+        if color then
+            texture:SetVertexColor(color[1], color[2], color[3], color[4])
+        end
+        return texture
+    end
+
+    self.vortex.backSmoke = createVortexTexture(ns.Media.PORTAL_VORTEX_BACK_SMOKE, WHEEL_SIZE + 72, "BACKGROUND", "BLEND", { 0.55, 0.66, 1.0, 1 })
+    self.vortex.outerWisps = createVortexTexture(ns.Media.PORTAL_VORTEX_OUTER_WISPS, WHEEL_SIZE + 82, "BACKGROUND", "ADD", { 0.45, 0.58, 1.0, 1 })
+    self.vortex.innerSpiral = createVortexTexture(ns.Media.PORTAL_VORTEX_INNER_SPIRAL, WHEEL_SIZE + 18, "BACKGROUND", "ADD", { 0.48, 0.66, 1.0, 1 })
+    self.vortex.glowBloom = createVortexTexture(ns.Media.PORTAL_VORTEX_GLOW_BLOOM, WHEEL_SIZE - 70, "BACKGROUND", "ADD", { 0.42, 0.70, 1.0, 1 })
+    self.vortex.motes = createVortexTexture(ns.Media.PORTAL_VORTEX_MOTES, WHEEL_SIZE + 54, "BACKGROUND", "ADD", { 0.62, 0.72, 1.0, 1 })
 
     self.wheelBase = frame.wheel:CreateTexture(nil, "BACKGROUND")
     self.wheelBase:SetAllPoints()
