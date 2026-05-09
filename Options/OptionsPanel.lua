@@ -100,6 +100,9 @@ function OptionsPanel:RefreshControls()
     self.hoverAnimationsCheckbox:SetChecked(ns.db.hoverAnimationsEnabled)
     self.clickPulseCheckbox:SetChecked(ns.db.clickPulseEnabled)
     self.nodeStaggerCheckbox:SetChecked(ns.db.nodeStaggerEnabled)
+    self.portalVortexCheckbox:SetChecked(ns.db.portalVortexEnabled)
+    self.portalVortexIdleCheckbox:SetChecked(ns.db.portalVortexIdleEnabled)
+    self.portalVortexMotesCheckbox:SetChecked(ns.db.portalVortexMotesEnabled)
     self.broadcastPortalsCheckbox:SetChecked(ns.db.broadcastPortals)
     self.broadcastTeleportsCheckbox:SetChecked(ns.db.broadcastTeleports)
     self.broadcastStartCheckbox:SetChecked(ns.db.broadcastOnStart)
@@ -110,6 +113,8 @@ function OptionsPanel:RefreshControls()
     self.scaleValueText:SetText(string.format("%.2f", ns.db.uiScale or 1))
     self.animationIntensitySlider:SetValue(ns.db.animationIntensity or 1)
     self.animationIntensityValueText:SetText(string.format("%.2f", ns.db.animationIntensity or 1))
+    self.portalVortexIntensitySlider:SetValue(ns.db.portalVortexIntensity or 1)
+    self.portalVortexIntensityValueText:SetText(string.format("%.2f", ns.db.portalVortexIntensity or 1))
 end
 
 function OptionsPanel:Create()
@@ -247,6 +252,47 @@ function OptionsPanel:Create()
         OptionsPanel.animationIntensityValueText:SetText(string.format("%.2f", value))
     end)
     self.animationIntensitySlider = intensitySlider
+
+    local vortexTitle = panel:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+    vortexTitle:SetPoint("TOPLEFT", panel, "TOPLEFT", 300, -482)
+    vortexTitle:SetText("Portal vortex")
+
+    self.portalVortexCheckbox = createCheckbox(panel, "Enable portal vortex", 300, -510)
+    self.portalVortexCheckbox:SetScript("OnClick", function(selfButton)
+        ns.db.portalVortexEnabled = selfButton:GetChecked() and true or false
+        applyAllSettings()
+    end)
+
+    self.portalVortexIdleCheckbox = createCheckbox(panel, "Idle vortex motion", 300, -538)
+    self.portalVortexIdleCheckbox:SetScript("OnClick", function(selfButton)
+        ns.db.portalVortexIdleEnabled = selfButton:GetChecked() and true or false
+    end)
+
+    self.portalVortexMotesCheckbox = createCheckbox(panel, "Vortex motes", 300, -566)
+    self.portalVortexMotesCheckbox:SetScript("OnClick", function(selfButton)
+        ns.db.portalVortexMotesEnabled = selfButton:GetChecked() and true or false
+    end)
+
+    local vortexIntensitySlider = CreateFrame("Slider", "PortalRouletteVortexIntensitySlider", panel, "OptionsSliderTemplate")
+    vortexIntensitySlider:SetPoint("TOPLEFT", panel, "TOPLEFT", 304, -614)
+    vortexIntensitySlider:SetWidth(180)
+    vortexIntensitySlider:SetMinMaxValues(0, 1)
+    vortexIntensitySlider:SetValueStep(0.05)
+    if vortexIntensitySlider.SetObeyStepOnDrag then
+        vortexIntensitySlider:SetObeyStepOnDrag(true)
+    end
+    _G[vortexIntensitySlider:GetName() .. "Low"]:SetText("0")
+    _G[vortexIntensitySlider:GetName() .. "High"]:SetText("1")
+    _G[vortexIntensitySlider:GetName() .. "Text"]:SetText("Vortex intensity")
+
+    self.portalVortexIntensityValueText = panel:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+    self.portalVortexIntensityValueText:SetPoint("LEFT", vortexIntensitySlider, "RIGHT", 16, 0)
+
+    vortexIntensitySlider:SetScript("OnValueChanged", function(_, value)
+        ns.db.portalVortexIntensity = value
+        OptionsPanel.portalVortexIntensityValueText:SetText(string.format("%.2f", value))
+    end)
+    self.portalVortexIntensitySlider = vortexIntensitySlider
 
     self.broadcastPortalsCheckbox = createCheckbox(panel, "Broadcast portals to group", 16, -414)
     self.broadcastPortalsCheckbox:SetScript("OnClick", function(selfButton)
