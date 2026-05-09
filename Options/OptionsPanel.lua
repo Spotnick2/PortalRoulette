@@ -94,6 +94,12 @@ function OptionsPanel:RefreshControls()
     self.soundsEnabledCheckbox:SetChecked(ns.db.soundsEnabled)
     self.hoverSoundsEnabledCheckbox:SetChecked(ns.db.hoverSoundsEnabled)
     self.wheelAnimationCheckbox:SetChecked(ns.db.enableWheelAnimation)
+    self.animationsEnabledCheckbox:SetChecked(ns.db.animationsEnabled)
+    self.openCloseAnimationsCheckbox:SetChecked(ns.db.openCloseAnimationsEnabled)
+    self.idleAnimationsCheckbox:SetChecked(ns.db.idleAnimationsEnabled)
+    self.hoverAnimationsCheckbox:SetChecked(ns.db.hoverAnimationsEnabled)
+    self.clickPulseCheckbox:SetChecked(ns.db.clickPulseEnabled)
+    self.nodeStaggerCheckbox:SetChecked(ns.db.nodeStaggerEnabled)
     self.broadcastPortalsCheckbox:SetChecked(ns.db.broadcastPortals)
     self.broadcastTeleportsCheckbox:SetChecked(ns.db.broadcastTeleports)
     self.broadcastStartCheckbox:SetChecked(ns.db.broadcastOnStart)
@@ -102,6 +108,8 @@ function OptionsPanel:RefreshControls()
 
     self.scaleSlider:SetValue(ns.db.uiScale or 1)
     self.scaleValueText:SetText(string.format("%.2f", ns.db.uiScale or 1))
+    self.animationIntensitySlider:SetValue(ns.db.animationIntensity or 1)
+    self.animationIntensityValueText:SetText(string.format("%.2f", ns.db.animationIntensity or 1))
 end
 
 function OptionsPanel:Create()
@@ -180,6 +188,65 @@ function OptionsPanel:Create()
     self.wheelAnimationCheckbox:SetScript("OnClick", function(selfButton)
         ns.db.enableWheelAnimation = selfButton:GetChecked() and true or false
     end)
+
+    local animationTitle = panel:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+    animationTitle:SetPoint("TOPLEFT", panel, "TOPLEFT", 300, -218)
+    animationTitle:SetText("Animation polish")
+
+    self.animationsEnabledCheckbox = createCheckbox(panel, "Enable animations", 300, -246)
+    self.animationsEnabledCheckbox:SetScript("OnClick", function(selfButton)
+        ns.db.animationsEnabled = selfButton:GetChecked() and true or false
+        applyAllSettings()
+    end)
+
+    self.openCloseAnimationsCheckbox = createCheckbox(panel, "Opening/closing animation", 300, -274)
+    self.openCloseAnimationsCheckbox:SetScript("OnClick", function(selfButton)
+        ns.db.openCloseAnimationsEnabled = selfButton:GetChecked() and true or false
+    end)
+
+    self.idleAnimationsCheckbox = createCheckbox(panel, "Idle wheel animation", 300, -302)
+    self.idleAnimationsCheckbox:SetScript("OnClick", function(selfButton)
+        ns.db.idleAnimationsEnabled = selfButton:GetChecked() and true or false
+        ns.db.enableWheelAnimation = ns.db.idleAnimationsEnabled
+        OptionsPanel:RefreshControls()
+        applyAllSettings()
+    end)
+
+    self.hoverAnimationsCheckbox = createCheckbox(panel, "Hover animation", 300, -330)
+    self.hoverAnimationsCheckbox:SetScript("OnClick", function(selfButton)
+        ns.db.hoverAnimationsEnabled = selfButton:GetChecked() and true or false
+    end)
+
+    self.clickPulseCheckbox = createCheckbox(panel, "Click pulse", 300, -358)
+    self.clickPulseCheckbox:SetScript("OnClick", function(selfButton)
+        ns.db.clickPulseEnabled = selfButton:GetChecked() and true or false
+    end)
+
+    self.nodeStaggerCheckbox = createCheckbox(panel, "Stagger node reveal", 300, -386)
+    self.nodeStaggerCheckbox:SetScript("OnClick", function(selfButton)
+        ns.db.nodeStaggerEnabled = selfButton:GetChecked() and true or false
+    end)
+
+    local intensitySlider = CreateFrame("Slider", "PortalRouletteAnimationIntensitySlider", panel, "OptionsSliderTemplate")
+    intensitySlider:SetPoint("TOPLEFT", panel, "TOPLEFT", 304, -434)
+    intensitySlider:SetWidth(180)
+    intensitySlider:SetMinMaxValues(0, 1)
+    intensitySlider:SetValueStep(0.05)
+    if intensitySlider.SetObeyStepOnDrag then
+        intensitySlider:SetObeyStepOnDrag(true)
+    end
+    _G[intensitySlider:GetName() .. "Low"]:SetText("0")
+    _G[intensitySlider:GetName() .. "High"]:SetText("1")
+    _G[intensitySlider:GetName() .. "Text"]:SetText("Animation intensity")
+
+    self.animationIntensityValueText = panel:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+    self.animationIntensityValueText:SetPoint("LEFT", intensitySlider, "RIGHT", 16, 0)
+
+    intensitySlider:SetScript("OnValueChanged", function(_, value)
+        ns.db.animationIntensity = value
+        OptionsPanel.animationIntensityValueText:SetText(string.format("%.2f", value))
+    end)
+    self.animationIntensitySlider = intensitySlider
 
     self.broadcastPortalsCheckbox = createCheckbox(panel, "Broadcast portals to group", 16, -414)
     self.broadcastPortalsCheckbox:SetScript("OnClick", function(selfButton)
