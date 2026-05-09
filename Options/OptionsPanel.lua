@@ -6,17 +6,17 @@ local OptionsPanel = {
 ns.OptionsPanel = OptionsPanel
 
 local function registerOptionsCategory(panel)
-    if InterfaceOptions_AddCategory then
-        InterfaceOptions_AddCategory(panel)
-        return panel
-    end
-
     if Settings and Settings.RegisterCanvasLayoutCategory then
         local category = Settings.RegisterCanvasLayoutCategory(panel, panel.name or "Portal Roulette")
         if Settings.RegisterAddOnCategory then
             Settings.RegisterAddOnCategory(category)
         end
         return category
+    end
+
+    if InterfaceOptions_AddCategory then
+        InterfaceOptions_AddCategory(panel)
+        return panel
     end
 
     return nil
@@ -30,8 +30,13 @@ local function openOptionsCategory(panel, categoryRef)
         end
         if categoryID then
             Settings.OpenToCategory(categoryID)
+            Settings.OpenToCategory(categoryID)
             return
         end
+    end
+
+    if Settings and Settings.OpenToCategory then
+        return
     end
 
     if InterfaceOptionsFrame_OpenToCategory then
@@ -47,6 +52,14 @@ local utilityLabelByMode = {
     [ns.UtilityMode.RANDOM] = "Random",
 }
 
+local function createSectionHeader(parent, text, x, y)
+    local header = parent:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+    header:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
+    header:SetText(text)
+    header:SetTextColor(0.92, 0.78, 1.0)
+    return header
+end
+
 local function createCheckbox(parent, text, x, y)
     local checkbox = CreateFrame("CheckButton", nil, parent, "InterfaceOptionsCheckButtonTemplate")
     checkbox:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
@@ -58,6 +71,19 @@ local function createCheckbox(parent, text, x, y)
     end
     textRegion:SetText(text)
     return checkbox
+end
+
+local function createRadio(parent, text, x, y)
+    local radio = CreateFrame("CheckButton", nil, parent, "UIRadioButtonTemplate")
+    radio:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
+    local textRegion = radio.text or radio.Text
+    if not textRegion then
+        textRegion = radio:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+        textRegion:SetPoint("LEFT", radio, "RIGHT", 4, 0)
+        radio.Text = textRegion
+    end
+    textRegion:SetText(text)
+    return radio
 end
 
 local function applyAllSettings()
@@ -91,6 +117,9 @@ function OptionsPanel:RefreshControls()
     self.cameraModeCheckbox:SetChecked(ns.db.cinematicCamera)
     self.lockLauncherCheckbox:SetChecked(ns.db.lockLauncher)
     self.minimapVisibilityCheckbox:SetChecked(ns.db.showMinimapButton)
+    self.showOptionsButtonCheckbox:SetChecked(ns.db.showOptionsButton ~= false)
+    self.showCloseButtonCheckbox:SetChecked(ns.db.showCloseButton ~= false)
+    self.showReagentPanelCheckbox:SetChecked(ns.db.showReagentPanel ~= false)
     self.soundsEnabledCheckbox:SetChecked(ns.db.soundsEnabled)
     self.hoverSoundsEnabledCheckbox:SetChecked(ns.db.hoverSoundsEnabled)
     self.wheelAnimationCheckbox:SetChecked(ns.db.enableWheelAnimation)
@@ -100,9 +129,6 @@ function OptionsPanel:RefreshControls()
     self.hoverAnimationsCheckbox:SetChecked(ns.db.hoverAnimationsEnabled)
     self.clickPulseCheckbox:SetChecked(ns.db.clickPulseEnabled)
     self.nodeStaggerCheckbox:SetChecked(ns.db.nodeStaggerEnabled)
-    self.portalVortexCheckbox:SetChecked(ns.db.portalVortexEnabled)
-    self.portalVortexIdleCheckbox:SetChecked(ns.db.portalVortexIdleEnabled)
-    self.portalVortexMotesCheckbox:SetChecked(ns.db.portalVortexMotesEnabled)
     self.broadcastPortalsCheckbox:SetChecked(ns.db.broadcastPortals)
     self.broadcastTeleportsCheckbox:SetChecked(ns.db.broadcastTeleports)
     self.broadcastStartCheckbox:SetChecked(ns.db.broadcastOnStart)
@@ -113,8 +139,6 @@ function OptionsPanel:RefreshControls()
     self.scaleValueText:SetText(string.format("%.2f", ns.db.uiScale or 1))
     self.animationIntensitySlider:SetValue(ns.db.animationIntensity or 1)
     self.animationIntensityValueText:SetText(string.format("%.2f", ns.db.animationIntensity or 1))
-    self.portalVortexIntensitySlider:SetValue(ns.db.portalVortexIntensity or 1)
-    self.portalVortexIntensityValueText:SetText(string.format("%.2f", ns.db.portalVortexIntensity or 1))
 end
 
 function OptionsPanel:Create()
@@ -126,26 +150,46 @@ function OptionsPanel:Create()
     panel.name = "Portal Roulette"
 
     panel.icon = panel:CreateTexture(nil, "ARTWORK")
-    panel.icon:SetSize(20, 20)
+    panel.icon:SetSize(28, 28)
     panel.icon:SetPoint("TOPLEFT", 16, -16)
     panel.icon:SetTexture(ns.Media.ICON_PORTAL_ROULETTE or ns.Media.ICON_PORTAL_ROULETTE_64 or ns.Media.ICON_RUNE_TELEPORT_CUSTOM)
     panel.icon:SetTexCoord(0.06, 0.94, 0.06, 0.94)
 
     panel.title = panel:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
-    panel.title:SetPoint("LEFT", panel.icon, "RIGHT", 8, 0)
+    panel.title:SetPoint("LEFT", panel.icon, "RIGHT", 10, 4)
     panel.title:SetText("Portal Roulette")
 
     panel.subtitle = panel:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
-    panel.subtitle:SetPoint("TOPLEFT", panel.title, "BOTTOMLEFT", 0, -8)
+    panel.subtitle:SetPoint("TOPLEFT", panel.title, "BOTTOMLEFT", 0, -4)
     panel.subtitle:SetText("Mage-only floating teleport/portal roulette.")
 
-    local utilityTitle = panel:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-    utilityTitle:SetPoint("TOPLEFT", panel.subtitle, "BOTTOMLEFT", 0, -16)
-    utilityTitle:SetText("Utility button mode")
+    -- Scrollable content area (panel chrome may be shorter than full content)
+    local scroll = CreateFrame("ScrollFrame", "PortalRouletteOptionsScroll", panel, "UIPanelScrollFrameTemplate")
+    scroll:SetPoint("TOPLEFT", panel, "TOPLEFT", 8, -56)
+    scroll:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -28, 48)
 
-    for index, mode in ipairs(ns.UtilityItems:GetModeOrder()) do
-        local check = createCheckbox(panel, utilityLabelByMode[mode], 28, -86 - ((index - 1) * 28))
-        check:SetScript("OnClick", function(selfButton)
+    local content = CreateFrame("Frame", nil, scroll)
+    content:SetSize(560, 720)
+    scroll:SetScrollChild(content)
+
+    -- Layout constants (anchored inside `content`)
+    local LEFT_X, RIGHT_X = 16, 312
+    local INDENT = 16
+    local TOP = -12
+    local SECTION_GAP = 16
+    local ROW_GAP = 26
+    local HEADER_TO_ROW = 24
+
+    -- ============= LEFT COLUMN =============
+    local leftY = TOP
+
+    createSectionHeader(content, "Utility Button", LEFT_X, leftY)
+    leftY = leftY - HEADER_TO_ROW
+
+    local modeOrder = ns.UtilityItems:GetModeOrder()
+    for _, mode in ipairs(modeOrder) do
+        local radio = createRadio(content, utilityLabelByMode[mode], LEFT_X + INDENT, leftY)
+        radio:SetScript("OnClick", function(selfButton)
             ns.db.utilityMode = mode
             OptionsPanel:RefreshControls()
             applyAllSettings()
@@ -153,99 +197,203 @@ function OptionsPanel:Create()
                 selfButton:SetChecked(true)
             end
         end)
-        self.utilityButtons[mode] = check
+        self.utilityButtons[mode] = radio
+        leftY = leftY - ROW_GAP
     end
 
-    self.showKarazhanCheckbox = createCheckbox(panel, "Show unavailable Karazhan node", 16, -218)
+    leftY = leftY - SECTION_GAP
+    createSectionHeader(content, "Group Broadcasts", LEFT_X, leftY)
+    leftY = leftY - HEADER_TO_ROW
+
+    self.broadcastPortalsCheckbox = createCheckbox(content, "Broadcast portals to group", LEFT_X + INDENT, leftY)
+    self.broadcastPortalsCheckbox:SetScript("OnClick", function(selfButton)
+        ns.db.broadcastPortals = selfButton:GetChecked() and true or false
+    end)
+    leftY = leftY - ROW_GAP
+
+    self.broadcastTeleportsCheckbox = createCheckbox(content, "Broadcast teleports to group", LEFT_X + INDENT, leftY)
+    self.broadcastTeleportsCheckbox:SetScript("OnClick", function(selfButton)
+        ns.db.broadcastTeleports = selfButton:GetChecked() and true or false
+    end)
+    leftY = leftY - ROW_GAP
+
+    self.broadcastStartCheckbox = createCheckbox(content, "Broadcast when cast starts", LEFT_X + INDENT, leftY)
+    self.broadcastStartCheckbox:SetScript("OnClick", function(selfButton)
+        ns.db.broadcastOnStart = selfButton:GetChecked() and true or false
+    end)
+    leftY = leftY - ROW_GAP
+
+    self.broadcastSuccessCheckbox = createCheckbox(content, "Broadcast when cast succeeds", LEFT_X + INDENT, leftY)
+    self.broadcastSuccessCheckbox:SetScript("OnClick", function(selfButton)
+        ns.db.broadcastOnSuccess = selfButton:GetChecked() and true or false
+    end)
+    leftY = leftY - ROW_GAP
+
+    self.confirmTeleportCheckbox = createCheckbox(content, "Confirm teleports while grouped", LEFT_X + INDENT, leftY)
+    self.confirmTeleportCheckbox:SetScript("OnClick", function(selfButton)
+        ns.db.confirmGroupedTeleport = selfButton:GetChecked() and true or false
+    end)
+    leftY = leftY - ROW_GAP
+
+    -- ============= RIGHT COLUMN =============
+    local rightY = TOP
+
+    createSectionHeader(content, "Visibility & Behavior", RIGHT_X, rightY)
+    rightY = rightY - HEADER_TO_ROW
+
+    self.showKarazhanCheckbox = createCheckbox(content, "Show unavailable Karazhan node", RIGHT_X + INDENT, rightY)
     self.showKarazhanCheckbox:SetScript("OnClick", function(selfButton)
         ns.db.showUnavailableKarazhan = selfButton:GetChecked() and true or false
         applyAllSettings()
     end)
+    rightY = rightY - ROW_GAP
 
-    self.cameraModeCheckbox = createCheckbox(panel, "Enable cinematic camera mode", 16, -246)
+    self.cameraModeCheckbox = createCheckbox(content, "Enable cinematic camera mode", RIGHT_X + INDENT, rightY)
     self.cameraModeCheckbox:SetScript("OnClick", function(selfButton)
         ns.db.cinematicCamera = selfButton:GetChecked() and true or false
         applyAllSettings()
     end)
+    rightY = rightY - ROW_GAP
 
-    self.lockLauncherCheckbox = createCheckbox(panel, "Lock launcher button", 16, -274)
+    self.lockLauncherCheckbox = createCheckbox(content, "Lock launcher button", RIGHT_X + INDENT, rightY)
     self.lockLauncherCheckbox:SetScript("OnClick", function(selfButton)
         ns.db.lockLauncher = selfButton:GetChecked() and true or false
     end)
+    rightY = rightY - ROW_GAP
 
-    self.minimapVisibilityCheckbox = createCheckbox(panel, "Show minimap button", 16, -302)
+    self.minimapVisibilityCheckbox = createCheckbox(content, "Show minimap button", RIGHT_X + INDENT, rightY)
     self.minimapVisibilityCheckbox:SetScript("OnClick", function(selfButton)
         ns.db.showMinimapButton = selfButton:GetChecked() and true or false
         applyAllSettings()
     end)
+    rightY = rightY - ROW_GAP
 
-    self.soundsEnabledCheckbox = createCheckbox(panel, "Enable addon sounds", 16, -330)
+    self.showOptionsButtonCheckbox = createCheckbox(content, "Show options (gear) button", RIGHT_X + INDENT, rightY)
+    self.showOptionsButtonCheckbox:SetScript("OnClick", function(selfButton)
+        ns.db.showOptionsButton = selfButton:GetChecked() and true or false
+        applyAllSettings()
+    end)
+    rightY = rightY - ROW_GAP
+
+    self.showCloseButtonCheckbox = createCheckbox(content, "Show close button", RIGHT_X + INDENT, rightY)
+    self.showCloseButtonCheckbox:SetScript("OnClick", function(selfButton)
+        ns.db.showCloseButton = selfButton:GetChecked() and true or false
+        applyAllSettings()
+    end)
+    rightY = rightY - ROW_GAP
+
+    self.showReagentPanelCheckbox = createCheckbox(content, "Show reagent panel", RIGHT_X + INDENT, rightY)
+    self.showReagentPanelCheckbox:SetScript("OnClick", function(selfButton)
+        ns.db.showReagentPanel = selfButton:GetChecked() and true or false
+        applyAllSettings()
+    end)
+    rightY = rightY - ROW_GAP
+
+    self.soundsEnabledCheckbox = createCheckbox(content, "Enable addon sounds", RIGHT_X + INDENT, rightY)
     self.soundsEnabledCheckbox:SetScript("OnClick", function(selfButton)
         ns.db.soundsEnabled = selfButton:GetChecked() and true or false
     end)
+    rightY = rightY - ROW_GAP
 
-    self.hoverSoundsEnabledCheckbox = createCheckbox(panel, "Enable hover sounds", 16, -358)
+    self.hoverSoundsEnabledCheckbox = createCheckbox(content, "Enable hover sounds", RIGHT_X + INDENT, rightY)
     self.hoverSoundsEnabledCheckbox:SetScript("OnClick", function(selfButton)
         ns.db.hoverSoundsEnabled = selfButton:GetChecked() and true or false
     end)
+    rightY = rightY - ROW_GAP
 
-    self.wheelAnimationCheckbox = createCheckbox(panel, "Enable subtle wheel animation", 16, -386)
+    self.wheelAnimationCheckbox = createCheckbox(content, "Enable subtle wheel animation", RIGHT_X + INDENT, rightY)
     self.wheelAnimationCheckbox:SetScript("OnClick", function(selfButton)
         ns.db.enableWheelAnimation = selfButton:GetChecked() and true or false
     end)
+    rightY = rightY - ROW_GAP
 
-    local animationTitle = panel:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-    animationTitle:SetPoint("TOPLEFT", panel, "TOPLEFT", 300, -218)
-    animationTitle:SetText("Animation polish")
+    rightY = rightY - SECTION_GAP
+    createSectionHeader(content, "Animation Polish", RIGHT_X, rightY)
+    rightY = rightY - HEADER_TO_ROW
 
-    self.animationsEnabledCheckbox = createCheckbox(panel, "Enable animations", 300, -246)
+    self.animationsEnabledCheckbox = createCheckbox(content, "Enable animations", RIGHT_X + INDENT, rightY)
     self.animationsEnabledCheckbox:SetScript("OnClick", function(selfButton)
         ns.db.animationsEnabled = selfButton:GetChecked() and true or false
         applyAllSettings()
     end)
+    rightY = rightY - ROW_GAP
 
-    self.openCloseAnimationsCheckbox = createCheckbox(panel, "Opening/closing animation", 300, -274)
+    self.openCloseAnimationsCheckbox = createCheckbox(content, "Opening/closing animation", RIGHT_X + INDENT, rightY)
     self.openCloseAnimationsCheckbox:SetScript("OnClick", function(selfButton)
         ns.db.openCloseAnimationsEnabled = selfButton:GetChecked() and true or false
     end)
+    rightY = rightY - ROW_GAP
 
-    self.idleAnimationsCheckbox = createCheckbox(panel, "Idle wheel animation", 300, -302)
+    self.idleAnimationsCheckbox = createCheckbox(content, "Idle wheel animation", RIGHT_X + INDENT, rightY)
     self.idleAnimationsCheckbox:SetScript("OnClick", function(selfButton)
         ns.db.idleAnimationsEnabled = selfButton:GetChecked() and true or false
         ns.db.enableWheelAnimation = ns.db.idleAnimationsEnabled
         OptionsPanel:RefreshControls()
         applyAllSettings()
     end)
+    rightY = rightY - ROW_GAP
 
-    self.hoverAnimationsCheckbox = createCheckbox(panel, "Hover animation", 300, -330)
+    self.hoverAnimationsCheckbox = createCheckbox(content, "Hover animation", RIGHT_X + INDENT, rightY)
     self.hoverAnimationsCheckbox:SetScript("OnClick", function(selfButton)
         ns.db.hoverAnimationsEnabled = selfButton:GetChecked() and true or false
     end)
+    rightY = rightY - ROW_GAP
 
-    self.clickPulseCheckbox = createCheckbox(panel, "Click pulse", 300, -358)
+    self.clickPulseCheckbox = createCheckbox(content, "Click pulse", RIGHT_X + INDENT, rightY)
     self.clickPulseCheckbox:SetScript("OnClick", function(selfButton)
         ns.db.clickPulseEnabled = selfButton:GetChecked() and true or false
     end)
+    rightY = rightY - ROW_GAP
 
-    self.nodeStaggerCheckbox = createCheckbox(panel, "Stagger node reveal", 300, -386)
+    self.nodeStaggerCheckbox = createCheckbox(content, "Stagger node reveal", RIGHT_X + INDENT, rightY)
     self.nodeStaggerCheckbox:SetScript("OnClick", function(selfButton)
         ns.db.nodeStaggerEnabled = selfButton:GetChecked() and true or false
     end)
+    rightY = rightY - ROW_GAP
 
-    local intensitySlider = CreateFrame("Slider", "PortalRouletteAnimationIntensitySlider", panel, "OptionsSliderTemplate")
-    intensitySlider:SetPoint("TOPLEFT", panel, "TOPLEFT", 304, -434)
-    intensitySlider:SetWidth(180)
+    -- ============= SCALES (full width) =============
+    local scalesY = math.min(leftY, rightY) - SECTION_GAP
+    createSectionHeader(content, "Scales", LEFT_X, scalesY)
+    local sliderY = scalesY - 32
+
+    local scaleSlider = CreateFrame("Slider", "PortalRouletteScaleSlider", content, "OptionsSliderTemplate")
+    scaleSlider:SetPoint("TOPLEFT", content, "TOPLEFT", LEFT_X + 4, sliderY)
+    scaleSlider:SetWidth(220)
+    scaleSlider:SetMinMaxValues(0.75, 1.35)
+    scaleSlider:SetValueStep(0.01)
+    if scaleSlider.SetObeyStepOnDrag then
+        scaleSlider:SetObeyStepOnDrag(true)
+    end
+    _G[scaleSlider:GetName() .. "Low"]:SetText("0.75")
+    _G[scaleSlider:GetName() .. "High"]:SetText("1.35")
+    _G[scaleSlider:GetName() .. "Text"]:SetText("UI Scale")
+
+    self.scaleValueText = content:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+    self.scaleValueText:SetPoint("LEFT", scaleSlider, "RIGHT", 12, 0)
+
+    scaleSlider:SetScript("OnValueChanged", function(_, value)
+        ns.db.uiScale = value
+        OptionsPanel.scaleValueText:SetText(string.format("%.2f", value))
+        if ns.RouletteFrame then
+            ns.RouletteFrame:ApplyScale()
+        end
+    end)
+    self.scaleSlider = scaleSlider
+
+    local intensitySlider = CreateFrame("Slider", "PortalRouletteAnimationIntensitySlider", content, "OptionsSliderTemplate")
+    intensitySlider:SetPoint("TOPLEFT", content, "TOPLEFT", RIGHT_X + 4, sliderY)
+    intensitySlider:SetWidth(220)
     intensitySlider:SetMinMaxValues(0, 1)
     intensitySlider:SetValueStep(0.05)
     if intensitySlider.SetObeyStepOnDrag then
         intensitySlider:SetObeyStepOnDrag(true)
     end
-    _G[intensitySlider:GetName() .. "Low"]:SetText("0")
-    _G[intensitySlider:GetName() .. "High"]:SetText("1")
-    _G[intensitySlider:GetName() .. "Text"]:SetText("Animation intensity")
+    _G[intensitySlider:GetName() .. "Low"]:SetText("0.00")
+    _G[intensitySlider:GetName() .. "High"]:SetText("1.00")
+    _G[intensitySlider:GetName() .. "Text"]:SetText("Animation Intensity")
 
-    self.animationIntensityValueText = panel:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
-    self.animationIntensityValueText:SetPoint("LEFT", intensitySlider, "RIGHT", 16, 0)
+    self.animationIntensityValueText = content:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+    self.animationIntensityValueText:SetPoint("LEFT", intensitySlider, "RIGHT", 12, 0)
 
     intensitySlider:SetScript("OnValueChanged", function(_, value)
         ns.db.animationIntensity = value
@@ -253,99 +401,10 @@ function OptionsPanel:Create()
     end)
     self.animationIntensitySlider = intensitySlider
 
-    local vortexTitle = panel:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-    vortexTitle:SetPoint("TOPLEFT", panel, "TOPLEFT", 300, -482)
-    vortexTitle:SetText("Portal vortex")
-
-    self.portalVortexCheckbox = createCheckbox(panel, "Enable portal vortex", 300, -510)
-    self.portalVortexCheckbox:SetScript("OnClick", function(selfButton)
-        ns.db.portalVortexEnabled = selfButton:GetChecked() and true or false
-        applyAllSettings()
-    end)
-
-    self.portalVortexIdleCheckbox = createCheckbox(panel, "Idle vortex motion", 300, -538)
-    self.portalVortexIdleCheckbox:SetScript("OnClick", function(selfButton)
-        ns.db.portalVortexIdleEnabled = selfButton:GetChecked() and true or false
-    end)
-
-    self.portalVortexMotesCheckbox = createCheckbox(panel, "Vortex motes", 300, -566)
-    self.portalVortexMotesCheckbox:SetScript("OnClick", function(selfButton)
-        ns.db.portalVortexMotesEnabled = selfButton:GetChecked() and true or false
-    end)
-
-    local vortexIntensitySlider = CreateFrame("Slider", "PortalRouletteVortexIntensitySlider", panel, "OptionsSliderTemplate")
-    vortexIntensitySlider:SetPoint("TOPLEFT", panel, "TOPLEFT", 304, -614)
-    vortexIntensitySlider:SetWidth(180)
-    vortexIntensitySlider:SetMinMaxValues(0, 1)
-    vortexIntensitySlider:SetValueStep(0.05)
-    if vortexIntensitySlider.SetObeyStepOnDrag then
-        vortexIntensitySlider:SetObeyStepOnDrag(true)
-    end
-    _G[vortexIntensitySlider:GetName() .. "Low"]:SetText("0")
-    _G[vortexIntensitySlider:GetName() .. "High"]:SetText("1")
-    _G[vortexIntensitySlider:GetName() .. "Text"]:SetText("Vortex intensity")
-
-    self.portalVortexIntensityValueText = panel:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
-    self.portalVortexIntensityValueText:SetPoint("LEFT", vortexIntensitySlider, "RIGHT", 16, 0)
-
-    vortexIntensitySlider:SetScript("OnValueChanged", function(_, value)
-        ns.db.portalVortexIntensity = value
-        OptionsPanel.portalVortexIntensityValueText:SetText(string.format("%.2f", value))
-    end)
-    self.portalVortexIntensitySlider = vortexIntensitySlider
-
-    self.broadcastPortalsCheckbox = createCheckbox(panel, "Broadcast portals to group", 16, -414)
-    self.broadcastPortalsCheckbox:SetScript("OnClick", function(selfButton)
-        ns.db.broadcastPortals = selfButton:GetChecked() and true or false
-    end)
-
-    self.broadcastTeleportsCheckbox = createCheckbox(panel, "Broadcast teleports to group", 16, -442)
-    self.broadcastTeleportsCheckbox:SetScript("OnClick", function(selfButton)
-        ns.db.broadcastTeleports = selfButton:GetChecked() and true or false
-    end)
-
-    self.broadcastStartCheckbox = createCheckbox(panel, "Broadcast when cast starts", 16, -470)
-    self.broadcastStartCheckbox:SetScript("OnClick", function(selfButton)
-        ns.db.broadcastOnStart = selfButton:GetChecked() and true or false
-    end)
-
-    self.broadcastSuccessCheckbox = createCheckbox(panel, "Broadcast when cast succeeds", 16, -498)
-    self.broadcastSuccessCheckbox:SetScript("OnClick", function(selfButton)
-        ns.db.broadcastOnSuccess = selfButton:GetChecked() and true or false
-    end)
-
-    self.confirmTeleportCheckbox = createCheckbox(panel, "Confirm teleports while grouped", 16, -526)
-    self.confirmTeleportCheckbox:SetScript("OnClick", function(selfButton)
-        ns.db.confirmGroupedTeleport = selfButton:GetChecked() and true or false
-    end)
-
-    local slider = CreateFrame("Slider", "PortalRouletteScaleSlider", panel, "OptionsSliderTemplate")
-    slider:SetPoint("TOPLEFT", panel, "TOPLEFT", 20, -578)
-    slider:SetWidth(220)
-    slider:SetMinMaxValues(0.75, 1.35)
-    slider:SetValueStep(0.01)
-    if slider.SetObeyStepOnDrag then
-        slider:SetObeyStepOnDrag(true)
-    end
-    _G[slider:GetName() .. "Low"]:SetText("0.75")
-    _G[slider:GetName() .. "High"]:SetText("1.35")
-    _G[slider:GetName() .. "Text"]:SetText("UI Scale")
-
-    self.scaleValueText = panel:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
-    self.scaleValueText:SetPoint("LEFT", slider, "RIGHT", 16, 0)
-
-    slider:SetScript("OnValueChanged", function(_, value)
-        ns.db.uiScale = value
-        OptionsPanel.scaleValueText:SetText(string.format("%.2f", value))
-        if ns.RouletteFrame then
-            ns.RouletteFrame:ApplyScale()
-        end
-    end)
-    self.scaleSlider = slider
-
+    -- ============= RESET BUTTON (fixed at panel bottom, outside scroll) =============
     local resetButton = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
     resetButton:SetSize(180, 24)
-    resetButton:SetPoint("TOPLEFT", slider, "BOTTOMLEFT", 0, -18)
+    resetButton:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 16, 14)
     resetButton:SetText("Reset Positions")
     resetButton:SetScript("OnClick", function()
         ns.DB:ResetPositions()

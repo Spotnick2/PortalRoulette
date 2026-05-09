@@ -123,6 +123,12 @@ function ReagentPanel:Refresh()
     local frame = self.frame
     if not frame then return end
 
+    if ns.db and ns.db.showReagentPanel == false then
+        frame:Hide()
+        return
+    end
+    frame:Show()
+
     for _, row in ipairs(frame.rows) do
         local count = GetItemCount(row.itemID, false, false) or 0
         row.count:SetText(count > 0 and count or "0")
