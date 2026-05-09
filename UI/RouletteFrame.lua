@@ -421,7 +421,7 @@ function RouletteFrame:CreateMainFrame()
     local frame = CreateFrame("Frame", "PortalRouletteMainFrame", overlayParent)
     frame:SetSize(780, 760)
     frame:SetFrameStrata("FULLSCREEN")
-    frame:EnableMouse(true)
+    frame:EnableMouse(false)
     frame:SetMovable(true)
     frame:RegisterForDrag("LeftButton")
     frame:SetClampedToScreen(true)
@@ -504,10 +504,7 @@ function RouletteFrame:CreateMainFrame()
     frame:EnableKeyboard(false)
     frame:SetScript("OnKeyDown", function(_, key)
         if key == "ESCAPE" then
-            if stopPlayerCastOrTargeting() then
-                return
-            end
-            RouletteFrame:Close()
+            RouletteFrame:HandleEscape()
             return
         end
         if frame.SetPropagateKeyboardInput then
@@ -517,6 +514,9 @@ function RouletteFrame:CreateMainFrame()
 
     frame:SetScript("OnShow", function()
         frame:EnableKeyboard(true)
+        if SetOverrideBinding then
+            SetOverrideBinding(frame, true, "ESCAPE", "PORTALROULETTE_ESCAPE")
+        end
         if frame.SetPropagateKeyboardInput then
             frame:SetPropagateKeyboardInput(false)
         end
@@ -529,6 +529,9 @@ function RouletteFrame:CreateMainFrame()
     end)
 
     frame:SetScript("OnHide", function()
+        if ClearOverrideBindings then
+            ClearOverrideBindings(frame)
+        end
         frame:EnableKeyboard(false)
         frame.dimmer:Hide()
         ns.CameraMode:Exit()
@@ -553,6 +556,13 @@ function RouletteFrame:CreateMainFrame()
         end
         if RouletteFrame.castBarStart then
             RouletteFrame:UpdateCastBar()
+        end
+        RouletteFrame.utilityRefreshElapsed = (RouletteFrame.utilityRefreshElapsed or 0) + (elapsed or 0)
+        if RouletteFrame.utilityRefreshElapsed >= 0.25 then
+            RouletteFrame.utilityRefreshElapsed = 0
+            if not (InCombatLockdown and InCombatLockdown()) then
+                RouletteFrame:RefreshCenterUtility()
+            end
         end
     end)
 
@@ -705,7 +715,7 @@ function RouletteFrame:CreateHeaderControls()
 
     parent.gearButton = CreateFrame("Button", nil, parent)
     parent.gearButton:SetSize(34, 34)
-    parent.gearButton:SetPoint("BOTTOM", frame.wheel, "TOP", 76, 10)
+    parent.gearButton:SetPoint("LEFT", parent.headerText, "RIGHT", 34, -18)
 
     parent.gearButton.bg = parent.gearButton:CreateTexture(nil, "BACKGROUND")
     parent.gearButton.bg:SetAllPoints()
@@ -782,7 +792,7 @@ function RouletteFrame:CreatePanels()
 
     frame.castBar = CreateFrame("Frame", nil, frame.lowerGroup)
     frame.castBar:SetSize(286, 22)
-    frame.castBar:SetPoint("TOP", frame.wheel, "BOTTOM", 0, -4)
+    frame.castBar:SetPoint("BOTTOM", frame.hintFrame, "TOP", 0, 4)
     frame.castBar:Hide()
 
     frame.castBar.bg = frame.castBar:CreateTexture(nil, "BACKGROUND")
@@ -960,6 +970,13 @@ function RouletteFrame:BuildNodeState(destination, faction)
     }
 end
 
+function RouletteFrame:HandleEscape()
+    if stopPlayerCastOrTargeting() then
+        return
+    end
+    self:Close()
+end
+
 StaticPopupDialogs = StaticPopupDialogs or {}
 StaticPopupDialogs.PORTALROULETTE_CONFIRM_TELEPORT = {
     text = "Teleport to %s while grouped?",
@@ -1118,7 +1135,7 @@ function RouletteFrame:RefreshCenterUtility()
     centerButton.tooltipTitle = (source and source.label) or "Hearthstone"
     if source and source.itemID == ns.Constants.ITEM_HEARTHSTONE and GetBindLocation then
         local bindLocation = GetBindLocation()
-        centerButton.tooltipDetail = bindLocation and ("Bound to: " .. bindLocation) or "Hearthstone bind location unavailable."
+        centerButton.tooltipDetail = bindLocation and ("Teleport to " .. bindLocation .. ".") or "Hearthstone bind location unavailable."
     else
         centerButton.tooltipDetail = enabled and "Click to use selected utility." or "Selected utility is unavailable."
     end

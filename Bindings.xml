@@ -8,4 +8,7 @@
     <Binding name="PORTALROULETTE_PORTALS">
         PortalRoulette_OpenPortals()
     </Binding>
+    <Binding name="PORTALROULETTE_ESCAPE">
+        PortalRoulette_Escape()
+    </Binding>
 </Bindings>

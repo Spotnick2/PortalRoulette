@@ -12,6 +12,7 @@ BINDING_HEADER_PORTALROULETTE = "Portal Roulette"
 BINDING_NAME_PORTALROULETTE_TOGGLE = "Open Portal Roulette"
 BINDING_NAME_PORTALROULETTE_TELEPORTS = "Open Teleports"
 BINDING_NAME_PORTALROULETTE_PORTALS = "Open Portals"
+BINDING_NAME_PORTALROULETTE_ESCAPE = "Cancel Portal Roulette Cast"
 
 function PortalRoulette_Toggle()
     if ns.RouletteFrame then
@@ -28,6 +29,12 @@ end
 function PortalRoulette_OpenPortals()
     if ns.RouletteFrame then
         ns.RouletteFrame:Open(ns.Mode.PORTAL)
+    end
+end
+
+function PortalRoulette_Escape()
+    if ns.RouletteFrame and ns.RouletteFrame.HandleEscape then
+        ns.RouletteFrame:HandleEscape()
     end
 end
 

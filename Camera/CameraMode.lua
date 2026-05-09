@@ -109,6 +109,16 @@ function CameraMode:_StopYaw()
     if type(MoveViewLeftStop)  == "function" then pcall(MoveViewLeftStop)  end
 end
 
+function CameraMode:_StopYawDirection(direction)
+    if direction and direction > 0 and type(MoveViewRightStop) == "function" then
+        pcall(MoveViewRightStop)
+    elseif direction and direction < 0 and type(MoveViewLeftStop) == "function" then
+        pcall(MoveViewLeftStop)
+    else
+        self:_StopYaw()
+    end
+end
+
 function CameraMode:_ApplyYaw(speed)
     speed = tonumber(speed) or 0
     if math.abs(speed) <= 0.0001 then return end
@@ -245,8 +255,9 @@ function CameraMode:UpdateAnimation(elapsed)
         if self.orbitElapsed >= ORBIT_HALF_PERIOD then
             -- Reverse direction so the character orbits back toward facing.
             self.orbitElapsed = self.orbitElapsed - ORBIT_HALF_PERIOD
+            local oldDir = self.yawDir
             self.yawDir = -self.yawDir
-            self:_StopYaw()
+            self:_StopYawDirection(oldDir)
             self:_ApplyYaw(self.yawDir * ORBIT_SPEED)
         end
         return
