@@ -51,6 +51,7 @@ local UNMOUNTED_ZOOM         = 2.5   -- Narcissus close-up goal with dynamic pit
 local MOUNTED_ZOOM           = 8.0   -- Narcissus default for mounted
 -- Narcissus eases into its portrait angle instead of snapping through a full spin.
 local ENTER_DURATION         = 1.50
+local CAST_RESET_DURATION    = 0.90
 local EXIT_DURATION          = 0.35
 local ORBIT_SPEED            = 0.005
 local ENTER_YAW_FROM_SPEED   = 1.0
@@ -186,6 +187,31 @@ function CameraMode:Exit()
     if self.animFrame then self.animFrame:Show() end
 end
 
+function CameraMode:ResetOrbitForCast()
+    if not self.active or self.mode == "exit" then return end
+    if not self:IsSupported() then return end
+
+    self:_StopYaw()
+    if type(SetView) == "function" then pcall(SetView, 2) end
+    self:_SetZoom(self:_GetTargetZoom())
+
+    if type(SetCVar) == "function" then
+        pcall(SetCVar, "cameraViewBlendStyle", "2")
+        pcall(SetCVar, "test_cameraDynamicPitch", "1")
+        pcall(SetCVar, "test_cameraOverShoulder", self:_GetShoulderOffset())
+    end
+
+    local dir = YAW_DIRECTION < 0 and -1 or 1
+    self.yawDir       = dir
+    self.yawFromSpeed = ENTER_YAW_FROM_SPEED
+    self.yawToSpeed   = ORBIT_SPEED
+    self.entryDuration = CAST_RESET_DURATION
+    self.mode = "enter"
+    self.elapsed = 0
+    self:_ApplyYaw(dir * self.yawFromSpeed)
+    if self.animFrame then self.animFrame:Show() end
+end
+
 function CameraMode:ForceRestore(reason)
     self:_StopYaw()
     if self.animFrame then self.animFrame:Hide() end
@@ -219,6 +245,7 @@ function CameraMode:ForceRestore(reason)
     self.mode    = nil
     self.capture = nil
     self.elapsed = 0
+    self.entryDuration = nil
 end
 
 function CameraMode:UpdateAnimation(elapsed)
@@ -229,7 +256,7 @@ function CameraMode:UpdateAnimation(elapsed)
     self.elapsed = (self.elapsed or 0) + (elapsed or 0)
 
     if self.mode == "enter" then
-        local entryDur = math.max(0.01, ENTER_DURATION)
+        local entryDur = math.max(0.01, self.entryDuration or ENTER_DURATION)
         if self.elapsed < entryDur then
             -- Narcissus-style entry: ease from the initial portrait turn down to orbit speed.
             if self.yawDir and self.yawFromSpeed and self.yawToSpeed then
@@ -241,6 +268,7 @@ function CameraMode:UpdateAnimation(elapsed)
             self:_StopYaw()
             self:_ApplyYaw(self.yawDir * ORBIT_SPEED)
             self.mode = "orbit"
+            self.entryDuration = nil
         end
         return
     end
@@ -274,7 +302,7 @@ CameraMode.eventFrame:SetScript("OnEvent", function(_, event, unit)
     if CameraMode.active then
         if event == "UNIT_SPELLCAST_START" or event == "UNIT_SPELLCAST_CHANNEL_START" then
             if unit == "player" then
-                CameraMode:Exit()
+                CameraMode:ResetOrbitForCast()
             end
             return
         end
