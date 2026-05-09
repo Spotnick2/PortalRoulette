@@ -9,7 +9,7 @@ ns.RouletteFrame = RouletteFrame
 local WHEEL_SIZE = 368
 local WHEEL_OFFSET_X = 30
 local WHEEL_OFFSET_Y = -166
-local HEADER_GAP = 54
+local HEADER_GAP = 46
 local NODE_SIZE = 66
 local NODE_RADIUS = 128
 local NODE_NAMEPLATE_W = 108
@@ -685,13 +685,16 @@ function RouletteFrame:CreateMainFrame()
             if RouletteFrame.factionAccent then
                 RouletteFrame.factionAccent:SetAlpha(0.18 + (math.sin(RouletteFrame.idlePulse * 1.25) * 0.025 * intensity))
             end
+            if RouletteFrame.centerCore then
+                RouletteFrame.centerCore:SetAlpha(0.10 + (math.sin(RouletteFrame.idlePulse * 1.8) * 0.025 * intensity))
+            end
         else
             if RouletteFrame.factionAccent then
                 RouletteFrame.factionAccent:SetAlpha(0.18)
             end
-        end
-        if RouletteFrame.centerCore then
-            RouletteFrame.centerCore:SetAlpha(0)
+            if RouletteFrame.centerCore then
+                RouletteFrame.centerCore:SetAlpha(0.10)
+            end
         end
         if RouletteFrame.castBarStart then
             RouletteFrame:UpdateCastBar()
@@ -752,10 +755,11 @@ function RouletteFrame:CreateWheel()
     self.centerCore:SetPoint("CENTER", frame.wheel, "CENTER")
     self.centerCore:SetTexture(ns.Media.CORE_VORTEX)
     self.centerCore:SetBlendMode("ADD")
-    self.centerCore:SetAlpha(0)
+    self.centerCore:SetVertexColor(0.36, 0.64, 1.0, 1)
+    self.centerCore:SetAlpha(0.10)
 
     frame.centerUtilityButton = CreateFrame("Button", nil, frame.wheel, "SecureActionButtonTemplate")
-    frame.centerUtilityButton:SetSize(100, 100)
+    frame.centerUtilityButton:SetSize(104, 104)
     frame.centerUtilityButton:SetPoint("CENTER", frame.wheel, "CENTER")
     frame.centerUtilityButton:RegisterForClicks("AnyDown", "AnyUp")
     frame.centerUtilityButton:EnableMouse(true)
@@ -779,6 +783,7 @@ function RouletteFrame:CreateWheel()
 
     frame.centerUtilityButton.cooldownText = frame.centerUtilityButton:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     frame.centerUtilityButton.cooldownText:SetPoint("CENTER", frame.centerUtilityButton, "CENTER", 0, 0)
+    frame.centerUtilityButton.cooldownText:SetTextColor(1, 1, 1, 1)
     frame.centerUtilityButton.cooldownText:SetShadowColor(0, 0, 0, 1)
     frame.centerUtilityButton.cooldownText:SetShadowOffset(1, -1)
     frame.centerUtilityButton.cooldownText:Hide()
@@ -827,23 +832,23 @@ function RouletteFrame:CreateHeader()
     parent.headerText = parent:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge")
     parent.headerText:SetPoint("BOTTOM", frame.wheel, "TOP", 0, HEADER_GAP)
     parent.headerText:SetText("PORTAL ROULETTE")
-    parent.headerText:SetTextColor(0.92, 0.88, 1.0)
-    parent.headerText:SetShadowColor(0.35, 0.0, 0.85, 0.95)
+    parent.headerText:SetTextColor(0.90, 0.88, 1.0)
+    parent.headerText:SetShadowColor(0.26, 0.05, 0.66, 0.78)
     parent.headerText:SetShadowOffset(0, -2)
 
     parent.headerLeft = parent:CreateTexture(nil, "OVERLAY")
-    parent.headerLeft:SetSize(20, 20)
-    parent.headerLeft:SetPoint("RIGHT", parent.headerText, "LEFT", -12, 0)
+    parent.headerLeft:SetSize(18, 18)
+    parent.headerLeft:SetPoint("RIGHT", parent.headerText, "LEFT", -13, 0)
     parent.headerLeft:SetTexture("Interface\\Cooldown\\star4")
     parent.headerLeft:SetBlendMode("ADD")
-    parent.headerLeft:SetVertexColor(0.62, 0.40, 1.0, 0.95)
+    parent.headerLeft:SetVertexColor(0.52, 0.58, 1.0, 0.82)
 
     parent.headerRight = parent:CreateTexture(nil, "OVERLAY")
-    parent.headerRight:SetSize(20, 20)
-    parent.headerRight:SetPoint("LEFT", parent.headerText, "RIGHT", 12, 0)
+    parent.headerRight:SetSize(18, 18)
+    parent.headerRight:SetPoint("LEFT", parent.headerText, "RIGHT", 13, 0)
     parent.headerRight:SetTexture("Interface\\Cooldown\\star4")
     parent.headerRight:SetBlendMode("ADD")
-    parent.headerRight:SetVertexColor(0.62, 0.40, 1.0, 0.95)
+    parent.headerRight:SetVertexColor(0.52, 0.58, 1.0, 0.82)
 
     frame.headerText = parent.headerText
 end
@@ -864,8 +869,8 @@ function RouletteFrame:CreateHeaderControls()
     local parent = frame.headerGroup
 
     parent.gearButton = CreateFrame("Button", nil, parent)
-    parent.gearButton:SetSize(34, 34)
-    parent.gearButton:SetPoint("LEFT", parent.headerText, "RIGHT", 34, -18)
+    parent.gearButton:SetSize(32, 32)
+    parent.gearButton:SetPoint("LEFT", parent.headerText, "RIGHT", 32, -14)
 
     parent.gearButton.bg = parent.gearButton:CreateTexture(nil, "BACKGROUND")
     parent.gearButton.bg:SetAllPoints()
@@ -889,7 +894,7 @@ function RouletteFrame:CreateHeaderControls()
         selfButton.bg:SetTexCoord(0.04, 0.96, 0.04, 0.96)
     end)
     parent.gearButton:SetScript("OnEnter", function(selfButton)
-        selfButton.bg:SetVertexColor(1.25, 1.1, 1.35, 1)
+        selfButton.bg:SetVertexColor(1.08, 1.02, 1.16, 1)
         GameTooltip:SetOwner(selfButton, "ANCHOR_RIGHT")
         GameTooltip:SetText("Options", 0.8, 0.95, 1)
         GameTooltip:Show()
@@ -902,8 +907,8 @@ function RouletteFrame:CreateHeaderControls()
     frame.gearButton = parent.gearButton
 
     parent.closeButton = CreateFrame("Button", nil, parent)
-    parent.closeButton:SetSize(24, 24)
-    parent.closeButton:SetPoint("LEFT", parent.gearButton, "RIGHT", 8, 0)
+    parent.closeButton:SetSize(20, 20)
+    parent.closeButton:SetPoint("LEFT", parent.gearButton, "RIGHT", 6, 0)
     parent.closeButton:SetNormalTexture("Interface\\Buttons\\UI-Panel-MinimizeButton-Up")
     parent.closeButton:SetPushedTexture("Interface\\Buttons\\UI-Panel-MinimizeButton-Down")
     parent.closeButton:SetHighlightTexture("Interface\\Buttons\\UI-Panel-MinimizeButton-Highlight", "ADD")
