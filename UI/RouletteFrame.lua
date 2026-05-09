@@ -12,7 +12,7 @@ local WHEEL_OFFSET_Y = -166
 local HEADER_GAP = 54
 local NODE_SIZE = 66
 local NODE_RADIUS = 128
-local NODE_NAMEPLATE_W = 104
+local NODE_NAMEPLATE_W = 108
 local NODE_NAMEPLATE_H = 27
 local KARAZHAN_SIZE = 88
 local KARAZHAN_RADIUS = 216
@@ -245,18 +245,18 @@ end
 local function positionNameplateForAngle(button, angleDeg, isKarazhan)
     local angle = angleDeg % 360
     if isKarazhan then
-        ns.DestinationNode:SetNameplateAnchor(button, "TOP", "BOTTOM", 0, -2, 88, 46)
+        ns.DestinationNode:SetNameplateAnchor(button, "TOP", "BOTTOM", 0, -5, 94, 46)
         return
     end
 
     if angle == 90 then
-        ns.DestinationNode:SetNameplateAnchor(button, "BOTTOM", "TOP", 0, 3, NODE_NAMEPLATE_W, NODE_NAMEPLATE_H)
+        ns.DestinationNode:SetNameplateAnchor(button, "BOTTOM", "TOP", 0, 2, NODE_NAMEPLATE_W, NODE_NAMEPLATE_H)
     elseif angle == 270 then
-        ns.DestinationNode:SetNameplateAnchor(button, "TOP", "BOTTOM", 0, -3, NODE_NAMEPLATE_W, NODE_NAMEPLATE_H)
-    elseif angle == 30 or angle == 150 or angle == 210 or angle == 330 then
+        ns.DestinationNode:SetNameplateAnchor(button, "TOP", "BOTTOM", 0, -4, NODE_NAMEPLATE_W, NODE_NAMEPLATE_H)
+    elseif angle == 30 or angle == 150 then
         ns.DestinationNode:SetNameplateAnchor(button, "TOP", "BOTTOM", 0, -2, NODE_NAMEPLATE_W, NODE_NAMEPLATE_H)
-    elseif angle > 30 and angle < 150 then
-        ns.DestinationNode:SetNameplateAnchor(button, "BOTTOM", "TOP", 0, 3, NODE_NAMEPLATE_W, NODE_NAMEPLATE_H)
+    elseif angle == 210 or angle == 330 then
+        ns.DestinationNode:SetNameplateAnchor(button, "TOP", "BOTTOM", 0, -4, NODE_NAMEPLATE_W, NODE_NAMEPLATE_H)
     else
         ns.DestinationNode:SetNameplateAnchor(button, "TOP", "BOTTOM", 0, -3, NODE_NAMEPLATE_W, NODE_NAMEPLATE_H)
     end
