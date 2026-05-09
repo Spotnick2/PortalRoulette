@@ -429,11 +429,11 @@ function RouletteFrame:ResetVortexState(visible)
     end
 
     local alpha = visible and 1 or 0
-    resetTextureVisual(vortex.backSmoke, 0.12 * alpha, 1, 0)
-    resetTextureVisual(vortex.outerWisps, 0.04 * alpha, 1, 0)
+    resetTextureVisual(vortex.backSmoke, 0.06 * alpha, 1, 0)
+    resetTextureVisual(vortex.outerWisps, 0.02 * alpha, 1, 0)
     resetTextureVisual(vortex.innerSpiral, 0.18 * alpha, 1, 0)
-    resetTextureVisual(vortex.glowBloom, 0.08 * alpha, 1, 0)
-    resetTextureVisual(vortex.motes, 0.06 * alpha, 1, 0)
+    resetTextureVisual(vortex.glowBloom, 0.05 * alpha, 1, 0)
+    resetTextureVisual(vortex.motes, 0.03 * alpha, 1, 0)
     vortex.outerAngle = 0
     vortex.innerAngle = 0
     vortex.moteAngle = 0
@@ -448,21 +448,33 @@ function RouletteFrame:PlayVortexOpen()
 
     local vortex = self.vortex
     local intensity = clampVortexIntensity()
-    resetTextureVisual(vortex.backSmoke, 0, 0.28, 0)
-    resetTextureVisual(vortex.outerWisps, 0, 0.36, 0)
-    resetTextureVisual(vortex.innerSpiral, 0.10 * intensity, 0.22, -0.18)
-    resetTextureVisual(vortex.glowBloom, 0, 0.18, 0)
-    resetTextureVisual(vortex.motes, 0, 0.85, 0)
+    resetTextureVisual(vortex.backSmoke, 0, 0.18, 0)
+    resetTextureVisual(vortex.outerWisps, 0, 0.20, 0)
+    resetTextureVisual(vortex.innerSpiral, 0.08 * intensity, 0.14, -0.18)
+    resetTextureVisual(vortex.glowBloom, 0, 0.14, 0)
+    resetTextureVisual(vortex.motes, 0, 0.45, 0)
 
-    ns.Animations:Play(vortex.innerSpiral, 0.08 * intensity, 0.18 * intensity, 0.22, 1.0, 0.48)
-    ns.Animations:Play(vortex.backSmoke, 0, 0.12 * intensity, 0.28, 1.0, 0.56)
-    ns.Animations:Play(vortex.outerWisps, 0, 0.04 * intensity, 0.36, 1.0, 0.62)
-    ns.Animations:Play(vortex.glowBloom, 0, 0.12 * intensity, 0.18, 1.0, 0.30, function()
-        ns.Animations:Play(vortex.glowBloom, vortex.glowBloom:GetAlpha(), 0.06 * intensity, 1.0, 0.96, 0.22)
+    ns.Animations:Play(vortex.innerSpiral, 0.08 * intensity, 0.30 * intensity, 0.14, 1.04, 0.62)
+    ns.Animations:Play(vortex.backSmoke, 0, 0.16 * intensity, 0.18, 1.02, 0.66)
+    ns.Animations:Play(vortex.glowBloom, 0, 0.16 * intensity, 0.14, 1.02, 0.36, function()
+        ns.Animations:Play(vortex.glowBloom, vortex.glowBloom:GetAlpha(), 0.07 * intensity, 1.02, 0.98, 0.26)
     end)
+    ns.Animations:Play(vortex.outerWisps, 0, 0.08 * intensity, 0.20, 1.02, 0.72)
     if ns.db and ns.db.portalVortexMotesEnabled ~= false then
-        ns.Animations:Play(vortex.motes, 0, 0.06 * intensity, 0.85, 1.0, 0.54)
+        ns.Animations:Play(vortex.motes, 0, 0.05 * intensity, 0.45, 1.04, 0.58)
     end
+
+    self:RunAfter(0.74, function()
+        if not self.vortex then
+            return
+        end
+        ns.Animations:Play(vortex.backSmoke, vortex.backSmoke:GetAlpha(), 0.08 * intensity, (vortex.backSmoke.GetScale and vortex.backSmoke:GetScale()) or 1, 1.0, 0.24)
+        ns.Animations:Play(vortex.outerWisps, vortex.outerWisps:GetAlpha(), 0.04 * intensity, (vortex.outerWisps.GetScale and vortex.outerWisps:GetScale()) or 1, 1.0, 0.24)
+        ns.Animations:Play(vortex.innerSpiral, vortex.innerSpiral:GetAlpha(), 0.20 * intensity, (vortex.innerSpiral.GetScale and vortex.innerSpiral:GetScale()) or 1, 1.0, 0.24)
+        if vortex.motes then
+            ns.Animations:Play(vortex.motes, vortex.motes:GetAlpha(), 0.03 * intensity, (vortex.motes.GetScale and vortex.motes:GetScale()) or 1, 1.0, 0.24)
+        end
+    end)
 end
 
 function RouletteFrame:PlayVortexCollapse()
@@ -472,7 +484,7 @@ function RouletteFrame:PlayVortexCollapse()
 
     local vortex = self.vortex
     local intensity = vortexEnabled() and clampVortexIntensity() or 0
-    vortex.collapseBoost = 0.32 * (intensity > 0 and intensity or 1)
+    vortex.collapseBoost = 0.44 * (intensity > 0 and intensity or 1)
 
     if intensity <= 0 then
         self:ResetVortexState(false)
@@ -485,22 +497,29 @@ function RouletteFrame:PlayVortexCollapse()
         end
     end
 
-    collapse(vortex.motes, 0, 0.36, 0.12)
-    collapse(vortex.outerWisps, 0.08 * intensity, 0.42, 0.22)
-    collapse(vortex.backSmoke, 0.14 * intensity, 0.34, 0.24)
-    collapse(vortex.innerSpiral, 0.30 * intensity, 0.20, 0.26)
-    collapse(vortex.glowBloom, 0.16 * intensity, 0.26, 0.20)
+    collapse(vortex.motes, 0, 0.36, 0.16)
+    collapse(vortex.outerWisps, 0.04 * intensity, 0.36, 0.18)
+    collapse(vortex.backSmoke, 0.12 * intensity, 0.34, 0.24)
+    collapse(vortex.innerSpiral, 0.36 * intensity, 0.28, 0.30)
+    collapse(vortex.glowBloom, 0.20 * intensity, 0.30, 0.24)
 
     self:RunAfter(0.24, function()
         if not self.vortex then
             return
         end
-        collapse(vortex.outerWisps, 0, 0.08, 0.10)
-        collapse(vortex.backSmoke, 0, 0.06, 0.10)
-        collapse(vortex.glowBloom, 0, 0.08, 0.10)
-        collapse(vortex.innerSpiral, 0.08 * intensity, 0.04, 0.08)
+        collapse(vortex.backSmoke, 0.04 * intensity, 0.16, 0.18)
+        collapse(vortex.innerSpiral, 0.24 * intensity, 0.10, 0.18)
+        collapse(vortex.glowBloom, 0.10 * intensity, 0.12, 0.18)
     end)
-    self:RunAfter(0.34, function()
+    self:RunAfter(0.44, function()
+        if not self.vortex then
+            return
+        end
+        collapse(vortex.backSmoke, 0, 0.06, 0.12)
+        collapse(vortex.innerSpiral, 0, 0.04, 0.12)
+        collapse(vortex.glowBloom, 0, 0.06, 0.12)
+    end)
+    self:RunAfter(0.58, function()
         self:ResetVortexState(false)
     end)
 end
@@ -525,9 +544,9 @@ function RouletteFrame:PlayOpenPresentation()
     frame.dimmer:SetAlpha(0)
 
     frame.headerGroup:SetAlpha(0)
-    frame.headerGroup:SetScale(1 - (0.015 * intensity))
+    frame.headerGroup:SetScale(1 - (0.025 * intensity))
     frame.wheel:SetAlpha(0)
-    frame.wheel:SetScale(1 - (0.08 * intensity))
+    frame.wheel:SetScale(1 - (0.12 * intensity))
     frame.sideGroup:SetAlpha(0)
     frame.sideGroup:SetScale(1 - (0.01 * intensity))
     frame.lowerGroup:SetAlpha(0)
@@ -540,47 +559,47 @@ function RouletteFrame:PlayOpenPresentation()
         resetVisual(self.karazhanButton, 0, 1 - (0.04 * intensity))
     end
 
-    playFade(frame.dimmer, 0, 0.86, 0.2)
+    playFade(frame.dimmer, 0, 0.86, 0.28)
 
-    self:RunAfter(0.03, function()
-        playFadeScale(frame.headerGroup, 0, 1, 1 - (0.015 * intensity), 1, 0.16)
+    self:RunAfter(0.04, function()
+        playFadeScale(frame.headerGroup, 0, 1, 1 - (0.025 * intensity), 1, 0.24)
     end)
-    self:RunAfter(0.08, function()
-        playFadeScale(frame.wheel, 0, 1, 1 - (0.08 * intensity), 1, 0.2)
+    self:RunAfter(0.10, function()
+        playFadeScale(frame.wheel, 0, 1, 1 - (0.12 * intensity), 1, 0.34)
         if frame.centerUtilityButton and ns.Animations and ns.Animations.Pulse then
-            ns.Animations:Pulse(frame.centerUtilityButton, 1 + (0.035 * intensity), 0.22)
+            ns.Animations:Pulse(frame.centerUtilityButton, 1 + (0.045 * intensity), 0.30)
         end
     end)
-    self:RunAfter(0.12, function()
+    self:RunAfter(0.20, function()
         for _, line in ipairs(self.nodeLines or {}) do
-            playFade(line, 0, 1, 0.14)
+            playFade(line, 0, 1, 0.20)
         end
     end)
 
-    local stagger = 0.03 * intensity
+    local stagger = 0.04 * intensity
     if ns.db and ns.db.nodeStaggerEnabled == false then
         stagger = 0
     end
     for index, button in ipairs(self.nodeButtons or {}) do
-        self:RunAfter(0.14 + ((index - 1) * stagger), function()
-            playFadeScale(button, 0, 1, 1 - (0.04 * intensity), 1, 0.13)
+        self:RunAfter(0.24 + ((index - 1) * stagger), function()
+            playFadeScale(button, 0, 1, 1 - (0.07 * intensity), 1, 0.18)
         end)
     end
 
-    local karazhanDelay = 0.14 + (#(self.nodeButtons or {}) * stagger) + (0.04 * intensity)
+    local karazhanDelay = 0.24 + (#(self.nodeButtons or {}) * stagger) + (0.06 * intensity)
     self:RunAfter(karazhanDelay, function()
         if self.karazhanLine then
-            playFade(self.karazhanLine, 0, 1, 0.12)
+            playFade(self.karazhanLine, 0, 1, 0.18)
         end
         if self.karazhanButton then
-            playFadeScale(self.karazhanButton, 0, 1, 1 - (0.035 * intensity), 1, 0.13)
+            playFadeScale(self.karazhanButton, 0, 1, 1 - (0.06 * intensity), 1, 0.18)
         end
     end)
-    self:RunAfter(0.16, function()
-        playFadeScale(frame.sideGroup, 0, 1, 1 - (0.01 * intensity), 1, 0.14)
+    self:RunAfter(0.26, function()
+        playFadeScale(frame.sideGroup, 0, 1, 1 - (0.02 * intensity), 1, 0.22)
     end)
-    self:RunAfter(0.2, function()
-        playFadeScale(frame.lowerGroup, 0, 1, 1 - (0.01 * intensity), 1, 0.14)
+    self:RunAfter(0.34, function()
+        playFadeScale(frame.lowerGroup, 0, 1, 1 - (0.02 * intensity), 1, 0.22)
     end)
 end
 
@@ -603,27 +622,27 @@ function RouletteFrame:PlayClosePresentation(onFinish)
         return
     end
 
-    playFade(frame.lowerGroup, frame.lowerGroup:GetAlpha(), 0, 0.12)
-    playFade(frame.sideGroup, frame.sideGroup:GetAlpha(), 0, 0.1)
+    playFade(frame.lowerGroup, frame.lowerGroup:GetAlpha(), 0, 0.18)
+    playFade(frame.sideGroup, frame.sideGroup:GetAlpha(), 0, 0.16)
     self:PlayVortexCollapse()
     for _, button in ipairs(self.nodeButtons or {}) do
-        playFadeScale(button, button:GetAlpha(), 0, button:GetScale(), 1 - (0.10 * intensity), 0.16)
+        playFadeScale(button, button:GetAlpha(), 0, button:GetScale(), 1 - (0.16 * intensity), 0.22)
     end
     for _, line in ipairs(self.nodeLines or {}) do
-        playFade(line, line:GetAlpha(), 0, 0.12)
+        playFade(line, line:GetAlpha(), 0, 0.18)
     end
     if self.karazhanLine then
-        playFade(self.karazhanLine, self.karazhanLine:GetAlpha(), 0, 0.1)
+        playFade(self.karazhanLine, self.karazhanLine:GetAlpha(), 0, 0.18)
     end
     if self.karazhanButton then
-        playFadeScale(self.karazhanButton, self.karazhanButton:GetAlpha(), 0, self.karazhanButton:GetScale(), 1 - (0.10 * intensity), 0.14)
+        playFadeScale(self.karazhanButton, self.karazhanButton:GetAlpha(), 0, self.karazhanButton:GetScale(), 1 - (0.16 * intensity), 0.22)
     end
     if frame.centerUtilityButton and ns.Animations and ns.Animations.Pulse then
-        ns.Animations:Pulse(frame.centerUtilityButton, 1 + (0.035 * intensity), 0.12)
+        ns.Animations:Pulse(frame.centerUtilityButton, 1 + (0.045 * intensity), 0.16)
     end
-    playFadeScale(frame.wheel, frame.wheel:GetAlpha(), 0, frame.wheel:GetScale(), 1 - ((0.12 + (0.04 * vortexIntensity)) * intensity), 0.32)
-    playFade(frame.headerGroup, frame.headerGroup:GetAlpha(), 0, 0.12)
-    playFade(frame.dimmer, frame.dimmer:GetAlpha(), 0, 0.15)
+    playFadeScale(frame.wheel, frame.wheel:GetAlpha(), 0, frame.wheel:GetScale(), 1 - ((0.18 + (0.05 * vortexIntensity)) * intensity), 0.46)
+    playFade(frame.headerGroup, frame.headerGroup:GetAlpha(), 0, 0.18)
+    playFade(frame.dimmer, frame.dimmer:GetAlpha(), 0, 0.24)
 
     if not C_Timer or not C_Timer.After then
         if onFinish then
@@ -632,7 +651,7 @@ function RouletteFrame:PlayClosePresentation(onFinish)
         return
     end
 
-    C_Timer.After(0.38, function()
+    C_Timer.After(0.58, function()
         if token ~= self.presentationToken then
             return
         end
@@ -836,7 +855,7 @@ function RouletteFrame:CreateMainFrame()
                     vortex.motes:SetRotation(vortex.moteAngle)
                 end
                 if vortex.glowBloom then
-                    local breath = 0.08 + (math.sin((RouletteFrame.idlePulse or 0) * 1.45) * 0.018)
+                    local breath = 0.05 + (math.sin((RouletteFrame.idlePulse or 0) * 1.45) * 0.012)
                     vortex.glowBloom:SetAlpha(breath * vortexIntensity)
                 end
                 if vortex.motes and ns.db and ns.db.portalVortexMotesEnabled == false then
@@ -875,7 +894,7 @@ function RouletteFrame:CreateWheel()
     }
 
     local function createVortexTexture(path, size, layer, blendMode, color)
-        local texture = frame.wheel:CreateTexture(nil, layer or "BACKGROUND")
+        local texture = frame:CreateTexture(nil, layer or "BACKGROUND")
         texture:SetSize(size, size)
         texture:SetPoint("CENTER", frame.wheel, "CENTER")
         texture:SetTexture(path)
@@ -889,11 +908,11 @@ function RouletteFrame:CreateWheel()
         return texture
     end
 
-    self.vortex.backSmoke = createVortexTexture(ns.Media.PORTAL_VORTEX_BACK_SMOKE, WHEEL_SIZE + 12, "BACKGROUND", "BLEND", { 0.50, 0.60, 1.0, 1 })
-    self.vortex.outerWisps = createVortexTexture(ns.Media.PORTAL_VORTEX_OUTER_WISPS, WHEEL_SIZE - 8, "BORDER", "ADD", { 0.34, 0.48, 1.0, 1 })
-    self.vortex.innerSpiral = createVortexTexture(ns.Media.PORTAL_VORTEX_INNER_SPIRAL, WHEEL_SIZE - 28, "BORDER", "ADD", { 0.46, 0.62, 1.0, 1 })
-    self.vortex.glowBloom = createVortexTexture(ns.Media.PORTAL_VORTEX_GLOW_BLOOM, WHEEL_SIZE - 86, "BORDER", "ADD", { 0.38, 0.66, 1.0, 1 })
-    self.vortex.motes = createVortexTexture(ns.Media.PORTAL_VORTEX_MOTES, WHEEL_SIZE - 16, "BORDER", "ADD", { 0.54, 0.64, 1.0, 1 })
+    self.vortex.backSmoke = createVortexTexture(ns.Media.PORTAL_VORTEX_BACK_SMOKE, WHEEL_SIZE - 40, "BACKGROUND", "BLEND", { 0.18, 0.22, 0.42, 1 })
+    self.vortex.outerWisps = createVortexTexture(ns.Media.PORTAL_VORTEX_OUTER_WISPS, WHEEL_SIZE - 80, "BORDER", "ADD", { 0.22, 0.30, 0.58, 1 })
+    self.vortex.innerSpiral = createVortexTexture(ns.Media.PORTAL_VORTEX_INNER_SPIRAL, WHEEL_SIZE - 60, "BORDER", "ADD", { 0.42, 0.58, 1.0, 1 })
+    self.vortex.glowBloom = createVortexTexture(ns.Media.PORTAL_VORTEX_GLOW_BLOOM, WHEEL_SIZE - 110, "BORDER", "ADD", { 0.34, 0.60, 1.0, 1 })
+    self.vortex.motes = createVortexTexture(ns.Media.PORTAL_VORTEX_MOTES, WHEEL_SIZE - 90, "BORDER", "ADD", { 0.48, 0.58, 1.0, 1 })
 
     self.wheelBase = frame.wheel:CreateTexture(nil, "BACKGROUND")
     self.wheelBase:SetAllPoints()
@@ -1569,6 +1588,18 @@ function RouletteFrame:UpdateUtilityModeVisuals()
     self:RefreshCenterUtility()
 end
 
+function RouletteFrame:UpdateHeaderButtons()
+    if not self.frame then
+        return
+    end
+    if self.frame.gearButton then
+        self.frame.gearButton:SetShown(ns.db and ns.db.showOptionsButton ~= false)
+    end
+    if self.frame.closeButton then
+        self.frame.closeButton:SetShown(ns.db and ns.db.showCloseButton ~= false)
+    end
+end
+
 function RouletteFrame:RefreshAll()
     if not self.frame then
         return
@@ -1578,6 +1609,7 @@ function RouletteFrame:RefreshAll()
     self:UpdateUtilityModeVisuals()
     self:RefreshDestinationNodes()
     self:RefreshCenterUtility()
+    self:UpdateHeaderButtons()
     ns.ReagentPanel:Refresh()
     ns.UtilityButton:Refresh()
 end
