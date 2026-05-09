@@ -440,6 +440,42 @@ function RouletteFrame:ResetVortexState(visible)
     vortex.collapseBoost = 0
 end
 
+function RouletteFrame:PlayVortexOpen()
+    if not vortexEnabled() or not self.vortex then
+        self:ResetVortexState(false)
+        return
+    end
+
+    local vortex = self.vortex
+    local intensity = clampVortexIntensity()
+    resetTextureVisual(vortex.backSmoke, 0, 0.28, 0)
+    resetTextureVisual(vortex.outerWisps, 0, 0.36, 0)
+    resetTextureVisual(vortex.innerSpiral, 0.10 * intensity, 0.22, -0.18)
+    resetTextureVisual(vortex.glowBloom, 0, 0.18, 0)
+    resetTextureVisual(vortex.motes, 0, 0.85, 0)
+
+    ns.Animations:Play(vortex.innerSpiral, 0.10 * intensity, 0.24 * intensity, 0.22, 1.0, 0.48)
+    ns.Animations:Play(vortex.backSmoke, 0, 0.18 * intensity, 0.28, 1.0, 0.56)
+    ns.Animations:Play(vortex.outerWisps, 0, 0.20 * intensity, 0.36, 1.0, 0.62)
+    ns.Animations:Play(vortex.glowBloom, 0, 0.16 * intensity, 0.18, 1.0, 0.30, function()
+        ns.Animations:Play(vortex.glowBloom, vortex.glowBloom:GetAlpha(), 0.10 * intensity, 1.0, 0.96, 0.22)
+    end)
+    if ns.db and ns.db.portalVortexMotesEnabled ~= false then
+        ns.Animations:Play(vortex.motes, 0, 0.14 * intensity, 0.85, 1.0, 0.54)
+    end
+end
+
+function RouletteFrame:FadeVortexOut(duration)
+    if not self.vortex then
+        return
+    end
+    for _, texture in pairs(self.vortex) do
+        if type(texture) == "table" and texture.GetAlpha then
+            ns.Animations:Play(texture, texture:GetAlpha(), 0, texture.GetScale and texture:GetScale() or 1, texture.GetScale and texture:GetScale() or 1, duration or 0.16)
+        end
+    end
+end
+
 function RouletteFrame:PlayOpenPresentation()
     if not self.frame then
         return
@@ -453,6 +489,8 @@ function RouletteFrame:PlayOpenPresentation()
         self:ResetPresentationState()
         return
     end
+
+    self:PlayVortexOpen()
 
     frame.dimmer:Show()
     frame.dimmer:SetAlpha(0)
@@ -714,6 +752,8 @@ function RouletteFrame:CreateMainFrame()
     frame:SetScript("OnUpdate", function(_, elapsed)
         local idleEnabled = animationEnabled("idleAnimationsEnabled") and not (ns.db and ns.db.enableWheelAnimation == false)
         local intensity = clampAnimationIntensity()
+        local vortexIdle = vortexEnabled() and not (ns.db and ns.db.portalVortexIdleEnabled == false)
+        local vortexIntensity = clampVortexIntensity()
 
         if idleEnabled then
             local speed = 0.35 + (0.65 * intensity)
@@ -739,6 +779,35 @@ function RouletteFrame:CreateMainFrame()
             end
             if RouletteFrame.centerCore then
                 RouletteFrame.centerCore:SetAlpha(0.10)
+            end
+        end
+
+        if RouletteFrame.vortex then
+            local vortex = RouletteFrame.vortex
+            if vortexIdle then
+                local boost = vortex.collapseBoost or 0
+                vortex.outerAngle = (vortex.outerAngle or 0) + elapsed * (0.035 + boost)
+                vortex.innerAngle = (vortex.innerAngle or 0) - elapsed * (0.050 + boost * 1.2)
+                vortex.moteAngle = (vortex.moteAngle or 0) + elapsed * (0.022 + boost * 0.45)
+
+                if vortex.outerWisps and vortex.outerWisps.SetRotation then
+                    vortex.outerWisps:SetRotation(vortex.outerAngle)
+                end
+                if vortex.innerSpiral and vortex.innerSpiral.SetRotation then
+                    vortex.innerSpiral:SetRotation(vortex.innerAngle)
+                end
+                if vortex.motes and vortex.motes.SetRotation then
+                    vortex.motes:SetRotation(vortex.moteAngle)
+                end
+                if vortex.glowBloom then
+                    local breath = 0.08 + (math.sin((RouletteFrame.idlePulse or 0) * 1.45) * 0.018)
+                    vortex.glowBloom:SetAlpha(breath * vortexIntensity)
+                end
+                if vortex.motes and ns.db and ns.db.portalVortexMotesEnabled == false then
+                    vortex.motes:SetAlpha(0)
+                end
+            elseif not vortexEnabled() then
+                RouletteFrame:ResetVortexState(false)
             end
         end
         if RouletteFrame.castBarStart then
