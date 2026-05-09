@@ -453,21 +453,30 @@ function RouletteFrame:PlayVortexOpen()
     vortex.opening = true
     vortex.collapsing = false
     vortex.collapseBoost = 0
-    resetTextureVisual(vortex.backSmoke, 0, 0.18, 0)
-    resetTextureVisual(vortex.outerWisps, 0, 0.20, 0)
-    resetTextureVisual(vortex.innerSpiral, 0.08 * intensity, 0.14, -0.18)
-    resetTextureVisual(vortex.glowBloom, 0, 0.14, 0)
-    resetTextureVisual(vortex.motes, 0, 0.45, 0)
+    resetTextureVisual(vortex.backSmoke, 0.04 * intensity, 0.10, 0.05)
+    resetTextureVisual(vortex.outerWisps, 0, 0.16, 0.24)
+    resetTextureVisual(vortex.innerSpiral, 0.16 * intensity, 0.08, -0.22)
+    resetTextureVisual(vortex.glowBloom, 0, 0.10, 0)
+    resetTextureVisual(vortex.motes, 0, 0.34, 0)
 
-    ns.Animations:Play(vortex.innerSpiral, 0.08 * intensity, 0.48 * intensity, 0.14, 1.08, 0.78)
-    ns.Animations:Play(vortex.backSmoke, 0, 0.28 * intensity, 0.18, 1.06, 0.80)
-    ns.Animations:Play(vortex.glowBloom, 0, 0.26 * intensity, 0.14, 1.06, 0.44, function()
-        ns.Animations:Play(vortex.glowBloom, vortex.glowBloom:GetAlpha(), 0.10 * intensity, 1.06, 0.98, 0.30)
+    ns.Animations:Play(vortex.innerSpiral, 0.16 * intensity, 0.54 * intensity, 0.08, 0.72, 0.42)
+    ns.Animations:Play(vortex.backSmoke, 0.04 * intensity, 0.30 * intensity, 0.10, 0.62, 0.50)
+    self:RunAfter(0.14, function()
+        ns.Animations:Play(vortex.outerWisps, 0, 0.16 * intensity, 0.16, 0.90, 0.48)
     end)
-    ns.Animations:Play(vortex.outerWisps, 0, 0.17 * intensity, 0.20, 1.06, 0.82)
-    if ns.db and ns.db.portalVortexMotesEnabled ~= false then
-        ns.Animations:Play(vortex.motes, 0, 0.10 * intensity, 0.45, 1.06, 0.68)
-    end
+    self:RunAfter(0.22, function()
+        ns.Animations:Play(vortex.glowBloom, 0, 0.22 * intensity, 0.10, 0.82, 0.30, function()
+            ns.Animations:Play(vortex.glowBloom, vortex.glowBloom:GetAlpha(), 0.09 * intensity, 0.82, 1.0, 0.32)
+        end)
+    end)
+    self:RunAfter(0.34, function()
+        ns.Animations:Play(vortex.innerSpiral, vortex.innerSpiral:GetAlpha(), 0.32 * intensity, (vortex.innerSpiral.GetScale and vortex.innerSpiral:GetScale()) or 1, 1.04, 0.44)
+        ns.Animations:Play(vortex.backSmoke, vortex.backSmoke:GetAlpha(), 0.14 * intensity, (vortex.backSmoke.GetScale and vortex.backSmoke:GetScale()) or 1, 1.0, 0.46)
+        ns.Animations:Play(vortex.outerWisps, vortex.outerWisps:GetAlpha(), 0.08 * intensity, (vortex.outerWisps.GetScale and vortex.outerWisps:GetScale()) or 1, 1.0, 0.46)
+        if vortex.motes and not (ns.db and ns.db.portalVortexMotesEnabled == false) then
+            ns.Animations:Play(vortex.motes, 0, 0.05 * intensity, 0.34, 1.0, 0.38)
+        end
+    end)
 
     self:RunAfter(0.90, function()
         if not self.vortex then
@@ -480,7 +489,7 @@ function RouletteFrame:PlayVortexOpen()
             ns.Animations:Play(vortex.motes, vortex.motes:GetAlpha(), 0.05 * intensity, (vortex.motes.GetScale and vortex.motes:GetScale()) or 1, 1.0, 0.32)
         end
     end)
-    self:RunAfter(1.24, function()
+    self:RunAfter(1.18, function()
         if self.vortex then
             self.vortex.opening = false
         end
@@ -494,7 +503,7 @@ function RouletteFrame:PlayVortexCollapse()
 
     local vortex = self.vortex
     local intensity = vortexEnabled() and clampVortexIntensity() or 0
-    vortex.collapseBoost = 0.70 * (intensity > 0 and intensity or 1)
+    vortex.collapseBoost = 0.95 * (intensity > 0 and intensity or 1)
     vortex.opening = false
     vortex.collapsing = true
 
@@ -509,31 +518,38 @@ function RouletteFrame:PlayVortexCollapse()
         end
     end
 
-    collapse(vortex.motes, 0, 0.50, 0.12)
-    collapse(vortex.outerWisps, 0.16 * intensity, 0.74, 0.16)
-    collapse(vortex.backSmoke, 0.22 * intensity, 0.70, 0.18)
-    collapse(vortex.innerSpiral, 0.48 * intensity, 0.64, 0.20)
-    collapse(vortex.glowBloom, 0.22 * intensity, 0.68, 0.18)
+    collapse(vortex.motes, 0, 0.50, 0.10)
+    collapse(vortex.outerWisps, 0.12 * intensity, 0.70, 0.14)
+    collapse(vortex.backSmoke, 0.20 * intensity, 0.68, 0.16)
+    collapse(vortex.innerSpiral, 0.50 * intensity, 0.58, 0.18)
+    collapse(vortex.glowBloom, 0.20 * intensity, 0.62, 0.16)
 
-    self:RunAfter(0.18, function()
+    self:RunAfter(0.16, function()
         if not self.vortex then
             return
         end
-        collapse(vortex.outerWisps, 0.08 * intensity, 0.28, 0.22)
-        collapse(vortex.backSmoke, 0.10 * intensity, 0.26, 0.24)
-        collapse(vortex.innerSpiral, 0.38 * intensity, 0.18, 0.24)
-        collapse(vortex.glowBloom, 0.16 * intensity, 0.20, 0.22)
+        collapse(vortex.outerWisps, 0.05 * intensity, 0.28, 0.20)
+        collapse(vortex.backSmoke, 0.08 * intensity, 0.24, 0.22)
+        collapse(vortex.innerSpiral, 0.42 * intensity, 0.18, 0.26)
+        collapse(vortex.glowBloom, 0.12 * intensity, 0.20, 0.20)
     end)
     self:RunAfter(0.46, function()
         if not self.vortex then
             return
         end
-        collapse(vortex.outerWisps, 0, 0.06, 0.16)
-        collapse(vortex.backSmoke, 0, 0.05, 0.16)
-        collapse(vortex.innerSpiral, 0, 0.03, 0.18)
-        collapse(vortex.glowBloom, 0, 0.04, 0.16)
+        collapse(vortex.outerWisps, 0, 0.06, 0.14)
+        collapse(vortex.backSmoke, 0.10 * intensity, 0.06, 0.16)
+        collapse(vortex.innerSpiral, 0.30 * intensity, 0.07, 0.18)
+        collapse(vortex.glowBloom, 0, 0.04, 0.14)
     end)
-    self:RunAfter(0.70, function()
+    self:RunAfter(0.64, function()
+        if not self.vortex then
+            return
+        end
+        collapse(vortex.backSmoke, 0, 0.03, 0.16)
+        collapse(vortex.innerSpiral, 0, 0.02, 0.18)
+    end)
+    self:RunAfter(0.86, function()
         self:ResetVortexState(false)
     end)
 end
@@ -578,13 +594,13 @@ function RouletteFrame:PlayOpenPresentation()
     self:RunAfter(0.06, function()
         playFadeScale(frame.headerGroup, 0, 1, 1 - (0.03 * intensity), 1, 0.28)
     end)
-    self:RunAfter(0.22, function()
-        playFadeScale(frame.wheel, 0, 1, 1 - (0.16 * intensity), 1, 0.44)
+    self:RunAfter(0.34, function()
+        playFadeScale(frame.wheel, 0, 1, 1 - (0.16 * intensity), 1, 0.46)
         if frame.centerUtilityButton and ns.Animations and ns.Animations.Pulse then
             ns.Animations:Pulse(frame.centerUtilityButton, 1 + (0.045 * intensity), 0.30)
         end
     end)
-    self:RunAfter(0.42, function()
+    self:RunAfter(0.58, function()
         for _, line in ipairs(self.nodeLines or {}) do
             playFade(line, 0, 1, 0.20)
         end
@@ -595,12 +611,12 @@ function RouletteFrame:PlayOpenPresentation()
         stagger = 0
     end
     for index, button in ipairs(self.nodeButtons or {}) do
-        self:RunAfter(0.48 + ((index - 1) * stagger), function()
+        self:RunAfter(0.66 + ((index - 1) * stagger), function()
             playFadeScale(button, 0, 1, 1 - (0.07 * intensity), 1, 0.18)
         end)
     end
 
-    local karazhanDelay = 0.48 + (#(self.nodeButtons or {}) * stagger) + (0.06 * intensity)
+    local karazhanDelay = 0.66 + (#(self.nodeButtons or {}) * stagger) + (0.06 * intensity)
     self:RunAfter(karazhanDelay, function()
         if self.karazhanLine then
             playFade(self.karazhanLine, 0, 1, 0.18)
@@ -609,10 +625,10 @@ function RouletteFrame:PlayOpenPresentation()
             playFadeScale(self.karazhanButton, 0, 1, 1 - (0.06 * intensity), 1, 0.18)
         end
     end)
-    self:RunAfter(0.52, function()
+    self:RunAfter(0.76, function()
         playFadeScale(frame.sideGroup, 0, 1, 1 - (0.02 * intensity), 1, 0.22)
     end)
-    self:RunAfter(0.60, function()
+    self:RunAfter(0.84, function()
         playFadeScale(frame.lowerGroup, 0, 1, 1 - (0.02 * intensity), 1, 0.22)
     end)
 end
@@ -655,7 +671,7 @@ function RouletteFrame:PlayClosePresentation(onFinish)
         ns.Animations:Pulse(frame.centerUtilityButton, 1 + (0.045 * intensity), 0.16)
     end
     self:RunAfter(0.12, function()
-        playFadeScale(frame.wheel, frame.wheel:GetAlpha(), 0, frame.wheel:GetScale(), 1 - ((0.26 + (0.06 * vortexIntensity)) * intensity), 0.46)
+        playFadeScale(frame.wheel, frame.wheel:GetAlpha(), 0, frame.wheel:GetScale(), 1 - ((0.30 + (0.06 * vortexIntensity)) * intensity), 0.46)
     end)
     playFade(frame.headerGroup, frame.headerGroup:GetAlpha(), 0, 0.16)
     playFade(frame.dimmer, frame.dimmer:GetAlpha(), 0, 0.24)
@@ -667,7 +683,7 @@ function RouletteFrame:PlayClosePresentation(onFinish)
         return
     end
 
-    C_Timer.After(0.76, function()
+    C_Timer.After(0.92, function()
         if token ~= self.presentationToken then
             return
         end
@@ -878,12 +894,21 @@ function RouletteFrame:CreateMainFrame()
                     end
                     if vortex.outerWisps then
                         vortex.outerWisps:SetAlpha((0.07 + (pulseB * 0.020)) * vortexIntensity)
+                        if vortex.outerWisps.SetScale then
+                            vortex.outerWisps:SetScale(1 + (pulseB * 0.006 * vortexIntensity))
+                        end
                     end
                     if vortex.innerSpiral then
                         vortex.innerSpiral:SetAlpha((0.24 + (pulseB * 0.050)) * vortexIntensity)
+                        if vortex.innerSpiral.SetScale then
+                            vortex.innerSpiral:SetScale(1 + (pulseB * 0.008 * vortexIntensity))
+                        end
                     end
                     if vortex.glowBloom then
                         vortex.glowBloom:SetAlpha((0.08 + (pulseA * 0.020)) * vortexIntensity)
+                        if vortex.glowBloom.SetScale then
+                            vortex.glowBloom:SetScale(1 + (pulseA * 0.012 * vortexIntensity))
+                        end
                     end
                     if vortex.motes then
                         if ns.db and ns.db.portalVortexMotesEnabled == false then
@@ -1113,7 +1138,7 @@ function RouletteFrame:CreateHeaderControls()
         -- standard options panel would be hidden by our UIParent fade.
         RouletteFrame:Close()
         if C_Timer and C_Timer.After then
-            C_Timer.After(0.80, function() ns.OptionsPanel:Open() end)
+            C_Timer.After(0.96, function() ns.OptionsPanel:Open() end)
         else
             ns.OptionsPanel:Open()
         end
