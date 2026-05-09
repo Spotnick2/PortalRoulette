@@ -55,8 +55,11 @@ local CAST_RESET_DURATION    = 0.90
 local EXIT_DURATION          = 0.35
 local ORBIT_SPEED            = 0.005
 local ENTER_YAW_FROM_SPEED   = 1.0
+local CAST_RESET_YAW_SPEED   = 0.78
+local CAST_RESET_YAW_DURATION = 0.42
 local YAW_DIRECTION          = 1     -- Narcissus uses MoveViewRightStart on entry
 local SAVED_VIEW_SLOT        = 5
+local PRESENTATION_VIEW_SLOT = 4
 
 -- ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -192,7 +195,14 @@ function CameraMode:ResetOrbitForCast()
     if not self:IsSupported() then return end
 
     self:_StopYaw()
-    if type(SetView) == "function" then pcall(SetView, 2) end
+    local restoredPresentationView = false
+    if self.presentationViewSaved and type(SetView) == "function" then
+        local ok = pcall(SetView, PRESENTATION_VIEW_SLOT)
+        restoredPresentationView = ok and true or false
+    end
+    if not restoredPresentationView and type(SetView) == "function" then
+        pcall(SetView, 2)
+    end
     self:_SetZoom(self:_GetTargetZoom())
 
     if type(SetCVar) == "function" then
@@ -203,15 +213,28 @@ function CameraMode:ResetOrbitForCast()
 
     local dir = YAW_DIRECTION < 0 and -1 or 1
     self.yawDir = dir
-    self.castResetDuration = CAST_RESET_DURATION
-    self.mode = "castReset"
     self.elapsed = 0
-    if self.animFrame then self.animFrame:Show() end
+    self.resumeOrbitAfterCastReset = nil
+
+    if restoredPresentationView then
+        self.castResetDuration = nil
+        self.mode = "castHold"
+        if self.animFrame then self.animFrame:Hide() end
+    else
+        self.castResetDuration = CAST_RESET_YAW_DURATION
+        self.mode = "castReset"
+        self:_ApplyYaw(dir * CAST_RESET_YAW_SPEED)
+        if self.animFrame then self.animFrame:Show() end
+    end
 end
 
 function CameraMode:ResumeOrbitAfterCast()
     if not self.active or self.mode == "exit" then return end
-    if self.mode ~= "castReset" and self.mode ~= "castHold" then return end
+    if self.mode == "castReset" then
+        self.resumeOrbitAfterCastReset = true
+        return
+    end
+    if self.mode ~= "castHold" then return end
 
     self:_StopYaw()
     self.yawDir = YAW_DIRECTION < 0 and -1 or 1
@@ -219,6 +242,7 @@ function CameraMode:ResumeOrbitAfterCast()
     self.mode = "orbit"
     self.elapsed = 0
     self.castResetDuration = nil
+    self.resumeOrbitAfterCastReset = nil
     if self.animFrame then self.animFrame:Hide() end
 end
 
@@ -256,6 +280,9 @@ function CameraMode:ForceRestore(reason)
     self.capture = nil
     self.elapsed = 0
     self.entryDuration = nil
+    self.castResetDuration = nil
+    self.resumeOrbitAfterCastReset = nil
+    self.presentationViewSaved = nil
 end
 
 function CameraMode:UpdateAnimation(elapsed)
@@ -276,6 +303,9 @@ function CameraMode:UpdateAnimation(elapsed)
             -- Transition to a very slow one-way drift. Casting exits this mode
             -- gracefully so the spell animation can play without camera motion.
             self:_StopYaw()
+            if type(SaveView) == "function" then
+                self.presentationViewSaved = pcall(SaveView, PRESENTATION_VIEW_SLOT) and true or false
+            end
             self:_ApplyYaw(self.yawDir * ORBIT_SPEED)
             self.mode = "orbit"
             self.entryDuration = nil
@@ -289,7 +319,11 @@ function CameraMode:UpdateAnimation(elapsed)
             self:_StopYaw()
             self.mode = "castHold"
             self.castResetDuration = nil
-            if self.animFrame then self.animFrame:Hide() end
+            if self.resumeOrbitAfterCastReset then
+                self:ResumeOrbitAfterCast()
+            elseif self.animFrame then
+                self.animFrame:Hide()
+            end
         end
         return
     end
