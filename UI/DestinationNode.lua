@@ -140,10 +140,10 @@ local function applyHoverState(button, isHover)
         end
         if button.linkTexture and button.linkHoverTexturePath then
             button.linkTexture:SetTexture(button.linkHoverTexturePath)
-            button.linkTexture:SetVertexColor(0.58, 0.78, 1.0, 1)
-            button.linkTexture:SetAlpha(0.78)
+            button.linkTexture:SetVertexColor(0.50, 0.72, 1.0, 1)
+            button.linkTexture:SetAlpha(0.70)
             if customAnimationEnabled("hoverAnimationsEnabled") then
-                ns.Animations:Play(button.linkTexture, 0.78, 0.84, 1, 1, 0.12)
+                ns.Animations:Play(button.linkTexture, 0.70, 0.76, 1, 1, 0.12)
             end
         end
         if customAnimationEnabled("hoverAnimationsEnabled") then
@@ -163,7 +163,7 @@ local function applyHoverState(button, isHover)
         end
         if button.linkTexture and button.linkNormalTexturePath then
             button.linkTexture:SetTexture(button.linkNormalTexturePath)
-            button.linkTexture:SetVertexColor(0.54, 0.70, 1.0, 1)
+            button.linkTexture:SetVertexColor(0.42, 0.62, 1.0, 1)
             if customAnimationEnabled("hoverAnimationsEnabled") then
                 ns.Animations:Play(button.linkTexture, button.linkTexture:GetAlpha(), button.linkNormalAlpha or 0.62, 1, 1, 0.1)
             else

@@ -62,7 +62,7 @@ local function setTextureLine(lineTexture, parent, startX, startY, endX, endY)
 
     lineTexture:ClearAllPoints()
     lineTexture:SetPoint("CENTER", parent, "CENTER", (startX + endX) * 0.5, (startY + endY) * 0.5)
-    lineTexture:SetSize(length, 12)
+    lineTexture:SetSize(length, 8)
     if lineTexture.SetRotation then
         lineTexture:SetRotation(angle)
     end
@@ -682,11 +682,11 @@ function RouletteFrame:CreateMainFrame()
                 RouletteFrame.innerRing:SetRotation(RouletteFrame.innerAngle)
             end
             if RouletteFrame.factionAccent then
-                RouletteFrame.factionAccent:SetAlpha(0.25 + (math.sin(RouletteFrame.idlePulse * 1.25) * 0.035 * intensity))
+                RouletteFrame.factionAccent:SetAlpha(0.18 + (math.sin(RouletteFrame.idlePulse * 1.25) * 0.025 * intensity))
             end
         else
             if RouletteFrame.factionAccent then
-                RouletteFrame.factionAccent:SetAlpha(0.28)
+                RouletteFrame.factionAccent:SetAlpha(0.18)
             end
         end
         if RouletteFrame.centerCore then
@@ -716,35 +716,35 @@ function RouletteFrame:CreateWheel()
     self.wheelBase = frame.wheel:CreateTexture(nil, "BACKGROUND")
     self.wheelBase:SetAllPoints()
     self.wheelBase:SetTexture(ns.Media.WHEEL_LAYER_NORMAL or ns.Media.RUNE_WHEEL_BASE)
-    self.wheelBase:SetVertexColor(0.72, 0.80, 1.0, 1)
-    self.wheelBase:SetAlpha(0.82)
+    self.wheelBase:SetVertexColor(0.58, 0.70, 1.0, 1)
+    self.wheelBase:SetAlpha(0.72)
 
     self.wheelHover = frame.wheel:CreateTexture(nil, "BORDER")
     self.wheelHover:SetAllPoints()
     self.wheelHover:SetTexture(ns.Media.WHEEL_LAYER_HOVER)
     self.wheelHover:SetBlendMode("ADD")
-    self.wheelHover:SetVertexColor(0.54, 0.72, 1.0, 1)
+    self.wheelHover:SetVertexColor(0.46, 0.68, 1.0, 1)
     self.wheelHover:SetAlpha(0)
 
     self.factionAccent = frame.wheel:CreateTexture(nil, "BORDER")
     self.factionAccent:SetAllPoints()
     self.factionAccent:SetBlendMode("ADD")
-    self.factionAccent:SetVertexColor(0.55, 0.70, 1.0, 1)
-    self.factionAccent:SetAlpha(0.28)
+    self.factionAccent:SetVertexColor(0.40, 0.60, 1.0, 1)
+    self.factionAccent:SetAlpha(0.18)
 
     self.outerRing = frame.wheel:CreateTexture(nil, "ARTWORK")
     self.outerRing:SetAllPoints()
     self.outerRing:SetTexture(ns.Media.RUNE_WHEEL_OUTER)
     self.outerRing:SetBlendMode("ADD")
-    self.outerRing:SetVertexColor(0.50, 0.68, 1.0, 1)
-    self.outerRing:SetAlpha(0.58)
+    self.outerRing:SetVertexColor(0.42, 0.62, 1.0, 1)
+    self.outerRing:SetAlpha(0.48)
 
     self.innerRing = frame.wheel:CreateTexture(nil, "ARTWORK")
     self.innerRing:SetAllPoints()
     self.innerRing:SetTexture(ns.Media.RUNE_WHEEL_INNER)
     self.innerRing:SetBlendMode("ADD")
-    self.innerRing:SetVertexColor(0.55, 0.75, 1.0, 1)
-    self.innerRing:SetAlpha(0.62)
+    self.innerRing:SetVertexColor(0.46, 0.68, 1.0, 1)
+    self.innerRing:SetAlpha(0.52)
 
     self.centerCore = frame.wheel:CreateTexture(nil, "OVERLAY")
     self.centerCore:SetSize(138, 138)
@@ -809,7 +809,7 @@ function RouletteFrame:CreateWheel()
     end)
     frame.wheel:SetScript("OnEnter", function()
         if RouletteFrame.wheelHover then
-            RouletteFrame.wheelHover:SetAlpha(0.36)
+            RouletteFrame.wheelHover:SetAlpha(0.24)
         end
     end)
     frame.wheel:SetScript("OnLeave", function()
@@ -1001,8 +1001,8 @@ function RouletteFrame:CreateDestinationNodes()
         local slotTextures = linkTexturesBySlot[slot] or linkTexturesBySlot.top
         local line = wheel:CreateTexture(nil, "ARTWORK")
         line:SetTexture(slotTextures.normal)
-        line:SetVertexColor(0.54, 0.70, 1.0, 1)
-        line:SetAlpha(0.62)
+        line:SetVertexColor(0.42, 0.62, 1.0, 1)
+        line:SetAlpha(0.44)
         setTextureLine(line, wheel, 0, 0, x, y)
         self.nodeLines[index] = line
         ns.DestinationNode:SetLinkedTexture(button, line, slotTextures.normal, slotTextures.hover)
@@ -1025,8 +1025,8 @@ function RouletteFrame:CreateKarazhanNode()
     local karazhanLinkTextures = linkTexturesBySlot.extension_right
     self.karazhanLine = wheel:CreateTexture(nil, "ARTWORK")
     self.karazhanLine:SetTexture(karazhanLinkTextures.normal)
-    self.karazhanLine:SetVertexColor(0.54, 0.70, 1.0, 1)
-    self.karazhanLine:SetAlpha(0.68)
+    self.karazhanLine:SetVertexColor(0.42, 0.62, 1.0, 1)
+    self.karazhanLine:SetAlpha(0.50)
 
     local attachX, attachY = getPositionForAngle(336, KARAZHAN_ATTACH_RADIUS)
     setTextureLine(self.karazhanLine, wheel, attachX, attachY, x, y)
