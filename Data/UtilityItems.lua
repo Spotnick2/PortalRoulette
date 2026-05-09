@@ -117,6 +117,47 @@ function UtilityItems:FindItemInBagsByName(itemName)
     return nil
 end
 
+function UtilityItems:GetItemCooldownByID(itemID)
+    if not itemID then
+        return 0, 0
+    end
+
+    if C_Container and C_Container.GetItemCooldown then
+        local start, duration = C_Container.GetItemCooldown(itemID)
+        if start and duration and duration > 0 then
+            return start, duration
+        end
+    end
+
+    if GetItemCooldown then
+        local start, duration = GetItemCooldown(itemID)
+        if start and duration and duration > 0 then
+            return start, duration
+        end
+    end
+
+    local containerSlotCD = C_Container and C_Container.GetContainerItemCooldown
+    for bag = 0, 4 do
+        local slots = getBagSlotCount(bag)
+        for slot = 1, slots do
+            local link = getBagItemLink(bag, slot)
+            if link and getItemLinkItemID(link) == itemID then
+                local start, duration
+                if containerSlotCD then
+                    start, duration = containerSlotCD(bag, slot)
+                elseif GetContainerItemCooldown then
+                    start, duration = GetContainerItemCooldown(bag, slot)
+                end
+                if start and duration and duration > 0 then
+                    return start, duration
+                end
+            end
+        end
+    end
+
+    return 0, 0
+end
+
 function UtilityItems:HasItem(itemID)
     if not itemID then
         return false

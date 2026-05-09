@@ -220,8 +220,12 @@ local function getUtilityCooldown(source)
     end
 
     local start, duration = 0, 0
-    if source.itemID and GetItemCooldown then
-        start, duration = GetItemCooldown(source.itemID)
+    if source.itemID then
+        if ns.UtilityItems and ns.UtilityItems.GetItemCooldownByID then
+            start, duration = ns.UtilityItems:GetItemCooldownByID(source.itemID)
+        elseif GetItemCooldown then
+            start, duration = GetItemCooldown(source.itemID)
+        end
     end
 
     local active = start and duration and duration > 1 and (start + duration) > GetTime()
@@ -483,17 +487,20 @@ function RouletteFrame:CreateMainFrame()
     frame.cancelButton = CreateFrame("Button", "PortalRouletteCancelCastButton", frame, "SecureActionButtonTemplate")
     frame.cancelButton:SetSize(1, 1)
     frame.cancelButton:SetPoint("TOPLEFT", frame, "TOPLEFT", -10, 10)
-    frame.cancelButton:RegisterForClicks("AnyUp")
+    frame.cancelButton:RegisterForClicks("AnyDown", "AnyUp")
     frame.cancelButton:Hide()
-    frame.cancelButton:SetAttribute("type1", "macro")
-    frame.cancelButton:SetAttribute("macrotext1", "/stopcasting\n/stopspelltarget")
+    frame.cancelButton:SetAttribute("type", "macro")
+    frame.cancelButton:SetAttribute("macrotext", "/stopcasting")
     frame.cancelButton:SetAttribute("type2", "macro")
-    frame.cancelButton:SetAttribute("macrotext2", "/stopcasting\n/stopspelltarget")
-    frame.cancelButton:SetScript("PreClick", function(button)
-        button.wasCasting = isPlayerCastingOrChanneling() and true or false
-        button.wasTargeting = SpellIsTargeting and SpellIsTargeting()
+    frame.cancelButton:SetAttribute("macrotext2", "/stopcasting")
+    frame.cancelButton:SetScript("PreClick", function(button, _, down)
+        if down then
+            button.wasCasting = isPlayerCastingOrChanneling() and true or false
+            button.wasTargeting = SpellIsTargeting and SpellIsTargeting()
+        end
     end)
-    frame.cancelButton:SetScript("PostClick", function(button, mouseButton)
+    frame.cancelButton:SetScript("PostClick", function(button, mouseButton, down)
+        if down then return end
         if mouseButton == "LeftButton" and not button.wasCasting and not button.wasTargeting then
             RouletteFrame:Close()
         end
@@ -648,7 +655,7 @@ function RouletteFrame:CreateWheel()
     frame.centerUtilityButton.cooldown:SetAllPoints(frame.centerUtilityButton)
     frame.centerUtilityButton.cooldown:SetFrameLevel(frame.centerUtilityButton:GetFrameLevel() + 5)
     if frame.centerUtilityButton.cooldown.SetDrawSwipe then
-        frame.centerUtilityButton.cooldown:SetDrawSwipe(true)
+        frame.centerUtilityButton.cooldown:SetDrawSwipe(false)
     end
     if frame.centerUtilityButton.cooldown.SetDrawEdge then
         frame.centerUtilityButton.cooldown:SetDrawEdge(false)
@@ -656,12 +663,6 @@ function RouletteFrame:CreateWheel()
     if frame.centerUtilityButton.cooldown.SetSwipeColor then
         frame.centerUtilityButton.cooldown:SetSwipeColor(0, 0, 0, 0.72)
     end
-
-    frame.centerUtilityButton.cooldownShade = frame.centerUtilityButton:CreateTexture(nil, "OVERLAY")
-    frame.centerUtilityButton.cooldownShade:SetAllPoints(frame.centerUtilityButton)
-    frame.centerUtilityButton.cooldownShade:SetTexture("Interface\\Buttons\\WHITE8X8")
-    frame.centerUtilityButton.cooldownShade:SetVertexColor(0, 0, 0, 0.48)
-    frame.centerUtilityButton.cooldownShade:Hide()
 
     frame.centerUtilityButton.cooldownText = frame.centerUtilityButton:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     frame.centerUtilityButton.cooldownText:SetPoint("CENTER", frame.centerUtilityButton, "CENTER", 0, 0)
@@ -1205,13 +1206,21 @@ function RouletteFrame:RefreshCenterUtility()
     if cooldownActive then
         centerButton.tooltipDetail = (centerButton.tooltipDetail or "") .. "\nOn cooldown."
     end
-    centerButton:SetAlpha((enabled and not cooldownActive) and 1 or 0.55)
+    centerButton:SetAlpha(enabled and 1 or 0.55)
     setCooldown(centerButton.cooldown, cooldownStart, cooldownDuration, cooldownActive)
-    if cooldownActive then
-        centerButton.cooldown:Show()
-        if centerButton.cooldownShade then
-            centerButton.cooldownShade:Show()
+    if not (InCombatLockdown and InCombatLockdown()) then
+        if enabled and not cooldownActive then
+            centerButton:Enable()
+        else
+            centerButton:Disable()
         end
+    end
+    local normalTex = centerButton:GetNormalTexture()
+    local highlightTex = centerButton:GetHighlightTexture()
+    if cooldownActive then
+        if normalTex then normalTex:SetVertexColor(0.45, 0.45, 0.55, 1) end
+        if highlightTex then highlightTex:SetAlpha(0) end
+        centerButton.cooldown:Show()
         if centerButton.cooldownText then
             local remaining = math.max(0, (cooldownStart + cooldownDuration) - GetTime())
             if remaining >= 60 then
@@ -1222,10 +1231,9 @@ function RouletteFrame:RefreshCenterUtility()
             centerButton.cooldownText:Show()
         end
     else
+        if normalTex then normalTex:SetVertexColor(1, 1, 1, 1) end
+        if highlightTex then highlightTex:SetAlpha(0.9) end
         centerButton.cooldown:Hide()
-        if centerButton.cooldownShade then
-            centerButton.cooldownShade:Hide()
-        end
         if centerButton.cooldownText then
             centerButton.cooldownText:Hide()
         end
@@ -1270,6 +1278,7 @@ function RouletteFrame:RefreshAll()
     self:UpdateTabVisuals()
     self:UpdateUtilityModeVisuals()
     self:RefreshDestinationNodes()
+    self:RefreshCenterUtility()
     ns.ReagentPanel:Refresh()
     ns.UtilityButton:Refresh()
 end
