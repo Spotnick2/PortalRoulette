@@ -171,26 +171,84 @@ local function getFrameAlpha(frame)
     return nil
 end
 
+local function isPlayerCastingOrChanneling()
+    return (UnitCastingInfo and UnitCastingInfo("player"))
+        or (UnitChannelInfo and UnitChannelInfo("player"))
+end
+
 function RouletteFrame:HideGameUI()
-    if UIParent and UIParent.GetAlpha then
-        self._savedUIParentAlpha = UIParent:GetAlpha()
+    if self.gameUIHidden or not SetUIVisibility then
+        return
     end
 
-    if SetUIVisibility then
-        SetUIVisibility(false)
-    elseif UIParent and UIParent.SetAlpha then
-        UIParent:SetAlpha(0)
+    self.gameUIHidden = true
+    if UIParent and UIParent.SetAlpha then
+        pcall(UIParent.SetAlpha, UIParent, 0)
+    end
+    pcall(SetUIVisibility, false)
+    if UIParent and UIParent.SetAlpha then
+        pcall(UIParent.SetAlpha, UIParent, 1)
     end
 end
 
 function RouletteFrame:RestoreGameUI()
+    if not self.gameUIHidden then
+        return
+    end
+
+    self.gameUIHidden = nil
+    if UIParent and UIParent.SetAlpha then
+        pcall(UIParent.SetAlpha, UIParent, 0)
+    end
     if SetUIVisibility then
-        SetUIVisibility(true)
+        pcall(SetUIVisibility, true)
+    end
+    if Minimap and Minimap.Show then
+        pcall(Minimap.Show, Minimap)
     end
     if UIParent and UIParent.SetAlpha then
-        UIParent:SetAlpha(self._savedUIParentAlpha or 1.0)
+        if C_Timer and C_Timer.After then
+            C_Timer.After(0.05, function()
+                if UIParent and UIParent.SetAlpha then
+                    pcall(UIParent.SetAlpha, UIParent, 1)
+                end
+            end)
+        else
+            pcall(UIParent.SetAlpha, UIParent, 1)
+        end
     end
-    self._savedUIParentAlpha = nil
+end
+
+function RouletteFrame:UpdateEscapeHandling()
+    if not self.frame then
+        return
+    end
+    self.frame:EnableKeyboard(not isPlayerCastingOrChanneling())
+end
+
+function RouletteFrame:RegisterTeleportConfirmPopup()
+    if self.teleportConfirmPopupRegistered or not StaticPopupDialogs then
+        return
+    end
+
+    StaticPopupDialogs.PORTALROULETTE_CONFIRM_TELEPORT = {
+        text = "Teleport to %s while grouped?",
+        button1 = YES,
+        button2 = NO,
+        timeout = 0,
+        whileDead = true,
+        hideOnEscape = true,
+        OnAccept = function(_, data)
+            if ns.RouletteFrame then
+                ns.RouletteFrame.teleportConfirmDestination = data.destinationID
+                ns.RouletteFrame.teleportConfirmButton = data.mouseButton
+                ns.RouletteFrame.teleportConfirmExpires = GetTime() + 8
+                ns.RouletteFrame:RefreshDestinationNodes()
+                ns.Print("Teleport armed for " .. data.label .. ". Click again to cast.")
+            end
+        end,
+    }
+    self.teleportConfirmPopupRegistered = true
 end
 
 local function createTab(parent, mode, xOffset, label)
@@ -208,11 +266,6 @@ local function createTab(parent, mode, xOffset, label)
 
     tab.mode = mode
     return tab
-end
-
-local function isPlayerCastingOrChanneling()
-    return (UnitCastingInfo and UnitCastingInfo("player"))
-        or (UnitChannelInfo and UnitChannelInfo("player"))
 end
 
 local function getUtilityCooldown(source)
@@ -392,6 +445,29 @@ function RouletteFrame:SetNodeVisualAlpha(alpha)
     end
 end
 
+function RouletteFrame:EnsureCityNodeBrightness()
+    for _, button in ipairs(self.nodeButtons or {}) do
+        if button and not button.isKarazhanNode then
+            button:SetAlpha(1)
+            if button.baseTexture then
+                button.baseTexture:SetVertexColor(1, 1, 1, 1)
+            end
+            if button.iconTexture then
+                button.iconTexture:SetAlpha(1)
+                button.iconTexture:SetVertexColor(1.15, 1.15, 1.15, 1)
+                button.iconTexture:SetDesaturated(false)
+            end
+            if button.iconHoverTexture then
+                button.iconHoverTexture:SetAlpha(0)
+            end
+            if button.nameplateTexture then
+                button.nameplateTexture:SetVertexColor(1.12, 1.12, 1.12, 1)
+                button.nameplateTexture:SetDesaturated(false)
+            end
+        end
+    end
+end
+
 function RouletteFrame:SetInteractionEnabled(enabled)
     if not self.frame then
         return
@@ -424,7 +500,7 @@ function RouletteFrame:ResetPresentationState()
     resetVisual(frame.sideGroup, 1, 1)
     resetVisual(frame.lowerGroup, 1, 1)
     if frame.dimmer then
-        resetVisual(frame.dimmer, 0.86, 1)
+        resetVisual(frame.dimmer, 0.90, 1)
         frame.dimmer:Show()
     end
     self:ResetVortexState(false)
@@ -610,7 +686,7 @@ function RouletteFrame:PlayOpenPresentation()
         resetVisual(self.karazhanButton, 0, 1 - (0.04 * intensity))
     end
 
-    playFade(frame.dimmer, 0, 0.86, 0.28)
+    playFade(frame.dimmer, 0, 0.90, 0.28)
 
     self:RunAfter(0.06, function()
         playFadeScale(frame.headerGroup, 0, 1, 1 - (0.03 * intensity), 1, 0.28)
@@ -722,7 +798,8 @@ function RouletteFrame:CreateMainFrame()
     local overlayParent = WorldFrame or UIParent
     local frame = CreateFrame("Frame", "PortalRouletteMainFrame", overlayParent)
     frame:SetSize(780, 760)
-    frame:SetFrameStrata("FULLSCREEN")
+    frame:SetFrameStrata("FULLSCREEN_DIALOG")
+    frame:SetFrameLevel(100)
     frame:EnableMouse(false)
     frame:SetMovable(true)
     frame:RegisterForDrag("LeftButton")
@@ -734,7 +811,7 @@ function RouletteFrame:CreateMainFrame()
     frame.dimmer = CreateFrame("Frame", nil, overlayParent)
     frame.dimmer:SetAllPoints(overlayParent)
     frame.dimmer:SetFrameStrata("FULLSCREEN")
-    frame.dimmer:SetFrameLevel(1)
+    frame.dimmer:SetFrameLevel(0)
     frame.dimmer:EnableMouse(false)
     if frame.dimmer.SetIgnoreParentAlpha then
         frame.dimmer:SetIgnoreParentAlpha(true)
@@ -747,7 +824,7 @@ function RouletteFrame:CreateMainFrame()
     -- prefers SetGradient with ColorMixin objects; fall back to SetGradientAlpha
     -- on clients that only have the older API.
     local minR, minG, minB, minA = 0.02, 0.02, 0.04, 0.0
-    local maxR, maxG, maxB, maxA = 0.02, 0.02, 0.04, 0.92
+    local maxR, maxG, maxB, maxA = 0.02, 0.02, 0.04, 0.82
     if frame.dimmer.texture.SetGradient and CreateColor then
         local ok = pcall(function()
             frame.dimmer.texture:SetGradient(
@@ -804,13 +881,20 @@ function RouletteFrame:CreateMainFrame()
     end)
 
     frame:EnableKeyboard(false)
+    frame:SetScript("OnKeyDown", function(_, key)
+        if key == "ESCAPE" then
+            RouletteFrame:Close()
+        end
+    end)
 
     frame:SetScript("OnShow", function()
         RouletteFrame.isClosing = false
+        RouletteFrame.openedAt = GetTime and GetTime() or 0
         RouletteFrame.optionsOpenToken = (RouletteFrame.optionsOpenToken or 0) + 1
         RouletteFrame:RefreshAll()
         RouletteFrame:SetInteractionEnabled(true)
         RouletteFrame:HideGameUI()
+        RouletteFrame:UpdateEscapeHandling()
         if ns.db and ns.db.cinematicCamera then
             ns.CameraMode:Enter()
         end
@@ -821,7 +905,7 @@ function RouletteFrame:CreateMainFrame()
         RouletteFrame.isClosing = false
         RouletteFrame:ResetVortexState(false)
         frame.dimmer:Hide()
-        ns.CameraMode:Exit()
+        frame:EnableKeyboard(false)
         RouletteFrame.presentationToken = (RouletteFrame.presentationToken or 0) + 1
         RouletteFrame:SetInteractionEnabled(true)
         RouletteFrame:RestoreGameUI()
@@ -846,17 +930,17 @@ function RouletteFrame:CreateMainFrame()
                 RouletteFrame.innerRing:SetRotation(RouletteFrame.innerAngle)
             end
             if RouletteFrame.factionAccent then
-                RouletteFrame.factionAccent:SetAlpha(0.20 + (math.sin(RouletteFrame.idlePulse * 1.25) * 0.04 * intensity))
+                RouletteFrame.factionAccent:SetAlpha(0.26 + (math.sin(RouletteFrame.idlePulse * 1.25) * 0.05 * intensity))
             end
             if RouletteFrame.centerCore then
-                RouletteFrame.centerCore:SetAlpha(0.12 + (math.sin(RouletteFrame.idlePulse * 1.8) * 0.04 * intensity))
+                RouletteFrame.centerCore:SetAlpha(0.16 + (math.sin(RouletteFrame.idlePulse * 1.8) * 0.05 * intensity))
             end
         else
             if RouletteFrame.factionAccent then
-                RouletteFrame.factionAccent:SetAlpha(0.18)
+                RouletteFrame.factionAccent:SetAlpha(0.24)
             end
             if RouletteFrame.centerCore then
-                RouletteFrame.centerCore:SetAlpha(0.10)
+                RouletteFrame.centerCore:SetAlpha(0.14)
             end
         end
 
@@ -918,6 +1002,10 @@ function RouletteFrame:CreateMainFrame()
         if RouletteFrame.castBarStart then
             RouletteFrame:UpdateCastBar()
         end
+        if not RouletteFrame.isClosing and (not RouletteFrame.openedAt or not GetTime or (GetTime() - RouletteFrame.openedAt) > 1.05) then
+            RouletteFrame:EnsureCityNodeBrightness()
+        end
+        RouletteFrame:UpdateEscapeHandling()
         RouletteFrame.utilityRefreshElapsed = (RouletteFrame.utilityRefreshElapsed or 0) + (elapsed or 0)
         if RouletteFrame.utilityRefreshElapsed >= 0.25 then
             RouletteFrame.utilityRefreshElapsed = 0
@@ -968,7 +1056,7 @@ function RouletteFrame:CreateWheel()
     self.wheelBase:SetAllPoints()
     self.wheelBase:SetTexture(ns.Media.WHEEL_LAYER_NORMAL or ns.Media.RUNE_WHEEL_BASE)
     self.wheelBase:SetVertexColor(0.58, 0.70, 1.0, 1)
-    self.wheelBase:SetAlpha(0.72)
+    self.wheelBase:SetAlpha(0.86)
 
     self.wheelHover = frame.wheel:CreateTexture(nil, "BORDER")
     self.wheelHover:SetAllPoints()
@@ -981,21 +1069,21 @@ function RouletteFrame:CreateWheel()
     self.factionAccent:SetAllPoints()
     self.factionAccent:SetBlendMode("ADD")
     self.factionAccent:SetVertexColor(0.40, 0.60, 1.0, 1)
-    self.factionAccent:SetAlpha(0.18)
+    self.factionAccent:SetAlpha(0.24)
 
     self.outerRing = frame.wheel:CreateTexture(nil, "ARTWORK")
     self.outerRing:SetAllPoints()
     self.outerRing:SetTexture(ns.Media.RUNE_WHEEL_OUTER)
     self.outerRing:SetBlendMode("ADD")
     self.outerRing:SetVertexColor(0.42, 0.62, 1.0, 1)
-    self.outerRing:SetAlpha(0.48)
+    self.outerRing:SetAlpha(0.62)
 
     self.innerRing = frame.wheel:CreateTexture(nil, "ARTWORK")
     self.innerRing:SetAllPoints()
     self.innerRing:SetTexture(ns.Media.RUNE_WHEEL_INNER)
     self.innerRing:SetBlendMode("ADD")
     self.innerRing:SetVertexColor(0.46, 0.68, 1.0, 1)
-    self.innerRing:SetAlpha(0.52)
+    self.innerRing:SetAlpha(0.66)
 
     self.centerCore = frame.wheel:CreateTexture(nil, "OVERLAY")
     self.centerCore:SetSize(138, 138)
@@ -1003,7 +1091,7 @@ function RouletteFrame:CreateWheel()
     self.centerCore:SetTexture(ns.Media.CORE_VORTEX)
     self.centerCore:SetBlendMode("ADD")
     self.centerCore:SetVertexColor(0.36, 0.64, 1.0, 1)
-    self.centerCore:SetAlpha(0.10)
+    self.centerCore:SetAlpha(0.14)
 
     frame.centerUtilityButton = CreateFrame("Button", nil, frame.wheel, "SecureActionButtonTemplate")
     frame.centerUtilityButton:SetSize(104, 104)
@@ -1352,8 +1440,8 @@ function RouletteFrame:BuildNodeState(destination, faction)
     local visuals = ns.Destinations:GetVisualsForDestination(destination, faction)
     local icon, _ = ns.Destinations:GetIconForDestination(destination, self.mode)
 
-    -- Visual enabled = spells known AND reagents available (for desaturation/label only;
-    -- buttons are always interactable and WoW reports errors naturally).
+    -- Normal city nodes are always visually bright; spell/reagent availability
+    -- only affects the action detail and lets WoW report cast errors naturally.
     local teleportKnown = getSpellKnown(teleportSpellID)
     local portalKnown = getSpellKnown(portalSpellID)
     local teleportReagents = GetItemCount(ns.Constants.ITEM_RUNE_TELEPORTATION, false, false) or 0
@@ -1362,7 +1450,7 @@ function RouletteFrame:BuildNodeState(destination, faction)
     local rightSpellName = portalSpellName
     local leftActionAvailable = teleportKnown and teleportReagents > 0
     local rightActionAvailable = portalKnown and portalReagents > 0
-    local enabled = (teleportKnown and teleportReagents > 0) or (portalKnown and portalReagents > 0)
+    local enabled = true
 
     local leftLabel = "Teleport"
     local rightLabel = "Portal"
@@ -1379,9 +1467,9 @@ function RouletteFrame:BuildNodeState(destination, faction)
     return {
         label             = destination.label,
         icon              = icon,
-        iconNormalTexture = visuals and visuals.iconNormal or icon,
+        iconNormalTexture = visuals and (visuals.iconHover or visuals.iconNormal) or icon,
         iconHoverTexture  = visuals and visuals.iconHover or nil,
-        nameplateNormalTexture = visuals and visuals.nameplateNormal or nil,
+        nameplateNormalTexture = visuals and (visuals.nameplateHover or visuals.nameplateNormal) or nil,
         nameplateHoverTexture = visuals and visuals.nameplateHover or nil,
         enabled           = enabled,
         tooltipTitle      = destination.label,
@@ -1397,25 +1485,6 @@ function RouletteFrame:BuildNodeState(destination, faction)
     }
 end
 
-StaticPopupDialogs = StaticPopupDialogs or {}
-StaticPopupDialogs.PORTALROULETTE_CONFIRM_TELEPORT = {
-    text = "Teleport to %s while grouped?",
-    button1 = YES,
-    button2 = NO,
-    timeout = 0,
-    whileDead = true,
-    hideOnEscape = true,
-    OnAccept = function(_, data)
-        if ns.RouletteFrame then
-            ns.RouletteFrame.teleportConfirmDestination = data.destinationID
-            ns.RouletteFrame.teleportConfirmButton = data.mouseButton
-            ns.RouletteFrame.teleportConfirmExpires = GetTime() + 8
-            ns.RouletteFrame:RefreshDestinationNodes()
-            ns.Print("Teleport armed for " .. data.label .. ". Click again to cast.")
-        end
-    end,
-}
-
 function RouletteFrame:HandleDestinationMouseUp(button, mouseButton)
     if not button or not button.destination or not ns.db or not ns.db.confirmGroupedTeleport or not isGrouped() then
         return
@@ -1427,6 +1496,7 @@ function RouletteFrame:HandleDestinationMouseUp(button, mouseButton)
     if isTeleportConfirmArmed(self, button.destination.id, mouseButton) then
         return
     end
+    self:RegisterTeleportConfirmPopup()
     if StaticPopup_Show then
         StaticPopup_Show("PORTALROULETTE_CONFIRM_TELEPORT", button.destination.label, nil, {
             destinationID = button.destination.id,
@@ -1594,8 +1664,8 @@ function RouletteFrame:RefreshCenterUtility()
     local normalTex = centerButton:GetNormalTexture()
     local highlightTex = centerButton:GetHighlightTexture()
     if cooldownActive then
-        if normalTex then normalTex:SetVertexColor(0.45, 0.45, 0.55, 1) end
-        if highlightTex then highlightTex:SetAlpha(0) end
+        if normalTex then normalTex:SetVertexColor(1, 1, 1, 1) end
+        if highlightTex then highlightTex:SetAlpha(0.35) end
         centerButton.cooldown:Show()
         if centerButton.cooldownText then
             local remaining = math.max(0, (cooldownStart + cooldownDuration) - GetTime())
@@ -1712,7 +1782,18 @@ function RouletteFrame:Close()
     if ns.Sound then
         ns.Sound:Play("Close")
     end
-
+    if ns.CameraMode then
+        ns.CameraMode:Exit()
+    end
+    if C_Timer and C_Timer.After then
+        C_Timer.After(0.10, function()
+            if self.frame and self.isClosing then
+                self:RestoreGameUI()
+            end
+        end)
+    else
+        self:RestoreGameUI()
+    end
     self:PlayClosePresentation(function()
         if self.frame then
             self.frame:Hide()
@@ -1738,5 +1819,4 @@ function RouletteFrame:Initialize()
     if not ns.isMage then
         return
     end
-    self:Create()
 end

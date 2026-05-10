@@ -172,7 +172,6 @@ function refreshVisualState()
 end
 
 local function initializeForMage()
-    ns.OptionsPanel:Initialize()
     ns.RouletteFrame:Initialize()
     ns.LauncherButton:Initialize()
     ns.MinimapButton:Initialize()

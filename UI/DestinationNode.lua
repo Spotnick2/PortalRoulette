@@ -316,7 +316,7 @@ function DestinationNode:ApplyState(button, state)
     end
 
     button.pendingState = nil
-    button.visualEnabled = (state.enabled and not state.disableActions) and true or false
+    button.visualEnabled = (not state.isKarazhan) or ((state.enabled and not state.disableActions) and true or false)
     button.tooltipTitle  = state.tooltipTitle or state.label or ""
     button.tooltipDetail = state.tooltipDetail
     button.tooltipClickText = state.tooltipClickText
@@ -362,11 +362,19 @@ function DestinationNode:ApplyState(button, state)
     button:Enable()
 
     if button.visualEnabled then
+        if not button.isKarazhanNode then
+            button:SetAlpha(1)
+        end
         button.baseTexture:SetTexture(state.normalTexture or ns.Media.NODE_NORMAL)
         button.baseTexture:SetVertexColor(1, 1, 1, 1)
         button.iconTexture:SetDesaturated(false)
         button.nameplateTexture:SetDesaturated(false)
+        button.iconTexture:SetVertexColor(1.15, 1.15, 1.15, 1)
+        button.nameplateTexture:SetVertexColor(1.12, 1.12, 1.12, 1)
         button.iconTexture:SetAlpha(1)
+        if button.iconHoverTexture then
+            button.iconHoverTexture:SetAlpha(0)
+        end
         button.nameplateTexture:SetAlpha(state.nameplateNormalTexture and 1 or 0)
     else
         button.baseTexture:SetTexture(state.normalTexture or ns.Media.NODE_NORMAL)
@@ -377,6 +385,8 @@ function DestinationNode:ApplyState(button, state)
         end
         button.iconTexture:SetDesaturated(false)
         button.nameplateTexture:SetDesaturated(false)
+        button.iconTexture:SetVertexColor(1, 1, 1, 1)
+        button.nameplateTexture:SetVertexColor(1, 1, 1, 1)
         button.iconTexture:SetAlpha(button.isKarazhanNode and 0.66 or 0.56)
         button.nameplateTexture:SetAlpha(state.nameplateNormalTexture and (button.isKarazhanNode and 0.70 or 0.62) or 0)
     end

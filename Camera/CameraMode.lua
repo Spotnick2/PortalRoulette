@@ -7,8 +7,8 @@ local _, ns = ...
 --                     wheel sits on the right side of the screen.
 -- Mounted detection:  separate zoom + shoulder values so a mounted character is fully
 --                     visible with the mount, matching Narcissus Classic behaviour.
--- CVar popup:         EXPERIMENTAL_CVAR_CONFIRMATION_NEEDED is suppressed at file load
---                     (same approach as Narcissus).
+-- CVar popup:         untouched; mutating UIParent event ownership can taint
+--                     protected Blizzard callbacks such as the game menu.
 
 local CameraMode = {
     active  = false,
@@ -52,7 +52,8 @@ local MOUNTED_ZOOM           = 8.0   -- Narcissus default for mounted
 -- Narcissus eases into its portrait angle instead of snapping through a full spin.
 local ENTER_DURATION         = 1.50
 local CAST_RESET_DURATION    = 0.90
-local EXIT_DURATION          = 0.35
+local EXIT_DURATION          = 0.92
+local EXIT_RESTORE_AT        = 0.10
 local ORBIT_SPEED            = 0.005
 local ENTER_YAW_FROM_SPEED   = 1.0
 local CAST_RESET_YAW_SPEED   = 0.78
@@ -164,6 +165,9 @@ function CameraMode:Enter()
         pcall(SetCVar, "test_cameraDynamicPitch", "1")
         pcall(SetCVar, "test_cameraOverShoulder", self:_GetShoulderOffset())
     end
+    if type(ConsoleExec) == "function" then
+        pcall(ConsoleExec, "pitchlimit 1")
+    end
 
     -- Start from a clean base view, then apply zoom.
     if type(SetView) == "function" then pcall(SetView, 2) end
@@ -184,9 +188,7 @@ function CameraMode:Exit()
     self:_StopYaw()
     self.mode    = "exit"
     self.elapsed = 0
-    if self.capture and self.capture.savedViewSlot and type(SetView) == "function" then
-        pcall(SetView, self.capture.savedViewSlot)
-    end
+    self.exitRestored = nil
     if self.animFrame then self.animFrame:Show() end
 end
 
@@ -249,6 +251,9 @@ end
 function CameraMode:ForceRestore(reason)
     self:_StopYaw()
     if self.animFrame then self.animFrame:Hide() end
+    if type(ConsoleExec) == "function" then
+        pcall(ConsoleExec, "pitchlimit 88")
+    end
 
     if self.capture then
         if self.capture.savedViewSlot and type(SetView) == "function" then
@@ -283,6 +288,8 @@ function CameraMode:ForceRestore(reason)
     self.castResetDuration = nil
     self.resumeOrbitAfterCastReset = nil
     self.presentationViewSaved = nil
+    self.exitYawDir = nil
+    self.exitRestored = nil
 end
 
 function CameraMode:UpdateAnimation(elapsed)
@@ -338,7 +345,13 @@ function CameraMode:UpdateAnimation(elapsed)
     end
 
     if self.mode == "exit" then
-        if self.elapsed >= math.max(0.01, EXIT_DURATION) then
+        local exitDur = math.max(0.01, EXIT_DURATION)
+        if not self.exitRestored and self.elapsed >= EXIT_RESTORE_AT then
+            self.exitRestored = true
+            self:ForceRestore("exit-restore")
+            return
+        end
+        if self.elapsed >= exitDur then
             self:ForceRestore("exit-complete")
         end
     end
@@ -384,8 +397,3 @@ CameraMode.eventFrame:SetScript("OnEvent", function(_, event, unit)
     end
 end)
 
--- Suppress "Are you sure you want to enable experimental feature?" popup.
--- Narcissus does the same unregister to allow silent test_* CVar writes.
-if UIParent and type(UIParent.UnregisterEvent) == "function" then
-    pcall(UIParent.UnregisterEvent, UIParent, "EXPERIMENTAL_CVAR_CONFIRMATION_NEEDED")
-end
