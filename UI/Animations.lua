@@ -5,7 +5,11 @@ local Animations = {
 }
 ns.Animations = Animations
 
-local runner = CreateFrame("Frame")
+local runner = CreateFrame("Frame", nil, WorldFrame or UIParent)
+runner:Show()
+if runner.SetIgnoreParentAlpha then
+    runner:SetIgnoreParentAlpha(true)
+end
 
 local function smoothStep(progress)
     return progress * progress * (3 - 2 * progress)

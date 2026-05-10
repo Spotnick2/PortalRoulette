@@ -177,46 +177,19 @@ local function isPlayerCastingOrChanneling()
 end
 
 function RouletteFrame:HideGameUI()
-    if self.gameUIHidden or not SetUIVisibility then
-        return
+    if UIParent and UIParent.GetAlpha then
+        self._savedUIParentAlpha = UIParent:GetAlpha()
     end
-
-    self.gameUIHidden = true
     if UIParent and UIParent.SetAlpha then
-        pcall(UIParent.SetAlpha, UIParent, 0)
-    end
-    pcall(SetUIVisibility, false)
-    if UIParent and UIParent.SetAlpha then
-        pcall(UIParent.SetAlpha, UIParent, 1)
+        UIParent:SetAlpha(0)
     end
 end
 
 function RouletteFrame:RestoreGameUI()
-    if not self.gameUIHidden then
-        return
-    end
-
-    self.gameUIHidden = nil
     if UIParent and UIParent.SetAlpha then
-        pcall(UIParent.SetAlpha, UIParent, 0)
+        UIParent:SetAlpha(self._savedUIParentAlpha or 1.0)
     end
-    if SetUIVisibility then
-        pcall(SetUIVisibility, true)
-    end
-    if Minimap and Minimap.Show then
-        pcall(Minimap.Show, Minimap)
-    end
-    if UIParent and UIParent.SetAlpha then
-        if C_Timer and C_Timer.After then
-            C_Timer.After(0.05, function()
-                if UIParent and UIParent.SetAlpha then
-                    pcall(UIParent.SetAlpha, UIParent, 1)
-                end
-            end)
-        else
-            pcall(UIParent.SetAlpha, UIParent, 1)
-        end
-    end
+    self._savedUIParentAlpha = nil
 end
 
 function RouletteFrame:UpdateEscapeHandling()
@@ -665,6 +638,7 @@ function RouletteFrame:PlayOpenPresentation()
         return
     end
 
+
     self:PlayVortexOpen()
 
     frame.dimmer:Show()
@@ -727,6 +701,32 @@ function RouletteFrame:PlayOpenPresentation()
     end)
     self:RunAfter(0.84, function()
         playFadeScale(frame.lowerGroup, 0, 1, 1 - (0.02 * intensity), 1, 0.22)
+    end)
+    self:RunAfter(1.25, function()
+        if not self.frame or not self.frame:IsShown() then
+            return
+        end
+        local function settle(obj, alpha, scale)
+            if not obj then return end
+            if ns.Animations and ns.Animations.Stop then
+                ns.Animations:Stop(obj)
+            end
+            if obj.SetAlpha then obj:SetAlpha(alpha) end
+            if scale and obj.SetScale then obj:SetScale(scale) end
+        end
+        settle(frame.headerGroup, 1, 1)
+        settle(frame.wheel, 1, 1)
+        settle(frame.sideGroup, 1, 1)
+        settle(frame.lowerGroup, 1, 1)
+        settle(frame.dimmer, 0.90, 1)
+        for _, line in ipairs(self.nodeLines or {}) do
+            settle(line, 1)
+        end
+        for _, button in ipairs(self.nodeButtons or {}) do
+            settle(button, 1, 1)
+        end
+        if self.karazhanLine then settle(self.karazhanLine, 1) end
+        if self.karazhanButton then settle(self.karazhanButton, 1, 1) end
     end)
 end
 
@@ -798,7 +798,7 @@ function RouletteFrame:CreateMainFrame()
     local overlayParent = WorldFrame or UIParent
     local frame = CreateFrame("Frame", "PortalRouletteMainFrame", overlayParent)
     frame:SetSize(780, 760)
-    frame:SetFrameStrata("FULLSCREEN_DIALOG")
+    frame:SetFrameStrata("FULLSCREEN")
     frame:SetFrameLevel(100)
     frame:EnableMouse(false)
     frame:SetMovable(true)
@@ -891,6 +891,15 @@ function RouletteFrame:CreateMainFrame()
         RouletteFrame.isClosing = false
         RouletteFrame.openedAt = GetTime and GetTime() or 0
         RouletteFrame.optionsOpenToken = (RouletteFrame.optionsOpenToken or 0) + 1
+        if frame.dimmer and frame.dimmer.SetFrameLevel then
+            pcall(frame.dimmer.SetFrameLevel, frame.dimmer, 0)
+        end
+        if frame.SetFrameLevel then
+            pcall(frame.SetFrameLevel, frame, 100)
+        end
+        if frame.Raise then
+            pcall(frame.Raise, frame)
+        end
         RouletteFrame:RefreshAll()
         RouletteFrame:SetInteractionEnabled(true)
         RouletteFrame:HideGameUI()
@@ -930,17 +939,17 @@ function RouletteFrame:CreateMainFrame()
                 RouletteFrame.innerRing:SetRotation(RouletteFrame.innerAngle)
             end
             if RouletteFrame.factionAccent then
-                RouletteFrame.factionAccent:SetAlpha(0.26 + (math.sin(RouletteFrame.idlePulse * 1.25) * 0.05 * intensity))
+                RouletteFrame.factionAccent:SetAlpha(0.18 + (math.sin(RouletteFrame.idlePulse * 1.25) * 0.025 * intensity))
             end
             if RouletteFrame.centerCore then
-                RouletteFrame.centerCore:SetAlpha(0.16 + (math.sin(RouletteFrame.idlePulse * 1.8) * 0.05 * intensity))
+                RouletteFrame.centerCore:SetAlpha(0.10 + (math.sin(RouletteFrame.idlePulse * 1.8) * 0.025 * intensity))
             end
         else
             if RouletteFrame.factionAccent then
-                RouletteFrame.factionAccent:SetAlpha(0.24)
+                RouletteFrame.factionAccent:SetAlpha(0.18)
             end
             if RouletteFrame.centerCore then
-                RouletteFrame.centerCore:SetAlpha(0.14)
+                RouletteFrame.centerCore:SetAlpha(0.10)
             end
         end
 
@@ -1056,7 +1065,7 @@ function RouletteFrame:CreateWheel()
     self.wheelBase:SetAllPoints()
     self.wheelBase:SetTexture(ns.Media.WHEEL_LAYER_NORMAL or ns.Media.RUNE_WHEEL_BASE)
     self.wheelBase:SetVertexColor(0.58, 0.70, 1.0, 1)
-    self.wheelBase:SetAlpha(0.86)
+    self.wheelBase:SetAlpha(0.72)
 
     self.wheelHover = frame.wheel:CreateTexture(nil, "BORDER")
     self.wheelHover:SetAllPoints()
@@ -1069,21 +1078,21 @@ function RouletteFrame:CreateWheel()
     self.factionAccent:SetAllPoints()
     self.factionAccent:SetBlendMode("ADD")
     self.factionAccent:SetVertexColor(0.40, 0.60, 1.0, 1)
-    self.factionAccent:SetAlpha(0.24)
+    self.factionAccent:SetAlpha(0.18)
 
     self.outerRing = frame.wheel:CreateTexture(nil, "ARTWORK")
     self.outerRing:SetAllPoints()
     self.outerRing:SetTexture(ns.Media.RUNE_WHEEL_OUTER)
     self.outerRing:SetBlendMode("ADD")
     self.outerRing:SetVertexColor(0.42, 0.62, 1.0, 1)
-    self.outerRing:SetAlpha(0.62)
+    self.outerRing:SetAlpha(0.48)
 
     self.innerRing = frame.wheel:CreateTexture(nil, "ARTWORK")
     self.innerRing:SetAllPoints()
     self.innerRing:SetTexture(ns.Media.RUNE_WHEEL_INNER)
     self.innerRing:SetBlendMode("ADD")
     self.innerRing:SetVertexColor(0.46, 0.68, 1.0, 1)
-    self.innerRing:SetAlpha(0.66)
+    self.innerRing:SetAlpha(0.52)
 
     self.centerCore = frame.wheel:CreateTexture(nil, "OVERLAY")
     self.centerCore:SetSize(138, 138)
@@ -1091,7 +1100,7 @@ function RouletteFrame:CreateWheel()
     self.centerCore:SetTexture(ns.Media.CORE_VORTEX)
     self.centerCore:SetBlendMode("ADD")
     self.centerCore:SetVertexColor(0.36, 0.64, 1.0, 1)
-    self.centerCore:SetAlpha(0.14)
+    self.centerCore:SetAlpha(0.10)
 
     frame.centerUtilityButton = CreateFrame("Button", nil, frame.wheel, "SecureActionButtonTemplate")
     frame.centerUtilityButton:SetSize(104, 104)
@@ -1467,9 +1476,9 @@ function RouletteFrame:BuildNodeState(destination, faction)
     return {
         label             = destination.label,
         icon              = icon,
-        iconNormalTexture = visuals and (visuals.iconHover or visuals.iconNormal) or icon,
+        iconNormalTexture = visuals and visuals.iconNormal or icon,
         iconHoverTexture  = visuals and visuals.iconHover or nil,
-        nameplateNormalTexture = visuals and (visuals.nameplateHover or visuals.nameplateNormal) or nil,
+        nameplateNormalTexture = visuals and visuals.nameplateNormal or nil,
         nameplateHoverTexture = visuals and visuals.nameplateHover or nil,
         enabled           = enabled,
         tooltipTitle      = destination.label,

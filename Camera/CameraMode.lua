@@ -359,7 +359,7 @@ end
 
 -- ── Frame plumbing ───────────────────────────────────────────────────────────
 
-CameraMode.animFrame = CreateFrame("Frame")
+CameraMode.animFrame = CreateFrame("Frame", nil, WorldFrame or UIParent)
 CameraMode.animFrame:Hide()
 CameraMode.animFrame:SetScript("OnUpdate", function(_, elapsed)
     CameraMode:UpdateAnimation(elapsed)
