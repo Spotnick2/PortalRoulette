@@ -303,26 +303,6 @@ local function getSpellKnown(spellID)
     return false
 end
 
-local function playFade(frame, fromAlpha, toAlpha, duration)
-    if not frame then
-        return
-    end
-    local scale = 1
-    if frame.GetScale then
-        scale = frame:GetScale()
-    end
-    ns.Animations:Play(frame, fromAlpha, toAlpha, scale, scale, duration)
-end
-
-local function playFadeScale(frame, fromAlpha, toAlpha, fromScale, toScale, duration)
-    if not frame then
-        return
-    end
-    local startScale = fromScale or ((frame.GetScale and frame:GetScale()) or 1)
-    local endScale = toScale or startScale
-    ns.Animations:Play(frame, fromAlpha, toAlpha, startScale, endScale, duration)
-end
-
 local function clampAnimationIntensity()
     local db = ns.db or {}
     local value = tonumber(db.animationIntensity) or 1
@@ -386,6 +366,55 @@ local function resetTextureVisual(texture, alpha, scale, rotation)
     end
 end
 
+local function clamp01(value)
+    if value <= 0 then
+        return 0
+    elseif value >= 1 then
+        return 1
+    end
+    return value
+end
+
+local function smoothStep(progress)
+    progress = clamp01(progress)
+    return progress * progress * (3 - (2 * progress))
+end
+
+local function outCubic(progress)
+    progress = 1 - clamp01(progress)
+    return 1 - (progress * progress * progress)
+end
+
+local function segmentProgress(elapsed, startAt, duration, easing)
+    local progress = clamp01((elapsed - startAt) / math.max(0.001, duration))
+    if easing == "out" then
+        return outCubic(progress)
+    end
+    return smoothStep(progress)
+end
+
+local function lerp(fromValue, toValue, progress)
+    return fromValue + ((toValue - fromValue) * progress)
+end
+
+local function applyVisual(frame, alpha, scale)
+    if not frame then
+        return
+    end
+    if alpha ~= nil and frame.SetAlpha then
+        frame:SetAlpha(alpha)
+    end
+    if scale ~= nil and frame.SetScale then
+        frame:SetScale(scale)
+    end
+end
+
+local function stopVisualAnimation(frame)
+    if frame and ns.Animations and ns.Animations.Stop then
+        ns.Animations:Stop(frame)
+    end
+end
+
 function RouletteFrame:RunAfter(delay, callback)
     local token = self.presentationToken
     if not C_Timer or not C_Timer.After then
@@ -415,6 +444,175 @@ function RouletteFrame:SetNodeVisualAlpha(alpha)
     end
     if self.karazhanButton then
         self.karazhanButton:SetAlpha(alpha)
+    end
+end
+
+function RouletteFrame:StopPresentationAnimations()
+    if not self.frame then
+        return
+    end
+
+    local frame = self.frame
+    stopVisualAnimation(frame.headerGroup)
+    stopVisualAnimation(frame.wheel)
+    stopVisualAnimation(frame.sideGroup)
+    stopVisualAnimation(frame.lowerGroup)
+    stopVisualAnimation(frame.dimmer)
+    for _, line in ipairs(self.nodeLines or {}) do
+        stopVisualAnimation(line)
+    end
+    for _, button in ipairs(self.nodeButtons or {}) do
+        stopVisualAnimation(button)
+    end
+    stopVisualAnimation(self.karazhanLine)
+    stopVisualAnimation(self.karazhanButton)
+end
+
+function RouletteFrame:SetOpenPresentationFinal()
+    if not self.frame then
+        return
+    end
+
+    local frame = self.frame
+    applyVisual(frame.dimmer, 0.90, 1)
+    applyVisual(frame.headerGroup, 1, 1)
+    applyVisual(frame.wheel, 1, 1)
+    applyVisual(frame.sideGroup, 1, 1)
+    applyVisual(frame.lowerGroup, 1, 1)
+    for _, line in ipairs(self.nodeLines or {}) do
+        applyVisual(line, 1, nil)
+    end
+    for _, button in ipairs(self.nodeButtons or {}) do
+        applyVisual(button, 1, 1)
+    end
+    applyVisual(self.karazhanLine, 1, nil)
+    applyVisual(self.karazhanButton, 1, 1)
+end
+
+function RouletteFrame:SetClosePresentationFinal()
+    if not self.frame then
+        return
+    end
+
+    local frame = self.frame
+    applyVisual(frame.dimmer, 0, 1)
+    applyVisual(frame.headerGroup, 0, 1)
+    applyVisual(frame.wheel, 0, 1)
+    applyVisual(frame.sideGroup, 0, 1)
+    applyVisual(frame.lowerGroup, 0, 1)
+    for _, line in ipairs(self.nodeLines or {}) do
+        applyVisual(line, 0, nil)
+        line.closeFromAlpha = nil
+    end
+    for _, button in ipairs(self.nodeButtons or {}) do
+        applyVisual(button, 0, 1)
+        button.closeFromAlpha = nil
+        button.closeFromScale = nil
+    end
+    if self.karazhanLine then
+        applyVisual(self.karazhanLine, 0, nil)
+        self.karazhanLine.closeFromAlpha = nil
+    end
+    if self.karazhanButton then
+        applyVisual(self.karazhanButton, 0, 1)
+        self.karazhanButton.closeFromAlpha = nil
+        self.karazhanButton.closeFromScale = nil
+    end
+end
+
+function RouletteFrame:ApplyOpenPresentation(elapsed, state)
+    local frame = self.frame
+    local intensity = state.intensity or 1
+
+    applyVisual(frame.dimmer, lerp(0, 0.90, segmentProgress(elapsed, 0, 0.28)), 1)
+    applyVisual(frame.headerGroup, segmentProgress(elapsed, 0.06, 0.28, "out"), lerp(1 - (0.03 * intensity), 1, segmentProgress(elapsed, 0.06, 0.28, "out")))
+    applyVisual(frame.wheel, segmentProgress(elapsed, 0.34, 0.46, "out"), lerp(1 - (0.16 * intensity), 1, segmentProgress(elapsed, 0.34, 0.46, "out")))
+
+    local lineProgress = segmentProgress(elapsed, 0.58, 0.20)
+    for _, line in ipairs(self.nodeLines or {}) do
+        applyVisual(line, lineProgress, nil)
+    end
+    applyVisual(self.karazhanLine, lineProgress, nil)
+
+    local stagger = state.stagger or 0
+    for index, button in ipairs(self.nodeButtons or {}) do
+        local progress = segmentProgress(elapsed, 0.66 + ((index - 1) * stagger), 0.18, "out")
+        applyVisual(button, progress, lerp(1 - (0.07 * intensity), 1, progress))
+    end
+
+    local karazhanStart = 0.66 + (#(self.nodeButtons or {}) * stagger) + (0.06 * intensity)
+    local karazhanProgress = segmentProgress(elapsed, karazhanStart, 0.18, "out")
+    applyVisual(self.karazhanButton, karazhanProgress, lerp(1 - (0.06 * intensity), 1, karazhanProgress))
+
+    local sideProgress = segmentProgress(elapsed, 0.76, 0.22, "out")
+    applyVisual(frame.sideGroup, sideProgress, lerp(1 - (0.02 * intensity), 1, sideProgress))
+    local lowerProgress = segmentProgress(elapsed, 0.84, 0.22, "out")
+    applyVisual(frame.lowerGroup, lowerProgress, lerp(1 - (0.02 * intensity), 1, lowerProgress))
+end
+
+function RouletteFrame:ApplyClosePresentation(elapsed, state)
+    local frame = self.frame
+    local intensity = state.intensity or 1
+    local vortexIntensity = state.vortexIntensity or 1
+
+    local lowerProgress = segmentProgress(elapsed, 0, 0.14)
+    applyVisual(frame.lowerGroup, lerp(state.lowerAlpha or 1, 0, lowerProgress), state.lowerScale or 1)
+    local sideProgress = segmentProgress(elapsed, 0, 0.12)
+    applyVisual(frame.sideGroup, lerp(state.sideAlpha or 1, 0, sideProgress), state.sideScale or 1)
+
+    local buttonTargetScale = 1 - (0.12 * intensity)
+    for _, button in ipairs(self.nodeButtons or {}) do
+        local progress = segmentProgress(elapsed, 0, 0.16)
+        applyVisual(button, lerp(button.closeFromAlpha or 1, 0, progress), lerp(button.closeFromScale or 1, buttonTargetScale, progress))
+    end
+    local lineProgress = segmentProgress(elapsed, 0, 0.14)
+    for _, line in ipairs(self.nodeLines or {}) do
+        applyVisual(line, lerp(line.closeFromAlpha or 1, 0, lineProgress), nil)
+    end
+    applyVisual(self.karazhanLine, lerp((self.karazhanLine and self.karazhanLine.closeFromAlpha) or 1, 0, lineProgress), nil)
+    if self.karazhanButton then
+        local progress = segmentProgress(elapsed, 0, 0.16)
+        applyVisual(self.karazhanButton, lerp(self.karazhanButton.closeFromAlpha or 1, 0, progress), lerp(self.karazhanButton.closeFromScale or 1, buttonTargetScale, progress))
+    end
+
+    local wheelProgress = segmentProgress(elapsed, 0.12, 0.46, "out")
+    local wheelTargetScale = 1 - ((0.30 + (0.06 * vortexIntensity)) * intensity)
+    applyVisual(frame.wheel, lerp(state.wheelAlpha or 1, 0, wheelProgress), lerp(state.wheelScale or 1, wheelTargetScale, wheelProgress))
+    local headerProgress = segmentProgress(elapsed, 0, 0.16)
+    applyVisual(frame.headerGroup, lerp(state.headerAlpha or 1, 0, headerProgress), state.headerScale or 1)
+    local dimmerProgress = segmentProgress(elapsed, 0, 0.24)
+    applyVisual(frame.dimmer, lerp(state.dimmerAlpha or 0.90, 0, dimmerProgress), 1)
+end
+
+function RouletteFrame:UpdatePresentation()
+    local state = self.presentationState
+    if not state or not self.frame or not self.frame:IsShown() then
+        return
+    end
+    if state.token ~= self.presentationToken then
+        self.presentationState = nil
+        return
+    end
+
+    local now = GetTime and GetTime() or 0
+    local elapsed = now - (state.startedAt or now)
+    if state.kind == "open" then
+        self:ApplyOpenPresentation(elapsed, state)
+        if elapsed >= (state.duration or 1.10) then
+            self:SetOpenPresentationFinal()
+            self.presentationState = nil
+        end
+    elseif state.kind == "close" then
+        self:ApplyClosePresentation(elapsed, state)
+        if elapsed >= (state.duration or 0.92) then
+            self:SetClosePresentationFinal()
+            self.presentationState = nil
+            if state.onFinish then
+                state.onFinish()
+            end
+        end
+    else
+        self.presentationState = nil
     end
 end
 
@@ -632,12 +830,13 @@ function RouletteFrame:PlayOpenPresentation()
     self.presentationToken = (self.presentationToken or 0) + 1
     local frame = self.frame
     local intensity = clampAnimationIntensity()
+    self.presentationState = nil
+    self:StopPresentationAnimations()
 
     if not animationEnabled("openCloseAnimationsEnabled") then
         self:ResetPresentationState()
         return
     end
-
 
     self:PlayVortexOpen()
 
@@ -660,74 +859,18 @@ function RouletteFrame:PlayOpenPresentation()
         resetVisual(self.karazhanButton, 0, 1 - (0.04 * intensity))
     end
 
-    playFade(frame.dimmer, 0, 0.90, 0.28)
-
-    self:RunAfter(0.06, function()
-        playFadeScale(frame.headerGroup, 0, 1, 1 - (0.03 * intensity), 1, 0.28)
-    end)
-    self:RunAfter(0.34, function()
-        playFadeScale(frame.wheel, 0, 1, 1 - (0.16 * intensity), 1, 0.46)
-        if frame.centerUtilityButton and ns.Animations and ns.Animations.Pulse then
-            ns.Animations:Pulse(frame.centerUtilityButton, 1 + (0.045 * intensity), 0.30)
-        end
-    end)
-    self:RunAfter(0.58, function()
-        for _, line in ipairs(self.nodeLines or {}) do
-            playFade(line, 0, 1, 0.20)
-        end
-    end)
-
     local stagger = 0.04 * intensity
     if ns.db and ns.db.nodeStaggerEnabled == false then
         stagger = 0
     end
-    for index, button in ipairs(self.nodeButtons or {}) do
-        self:RunAfter(0.66 + ((index - 1) * stagger), function()
-            playFadeScale(button, 0, 1, 1 - (0.07 * intensity), 1, 0.18)
-        end)
-    end
-
-    local karazhanDelay = 0.66 + (#(self.nodeButtons or {}) * stagger) + (0.06 * intensity)
-    self:RunAfter(karazhanDelay, function()
-        if self.karazhanLine then
-            playFade(self.karazhanLine, 0, 1, 0.18)
-        end
-        if self.karazhanButton then
-            playFadeScale(self.karazhanButton, 0, 1, 1 - (0.06 * intensity), 1, 0.18)
-        end
-    end)
-    self:RunAfter(0.76, function()
-        playFadeScale(frame.sideGroup, 0, 1, 1 - (0.02 * intensity), 1, 0.22)
-    end)
-    self:RunAfter(0.84, function()
-        playFadeScale(frame.lowerGroup, 0, 1, 1 - (0.02 * intensity), 1, 0.22)
-    end)
-    self:RunAfter(1.25, function()
-        if not self.frame or not self.frame:IsShown() then
-            return
-        end
-        local function settle(obj, alpha, scale)
-            if not obj then return end
-            if ns.Animations and ns.Animations.Stop then
-                ns.Animations:Stop(obj)
-            end
-            if obj.SetAlpha then obj:SetAlpha(alpha) end
-            if scale and obj.SetScale then obj:SetScale(scale) end
-        end
-        settle(frame.headerGroup, 1, 1)
-        settle(frame.wheel, 1, 1)
-        settle(frame.sideGroup, 1, 1)
-        settle(frame.lowerGroup, 1, 1)
-        settle(frame.dimmer, 0.90, 1)
-        for _, line in ipairs(self.nodeLines or {}) do
-            settle(line, 1)
-        end
-        for _, button in ipairs(self.nodeButtons or {}) do
-            settle(button, 1, 1)
-        end
-        if self.karazhanLine then settle(self.karazhanLine, 1) end
-        if self.karazhanButton then settle(self.karazhanButton, 1, 1) end
-    end)
+    self.presentationState = {
+        kind = "open",
+        token = self.presentationToken,
+        startedAt = GetTime and GetTime() or 0,
+        duration = 1.10,
+        intensity = intensity,
+        stagger = stagger,
+    }
 end
 
 function RouletteFrame:PlayClosePresentation(onFinish)
@@ -740,6 +883,8 @@ function RouletteFrame:PlayClosePresentation(onFinish)
     local frame = self.frame
     local intensity = clampAnimationIntensity()
     local vortexIntensity = clampVortexIntensity()
+    self.presentationState = nil
+    self:StopPresentationAnimations()
 
     if not animationEnabled("openCloseAnimationsEnabled") then
         self:ResetVortexState(false)
@@ -749,45 +894,43 @@ function RouletteFrame:PlayClosePresentation(onFinish)
         return
     end
 
-    playFade(frame.lowerGroup, frame.lowerGroup:GetAlpha(), 0, 0.14)
-    playFade(frame.sideGroup, frame.sideGroup:GetAlpha(), 0, 0.12)
     self:PlayVortexCollapse()
     for _, button in ipairs(self.nodeButtons or {}) do
-        playFadeScale(button, button:GetAlpha(), 0, button:GetScale(), 1 - (0.12 * intensity), 0.16)
+        button.closeFromAlpha = (button.GetAlpha and button:GetAlpha()) or 1
+        button.closeFromScale = (button.GetScale and button:GetScale()) or 1
     end
     for _, line in ipairs(self.nodeLines or {}) do
-        playFade(line, line:GetAlpha(), 0, 0.14)
+        line.closeFromAlpha = (line.GetAlpha and line:GetAlpha()) or 1
     end
     if self.karazhanLine then
-        playFade(self.karazhanLine, self.karazhanLine:GetAlpha(), 0, 0.14)
+        self.karazhanLine.closeFromAlpha = (self.karazhanLine.GetAlpha and self.karazhanLine:GetAlpha()) or 1
     end
     if self.karazhanButton then
-        playFadeScale(self.karazhanButton, self.karazhanButton:GetAlpha(), 0, self.karazhanButton:GetScale(), 1 - (0.12 * intensity), 0.16)
+        self.karazhanButton.closeFromAlpha = (self.karazhanButton.GetAlpha and self.karazhanButton:GetAlpha()) or 1
+        self.karazhanButton.closeFromScale = (self.karazhanButton.GetScale and self.karazhanButton:GetScale()) or 1
     end
     if frame.centerUtilityButton and ns.Animations and ns.Animations.Pulse then
         ns.Animations:Pulse(frame.centerUtilityButton, 1 + (0.045 * intensity), 0.16)
     end
-    self:RunAfter(0.12, function()
-        playFadeScale(frame.wheel, frame.wheel:GetAlpha(), 0, frame.wheel:GetScale(), 1 - ((0.30 + (0.06 * vortexIntensity)) * intensity), 0.46)
-    end)
-    playFade(frame.headerGroup, frame.headerGroup:GetAlpha(), 0, 0.16)
-    playFade(frame.dimmer, frame.dimmer:GetAlpha(), 0, 0.24)
 
-    if not C_Timer or not C_Timer.After then
-        if onFinish then
-            onFinish()
-        end
-        return
-    end
-
-    C_Timer.After(0.92, function()
-        if token ~= self.presentationToken then
-            return
-        end
-        if onFinish then
-            onFinish()
-        end
-    end)
+    self.presentationState = {
+        kind = "close",
+        token = token,
+        startedAt = GetTime and GetTime() or 0,
+        duration = 0.92,
+        onFinish = onFinish,
+        intensity = intensity,
+        vortexIntensity = vortexIntensity,
+        dimmerAlpha = (frame.dimmer.GetAlpha and frame.dimmer:GetAlpha()) or 0.90,
+        headerAlpha = (frame.headerGroup.GetAlpha and frame.headerGroup:GetAlpha()) or 1,
+        headerScale = (frame.headerGroup.GetScale and frame.headerGroup:GetScale()) or 1,
+        wheelAlpha = (frame.wheel.GetAlpha and frame.wheel:GetAlpha()) or 1,
+        wheelScale = (frame.wheel.GetScale and frame.wheel:GetScale()) or 1,
+        sideAlpha = (frame.sideGroup.GetAlpha and frame.sideGroup:GetAlpha()) or 1,
+        sideScale = (frame.sideGroup.GetScale and frame.sideGroup:GetScale()) or 1,
+        lowerAlpha = (frame.lowerGroup.GetAlpha and frame.lowerGroup:GetAlpha()) or 1,
+        lowerScale = (frame.lowerGroup.GetScale and frame.lowerGroup:GetScale()) or 1,
+    }
 end
 
 function RouletteFrame:CreateMainFrame()
@@ -916,12 +1059,14 @@ function RouletteFrame:CreateMainFrame()
         frame.dimmer:Hide()
         frame:EnableKeyboard(false)
         RouletteFrame.presentationToken = (RouletteFrame.presentationToken or 0) + 1
+        RouletteFrame.presentationState = nil
         RouletteFrame:SetInteractionEnabled(true)
         RouletteFrame:RestoreGameUI()
     end)
 
     frame:SetScript("OnUpdate", function(_, elapsed)
-        local idleEnabled = animationEnabled("idleAnimationsEnabled") and not RouletteFrame.isClosing and not (ns.db and ns.db.enableWheelAnimation == false)
+        RouletteFrame:UpdatePresentation()
+        local idleEnabled = animationEnabled("idleAnimationsEnabled") and not RouletteFrame.presentationState and not RouletteFrame.isClosing and not (ns.db and ns.db.enableWheelAnimation == false)
         local intensity = clampAnimationIntensity()
         local vortexIdle = vortexEnabled() and not RouletteFrame.isClosing and not (ns.db and ns.db.portalVortexIdleEnabled == false)
         local vortexIntensity = clampVortexIntensity()
