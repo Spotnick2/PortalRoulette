@@ -3,6 +3,10 @@
 ## Deployment
 - After local changes, deploy addon files to:
   - `C:\Program Files (x86)\World of Warcraft\_anniversary_\Interface\AddOns\PortalRoulette`
+- Use the approved PowerShell executable for Windows commands when the default shell runner is unreliable:
+  - `C:\Users\nicol\AppData\Local\Microsoft\WindowsApps\pwsh.exe -Command '...'`
+- Prefer single-quoted `-Command` payloads when the command uses PowerShell variables like `$source`, `$dest`, `$i`, `$_`, or `$LASTEXITCODE`; double-quoted payloads can be expanded by the wrapper before PowerShell receives them.
+- Deploy with a tracked-file copy from `git ls-files`; do not copy untracked review/temp folders such as `.tmp_video_review`.
 
 ## Addon context (TBC Classic Anniversary)
 
