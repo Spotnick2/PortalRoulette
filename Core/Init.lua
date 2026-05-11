@@ -172,6 +172,12 @@ function refreshVisualState()
 end
 
 local function initializeForMage()
+    local function refreshLauncherTheme()
+        if ns.LauncherButton and ns.LauncherButton.RefreshSpecTheme then
+            ns.LauncherButton:RefreshSpecTheme()
+        end
+    end
+
     ns.RouletteFrame:Initialize()
     ns.LauncherButton:Initialize()
     ns.MinimapButton:Initialize()
@@ -194,6 +200,15 @@ local function initializeForMage()
         if ns.RouletteFrame then
             ns.RouletteFrame:RefreshDestinationNodes()
         end
+        refreshLauncherTheme()
+    end)
+
+    ns.Events:Register("PLAYER_TALENT_UPDATE", function()
+        refreshLauncherTheme()
+    end)
+
+    ns.Events:Register("CHARACTER_POINTS_CHANGED", function()
+        refreshLauncherTheme()
     end)
 
     ns.Events:Register("PLAYER_REGEN_ENABLED", function()

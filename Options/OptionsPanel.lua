@@ -155,6 +155,7 @@ function OptionsPanel:RefreshControls()
     self.showKarazhanCheckbox:SetChecked(ns.db.showUnavailableKarazhan)
     self.cameraModeCheckbox:SetChecked(ns.db.cinematicCamera)
     self.lockLauncherCheckbox:SetChecked(ns.db.lockLauncher)
+    self.actionBarPromptCheckbox:SetChecked(not ns.db.actionBarPromptDismissed)
     self.minimapVisibilityCheckbox:SetChecked(ns.db.showMinimapButton)
     self.showOptionsButtonCheckbox:SetChecked(ns.db.showOptionsButton ~= false)
     self.showCloseButtonCheckbox:SetChecked(ns.db.showCloseButton ~= false)
@@ -176,6 +177,8 @@ function OptionsPanel:RefreshControls()
 
     self.scaleSlider:SetValue(ns.db.uiScale or 1)
     self.scaleValueText:SetText(string.format("%.2f", ns.db.uiScale or 1))
+    self.launcherScaleSlider:SetValue(ns.db.launcherScale or 1.35)
+    self.launcherScaleValueText:SetText(string.format("%.2f", ns.db.launcherScale or 1.35))
     self.animationIntensitySlider:SetValue(ns.db.animationIntensity or 1)
     self.animationIntensityValueText:SetText(string.format("%.2f", ns.db.animationIntensity or 1))
 end
@@ -300,6 +303,13 @@ function OptionsPanel:Create()
     end)
     rightY = rightY - ROW_GAP
 
+    self.actionBarPromptCheckbox = createCheckbox(content, "Show action bar drag prompt", RIGHT_X + INDENT, rightY)
+    self.actionBarPromptCheckbox:SetScript("OnClick", function(selfButton)
+        ns.db.actionBarPromptDismissed = not selfButton:GetChecked()
+        applyAllSettings()
+    end)
+    rightY = rightY - ROW_GAP
+
     self.minimapVisibilityCheckbox = createCheckbox(content, "Show minimap button", RIGHT_X + INDENT, rightY)
     self.minimapVisibilityCheckbox:SetScript("OnClick", function(selfButton)
         ns.db.showMinimapButton = selfButton:GetChecked() and true or false
@@ -418,6 +428,30 @@ function OptionsPanel:Create()
         end
     end)
     self.scaleSlider = scaleSlider
+
+    local launcherScaleSlider = CreateFrame("Slider", "PortalRouletteLauncherScaleSlider", content, "OptionsSliderTemplate")
+    launcherScaleSlider:SetPoint("TOPLEFT", content, "TOPLEFT", LEFT_X + 4, sliderY - 72)
+    launcherScaleSlider:SetWidth(220)
+    launcherScaleSlider:SetMinMaxValues(0.9, 1.9)
+    launcherScaleSlider:SetValueStep(0.05)
+    if launcherScaleSlider.SetObeyStepOnDrag then
+        launcherScaleSlider:SetObeyStepOnDrag(true)
+    end
+    _G[launcherScaleSlider:GetName() .. "Low"]:SetText("0.90")
+    _G[launcherScaleSlider:GetName() .. "High"]:SetText("1.90")
+    _G[launcherScaleSlider:GetName() .. "Text"]:SetText("Launcher Size")
+
+    self.launcherScaleValueText = content:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+    self.launcherScaleValueText:SetPoint("LEFT", launcherScaleSlider, "RIGHT", 12, 0)
+
+    launcherScaleSlider:SetScript("OnValueChanged", function(_, value)
+        ns.db.launcherScale = value
+        OptionsPanel.launcherScaleValueText:SetText(string.format("%.2f", value))
+        if ns.LauncherButton and ns.LauncherButton.ApplySettings then
+            ns.LauncherButton:ApplySettings()
+        end
+    end)
+    self.launcherScaleSlider = launcherScaleSlider
 
     local intensitySlider = CreateFrame("Slider", "PortalRouletteAnimationIntensitySlider", content, "OptionsSliderTemplate")
     intensitySlider:SetPoint("TOPLEFT", content, "TOPLEFT", RIGHT_X + 4, sliderY)
