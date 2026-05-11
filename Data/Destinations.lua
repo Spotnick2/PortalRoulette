@@ -106,21 +106,6 @@ local karazhanNode = {
     ringAttachRadius = 168,
 }
 
-local destinationIcons = {
-    orgrimmar = ns.Media.ICON_CITY_ORGRIMMAR,
-    undercity = ns.Media.ICON_CITY_UNDERCITY,
-    thunder_bluff = ns.Media.ICON_CITY_THUNDER_BLUFF,
-    silvermoon = ns.Media.ICON_CITY_SILVERMOON,
-    stonard = ns.Media.ICON_CITY_STONARD,
-    shattrath = ns.Media.ICON_CITY_SHATTRATH,
-    stormwind = ns.Media.ICON_CITY_STORMWIND,
-    ironforge = ns.Media.ICON_CITY_IRONFORGE,
-    darnassus = ns.Media.ICON_CITY_DARNASSUS,
-    exodar = ns.Media.ICON_CITY_THE_EXODAR,
-    theramore = ns.Media.ICON_CITY_THERAMORE,
-    karazhan = ns.Media.ICON_CITY_KARAZHAN,
-}
-
 local function getSpellName(spellID)
     if not spellID then
         return nil
@@ -160,11 +145,6 @@ end
 function Destinations:GetIconForDestination(destination, mode)
     if not destination then
         return "Interface\\ICONS\\INV_Misc_QuestionMark", false
-    end
-
-    local customIcon = destination and destination.id and destinationIcons[destination.id]
-    if customIcon then
-        return customIcon, true
     end
 
     local spellID = destination.teleportSpell

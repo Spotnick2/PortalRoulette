@@ -176,6 +176,85 @@ local function isPlayerCastingOrChanneling()
         or (UnitChannelInfo and UnitChannelInfo("player"))
 end
 
+local externalUIFrameNames = {
+    "MinimapCluster",
+    "Minimap",
+    "MinimapBackdrop",
+    "MinimapBorder",
+    "MinimapBorderTop",
+    "MinimapCompassTexture",
+    "MinimapNorthTag",
+    "MinimapToggleButton",
+    "MinimapZoneTextButton",
+    "MinimapZoneText",
+    "MiniMapTracking",
+    "MiniMapTrackingFrame",
+    "MiniMapTrackingButton",
+    "MiniMapTrackingIcon",
+    "MiniMapTrackingBackground",
+    "MiniMapTrackingBorder",
+    "MiniMapTrackingButtonBorder",
+    "MiniMapMailFrame",
+    "MiniMapMailIcon",
+    "MiniMapMailBorder",
+    "MiniMapWorldMapButton",
+    "MinimapZoomIn",
+    "MinimapZoomOut",
+    "MidnightMinimapBase",
+    "MidnightMinimapTop",
+    "MidnightMinimapMid",
+    "MidnightMinimapInfoPanel",
+    "MidnightMinimapCoords",
+}
+
+function RouletteFrame:HideExternalUIFrames()
+    self._hiddenExternalUIFrames = self._hiddenExternalUIFrames or {}
+    for _, frameName in ipairs(externalUIFrameNames) do
+        local frame = _G[frameName]
+        if frame then
+            if self._hiddenExternalUIFrames[frame] == nil then
+                local wasShown = true
+                if frame.IsShown then
+                    local ok, shown = pcall(frame.IsShown, frame)
+                    wasShown = ok and shown or true
+                end
+                local alpha = 1
+                if frame.GetAlpha then
+                    local ok, currentAlpha = pcall(frame.GetAlpha, frame)
+                    alpha = ok and currentAlpha or 1
+                end
+                self._hiddenExternalUIFrames[frame] = {
+                    alpha = alpha,
+                    wasShown = wasShown,
+                }
+            end
+            if frame.SetAlpha then
+                pcall(frame.SetAlpha, frame, 0)
+            end
+            if frame.Hide then
+                pcall(frame.Hide, frame)
+            end
+        end
+    end
+end
+
+function RouletteFrame:RestoreExternalUIFrames()
+    if not self._hiddenExternalUIFrames then
+        return
+    end
+    for frame, state in pairs(self._hiddenExternalUIFrames) do
+        if frame then
+            if frame.SetAlpha then
+                pcall(frame.SetAlpha, frame, state.alpha or 1)
+            end
+            if state.wasShown and frame.Show then
+                pcall(frame.Show, frame)
+            end
+        end
+    end
+    self._hiddenExternalUIFrames = nil
+end
+
 function RouletteFrame:HideGameUI()
     if UIParent and UIParent.GetAlpha then
         self._savedUIParentAlpha = UIParent:GetAlpha()
@@ -183,9 +262,11 @@ function RouletteFrame:HideGameUI()
     if UIParent and UIParent.SetAlpha then
         UIParent:SetAlpha(0)
     end
+    self:HideExternalUIFrames()
 end
 
 function RouletteFrame:RestoreGameUI()
+    self:RestoreExternalUIFrames()
     if UIParent and UIParent.SetAlpha then
         UIParent:SetAlpha(self._savedUIParentAlpha or 1.0)
     end

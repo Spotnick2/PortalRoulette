@@ -1,0 +1,17 @@
+package-as: PortalRoulette
+
+enable-nolib-creation: no
+
+manual-changelog:
+  filename: CHANGELOG.md
+  markup-type: markdown
+
+ignore:
+  - .claude
+  - .github
+  - .gitignore
+  - AGENTS.md
+  - README.md
+  - CHANGELOG.md
+  - docs
+  - screenshots
