@@ -104,7 +104,6 @@ ns.Media = {
     ICON_RUNE_PORTAL_CUSTOM = ns.MediaRoot .. "Icon_RunePortal_Custom_128.tga",
     ICON_PORTAL_ROULETTE = ns.MediaRoot .. "Icon_PortalRoulette_128.tga",
     ICON_PORTAL_ROULETTE_64 = ns.MediaRoot .. "Icon_PortalRoulette_64.tga",
-    ICON_MINIMAP = ns.MediaRoot .. "Icon_Minimap_PortalRoulette_128.tga",
     LAUNCHER_ARCANE_NORMAL = ns.MediaRoot .. "Launcher\\Arcane\\PortalRoulette_Launcher_Arcane_Normal.tga",
     LAUNCHER_ARCANE_HOVER = ns.MediaRoot .. "Launcher\\Arcane\\PortalRoulette_Launcher_Arcane_Hover.tga",
     LAUNCHER_ARCANE_PUSHED = ns.MediaRoot .. "Launcher\\Arcane\\PortalRoulette_Launcher_Arcane_Pushed.tga",
