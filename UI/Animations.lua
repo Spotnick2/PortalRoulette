@@ -5,7 +5,11 @@ local Animations = {
 }
 ns.Animations = Animations
 
-local runner = CreateFrame("Frame")
+local runner = CreateFrame("Frame", nil, WorldFrame or UIParent)
+runner:Show()
+if runner.SetIgnoreParentAlpha then
+    runner:SetIgnoreParentAlpha(true)
+end
 
 local function smoothStep(progress)
     return progress * progress * (3 - 2 * progress)
@@ -70,6 +74,29 @@ function Animations:Play(frame, fromAlpha, toAlpha, fromScale, toScale, duration
         elapsed = 0,
         onFinish = onFinish,
     }
+end
+
+function Animations:Reset(frame, alpha, scale)
+    if not frame then
+        return
+    end
+    self:Stop(frame)
+    if alpha ~= nil and frame.SetAlpha then
+        frame:SetAlpha(alpha)
+    end
+    if scale ~= nil and frame.SetScale then
+        frame:SetScale(scale)
+    end
+end
+
+function Animations:Pulse(frame, scaleUp, duration)
+    if not frame then
+        return
+    end
+    local baseScale = frame:GetScale()
+    self:Play(frame, frame:GetAlpha(), frame:GetAlpha(), baseScale, scaleUp or (baseScale * 1.04), (duration or 0.16) * 0.5, function()
+        self:Play(frame, frame:GetAlpha(), frame:GetAlpha(), frame:GetScale(), baseScale, (duration or 0.16) * 0.5)
+    end)
 end
 
 function Animations:PlayOpen(frame)

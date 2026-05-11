@@ -7,8 +7,8 @@ local _, ns = ...
 --                     wheel sits on the right side of the screen.
 -- Mounted detection:  separate zoom + shoulder values so a mounted character is fully
 --                     visible with the mount, matching Narcissus Classic behaviour.
--- CVar popup:         EXPERIMENTAL_CVAR_CONFIRMATION_NEEDED is suppressed at file load
---                     (same approach as Narcissus).
+-- CVar popup:         untouched; mutating UIParent event ownership can taint
+--                     protected Blizzard callbacks such as the game menu.
 
 local CameraMode = {
     active  = false,
@@ -17,12 +17,6 @@ local CameraMode = {
     elapsed = 0,
 }
 ns.CameraMode = CameraMode
-
-local function clamp(v, lo, hi, fallback)
-    v = tonumber(v)
-    if not v then return fallback end
-    return math.max(lo, math.min(hi, v))
-end
 
 local function inOutSine(t, b, e, d)
     return -(e - b) / 2 * (math.cos(math.pi * t / d) - 1) + b
@@ -51,19 +45,22 @@ local MOUNTED_SHOULDER_F2 = -4.0
 
 -- Narcissus uses the ACTUAL zoom as the reference in the shoulder formula:
 --   offset = currentZoom * factor1 + factor2
--- For unmounted Human at zoom 2.1: offset = 2.1*0.3283 + (-0.02) = 0.669 → small left bias.
+-- For unmounted Human at zoom 2.5: offset = 2.5*0.3283 + (-0.02) = 0.801 → small left bias.
 -- We use the same convention.
-local UNMOUNTED_ZOOM         = 2.1   -- Narcissus default for human-baseline
+local UNMOUNTED_ZOOM         = 2.5   -- Narcissus close-up goal with dynamic pitch
 local MOUNTED_ZOOM           = 8.0   -- Narcissus default for mounted
-local ENTER_DURATION         = 1.20
-local EXIT_DURATION          = 0.35
+-- Narcissus eases into its portrait angle instead of snapping through a full spin.
+local ENTER_DURATION         = 1.50
+local CAST_RESET_DURATION    = 0.90
+local EXIT_DURATION          = 0.92
+local EXIT_RESTORE_AT        = 0.10
 local ORBIT_SPEED            = 0.005
-local TOTAL_PRESENT_DURATION = 10.0  -- empirically tuned: at this point the character
-                                     -- has rotated to face the camera. We stop the
-                                     -- yaw here so the camera settles facing the user.
-local YAW_DEGREES            = 360
-local YAW_DIRECTION          = -1    -- -1 = turn left (character faces toward camera)
+local ENTER_YAW_FROM_SPEED   = 1.0
+local CAST_RESET_YAW_SPEED   = 0.78
+local CAST_RESET_YAW_DURATION = 0.42
+local YAW_DIRECTION          = 1     -- Narcissus uses MoveViewRightStart on entry
 local SAVED_VIEW_SLOT        = 5
+local PRESENTATION_VIEW_SLOT = 4
 
 -- ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -113,6 +110,16 @@ function CameraMode:_StopYaw()
     if type(MoveViewLeftStop)  == "function" then pcall(MoveViewLeftStop)  end
 end
 
+function CameraMode:_StopYawDirection(direction)
+    if direction and direction > 0 and type(MoveViewRightStop) == "function" then
+        pcall(MoveViewRightStop)
+    elseif direction and direction < 0 and type(MoveViewLeftStop) == "function" then
+        pcall(MoveViewLeftStop)
+    else
+        self:_StopYaw()
+    end
+end
+
 function CameraMode:_ApplyYaw(speed)
     speed = tonumber(speed) or 0
     if math.abs(speed) <= 0.0001 then return end
@@ -152,24 +159,25 @@ function CameraMode:Enter()
             tonumber(GetCVar("test_cameraOverShoulder")) or 0
         self.capture.cameraDynamicPitch =
             tonumber(GetCVar("test_cameraDynamicPitch")) or 0
+        self.capture.cameraViewBlendStyle =
+            tonumber(GetCVar("cameraViewBlendStyle")) or 1
+        pcall(SetCVar, "cameraViewBlendStyle", "2")
         pcall(SetCVar, "test_cameraDynamicPitch", "1")
         pcall(SetCVar, "test_cameraOverShoulder", self:_GetShoulderOffset())
+    end
+    if type(ConsoleExec) == "function" then
+        pcall(ConsoleExec, "pitchlimit 1")
     end
 
     -- Start from a clean base view, then apply zoom.
     if type(SetView) == "function" then pcall(SetView, 2) end
     self:_SetZoom(self:_GetTargetZoom())
 
-    -- Compute entry yaw swing speed.
-    local yawMoveSpeed = tonumber(GetCVar and GetCVar("cameraYawMoveSpeed")) or 180
-    if yawMoveSpeed <= 0 then yawMoveSpeed = 180 end
-    local degrees  = math.abs(YAW_DEGREES)
-    local seconds  = math.max(0.05, ENTER_DURATION)
-    local rawSpeed = (degrees / yawMoveSpeed) / seconds
     local dir = YAW_DIRECTION < 0 and -1 or 1
     self.yawDir       = dir
-    self.yawFromSpeed = clamp(rawSpeed, 0.10, 4.0, 1.0)
+    self.yawFromSpeed = ENTER_YAW_FROM_SPEED
     self.yawToSpeed   = ORBIT_SPEED
+    self:_StopYaw()
     self:_ApplyYaw(dir * self.yawFromSpeed)
 
     if self.animFrame then self.animFrame:Show() end
@@ -180,15 +188,72 @@ function CameraMode:Exit()
     self:_StopYaw()
     self.mode    = "exit"
     self.elapsed = 0
-    if self.capture and self.capture.savedViewSlot and type(SetView) == "function" then
-        pcall(SetView, self.capture.savedViewSlot)
-    end
+    self.exitRestored = nil
     if self.animFrame then self.animFrame:Show() end
+end
+
+function CameraMode:ResetOrbitForCast()
+    if not self.active or self.mode == "exit" then return end
+    if not self:IsSupported() then return end
+
+    self:_StopYaw()
+    local restoredPresentationView = false
+    if self.presentationViewSaved and type(SetView) == "function" then
+        local ok = pcall(SetView, PRESENTATION_VIEW_SLOT)
+        restoredPresentationView = ok and true or false
+    end
+    if not restoredPresentationView and type(SetView) == "function" then
+        pcall(SetView, 2)
+    end
+    self:_SetZoom(self:_GetTargetZoom())
+
+    if type(SetCVar) == "function" then
+        pcall(SetCVar, "cameraViewBlendStyle", "2")
+        pcall(SetCVar, "test_cameraDynamicPitch", "1")
+        pcall(SetCVar, "test_cameraOverShoulder", self:_GetShoulderOffset())
+    end
+
+    local dir = YAW_DIRECTION < 0 and -1 or 1
+    self.yawDir = dir
+    self.elapsed = 0
+    self.resumeOrbitAfterCastReset = nil
+
+    if restoredPresentationView then
+        self.castResetDuration = nil
+        self.mode = "castHold"
+        if self.animFrame then self.animFrame:Hide() end
+    else
+        self.castResetDuration = CAST_RESET_YAW_DURATION
+        self.mode = "castReset"
+        self:_ApplyYaw(dir * CAST_RESET_YAW_SPEED)
+        if self.animFrame then self.animFrame:Show() end
+    end
+end
+
+function CameraMode:ResumeOrbitAfterCast()
+    if not self.active or self.mode == "exit" then return end
+    if self.mode == "castReset" then
+        self.resumeOrbitAfterCastReset = true
+        return
+    end
+    if self.mode ~= "castHold" then return end
+
+    self:_StopYaw()
+    self.yawDir = YAW_DIRECTION < 0 and -1 or 1
+    self:_ApplyYaw(self.yawDir * ORBIT_SPEED)
+    self.mode = "orbit"
+    self.elapsed = 0
+    self.castResetDuration = nil
+    self.resumeOrbitAfterCastReset = nil
+    if self.animFrame then self.animFrame:Hide() end
 end
 
 function CameraMode:ForceRestore(reason)
     self:_StopYaw()
     if self.animFrame then self.animFrame:Hide() end
+    if type(ConsoleExec) == "function" then
+        pcall(ConsoleExec, "pitchlimit 88")
+    end
 
     if self.capture then
         if self.capture.savedViewSlot and type(SetView) == "function" then
@@ -208,6 +273,10 @@ function CameraMode:ForceRestore(reason)
                 pcall(SetCVar, "test_cameraDynamicPitch",
                       self.capture.cameraDynamicPitch)
             end
+            if self.capture.cameraViewBlendStyle then
+                pcall(SetCVar, "cameraViewBlendStyle",
+                      self.capture.cameraViewBlendStyle)
+            end
         end
     end
 
@@ -215,6 +284,12 @@ function CameraMode:ForceRestore(reason)
     self.mode    = nil
     self.capture = nil
     self.elapsed = 0
+    self.entryDuration = nil
+    self.castResetDuration = nil
+    self.resumeOrbitAfterCastReset = nil
+    self.presentationViewSaved = nil
+    self.exitYawDir = nil
+    self.exitRestored = nil
 end
 
 function CameraMode:UpdateAnimation(elapsed)
@@ -225,29 +300,58 @@ function CameraMode:UpdateAnimation(elapsed)
     self.elapsed = (self.elapsed or 0) + (elapsed or 0)
 
     if self.mode == "enter" then
-        local entryDur = math.max(0.01, ENTER_DURATION)
-        local totalDur = math.max(entryDur, TOTAL_PRESENT_DURATION)
-
+        local entryDur = math.max(0.01, self.entryDuration or ENTER_DURATION)
         if self.elapsed < entryDur then
-            -- Entry phase: ease from initial fast yaw to orbit speed.
+            -- Narcissus-style entry: ease from the initial portrait turn down to orbit speed.
             if self.yawDir and self.yawFromSpeed and self.yawToSpeed then
                 self:_ApplyYaw(self.yawDir * inOutSine(self.elapsed, self.yawFromSpeed, self.yawToSpeed, entryDur))
             end
-        elseif self.elapsed < totalDur then
-            -- Orbit phase: continue at slow orbit speed until total duration.
-            self:_ApplyYaw(self.yawDir * ORBIT_SPEED)
         else
-            -- Total duration elapsed: stop the camera so the character settles
-            -- facing the viewer (~10s mark of the orbit).
+            -- Transition to a very slow one-way drift. Casting exits this mode
+            -- gracefully so the spell animation can play without camera motion.
             self:_StopYaw()
-            self.mode = nil
-            if self.animFrame then self.animFrame:Hide() end
+            if type(SaveView) == "function" then
+                self.presentationViewSaved = pcall(SaveView, PRESENTATION_VIEW_SLOT) and true or false
+            end
+            self:_ApplyYaw(self.yawDir * ORBIT_SPEED)
+            self.mode = "orbit"
+            self.entryDuration = nil
         end
         return
     end
 
+    if self.mode == "castReset" then
+        local resetDur = math.max(0.01, self.castResetDuration or CAST_RESET_DURATION)
+        if self.elapsed >= resetDur then
+            self:_StopYaw()
+            self.mode = "castHold"
+            self.castResetDuration = nil
+            if self.resumeOrbitAfterCastReset then
+                self:ResumeOrbitAfterCast()
+            elseif self.animFrame then
+                self.animFrame:Hide()
+            end
+        end
+        return
+    end
+
+    if self.mode == "castHold" then
+        if self.animFrame then self.animFrame:Hide() end
+        return
+    end
+
+    if self.mode == "orbit" then
+        return
+    end
+
     if self.mode == "exit" then
-        if self.elapsed >= math.max(0.01, EXIT_DURATION) then
+        local exitDur = math.max(0.01, EXIT_DURATION)
+        if not self.exitRestored and self.elapsed >= EXIT_RESTORE_AT then
+            self.exitRestored = true
+            self:ForceRestore("exit-restore")
+            return
+        end
+        if self.elapsed >= exitDur then
             self:ForceRestore("exit-complete")
         end
     end
@@ -255,7 +359,7 @@ end
 
 -- ── Frame plumbing ───────────────────────────────────────────────────────────
 
-CameraMode.animFrame = CreateFrame("Frame")
+CameraMode.animFrame = CreateFrame("Frame", nil, WorldFrame or UIParent)
 CameraMode.animFrame:Hide()
 CameraMode.animFrame:SetScript("OnUpdate", function(_, elapsed)
     CameraMode:UpdateAnimation(elapsed)
@@ -265,14 +369,31 @@ CameraMode.eventFrame = CreateFrame("Frame")
 CameraMode.eventFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
 CameraMode.eventFrame:RegisterEvent("PLAYER_LOGOUT")
 CameraMode.eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
-CameraMode.eventFrame:SetScript("OnEvent", function(_, event)
+CameraMode.eventFrame:RegisterEvent("UNIT_SPELLCAST_START")
+CameraMode.eventFrame:RegisterEvent("UNIT_SPELLCAST_CHANNEL_START")
+CameraMode.eventFrame:RegisterEvent("UNIT_SPELLCAST_STOP")
+CameraMode.eventFrame:RegisterEvent("UNIT_SPELLCAST_CHANNEL_STOP")
+CameraMode.eventFrame:RegisterEvent("UNIT_SPELLCAST_FAILED")
+CameraMode.eventFrame:RegisterEvent("UNIT_SPELLCAST_INTERRUPTED")
+CameraMode.eventFrame:SetScript("OnEvent", function(_, event, unit)
     if CameraMode.active then
+        if event == "UNIT_SPELLCAST_START" or event == "UNIT_SPELLCAST_CHANNEL_START" then
+            if unit == "player" then
+                CameraMode:ResetOrbitForCast()
+            end
+            return
+        end
+        if event == "UNIT_SPELLCAST_STOP"
+            or event == "UNIT_SPELLCAST_CHANNEL_STOP"
+            or event == "UNIT_SPELLCAST_FAILED"
+            or event == "UNIT_SPELLCAST_INTERRUPTED"
+        then
+            if unit == "player" then
+                CameraMode:ResumeOrbitAfterCast()
+            end
+            return
+        end
         CameraMode:ForceRestore(event)
     end
 end)
 
--- Suppress "Are you sure you want to enable experimental feature?" popup.
--- Narcissus does the same unregister to allow silent test_* CVar writes.
-if UIParent and type(UIParent.UnregisterEvent) == "function" then
-    pcall(UIParent.UnregisterEvent, UIParent, "EXPERIMENTAL_CVAR_CONFIRMATION_NEEDED")
-end

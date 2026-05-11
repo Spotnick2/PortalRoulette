@@ -3,74 +3,110 @@ local _, ns = ...
 local ReagentPanel = {}
 ns.ReagentPanel = ReagentPanel
 
--- Row texture aspect: 2172×724 = 3:1. Icon texture: 1254×1254 = 1:1.
--- We use the standalone icon files for reliable layout control rather than
--- trying to guess where the blank count area falls in the row art.
-local ROW_H  = 42
-local ROW_W  = ROW_H * 3  -- 126, preserving the 3:1 source ratio
-local ICON_SIZE = 34
+local PANEL_W = 170
+local PANEL_H = 126
+local ROW_W = 150
+local ROW_H = 42
+local ICON_SIZE = 33
 
 local reagentRows = {
     {
         itemID      = ns.Constants.ITEM_RUNE_TELEPORTATION,
-        rowTexture  = ns.Media.REAGENT_ROW_TELEPORT,
         iconTexture = ns.Media.REAGENT_ICON_TELEPORT,
         fallbackIcon = ns.Media.ICON_RUNE_TELEPORT_CUSTOM,
     },
     {
         itemID      = ns.Constants.ITEM_RUNE_PORTALS,
-        rowTexture  = ns.Media.REAGENT_ROW_PORTAL,
         iconTexture = ns.Media.REAGENT_ICON_PORTAL,
         fallbackIcon = ns.Media.ICON_RUNE_PORTAL_CUSTOM,
     },
 }
 
+local function createSolidTexture(parent, layer, color)
+    local texture = parent:CreateTexture(nil, layer)
+    texture:SetTexture("Interface\\Buttons\\WHITE8X8")
+    texture:SetVertexColor(color[1], color[2], color[3], color[4])
+    return texture
+end
+
+local function addBorder(frame, r, g, b, a)
+    local top = createSolidTexture(frame, "BORDER", { r, g, b, a })
+    top:SetPoint("TOPLEFT", frame, "TOPLEFT", 1, -1)
+    top:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -1, -1)
+    top:SetHeight(1)
+
+    local bottom = createSolidTexture(frame, "BORDER", { r, g, b, a })
+    bottom:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 1, 1)
+    bottom:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -1, 1)
+    bottom:SetHeight(1)
+
+    local left = createSolidTexture(frame, "BORDER", { r, g, b, a })
+    left:SetPoint("TOPLEFT", frame, "TOPLEFT", 1, -1)
+    left:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 1, 1)
+    left:SetWidth(1)
+
+    local right = createSolidTexture(frame, "BORDER", { r, g, b, a })
+    right:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -1, -1)
+    right:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -1, 1)
+    right:SetWidth(1)
+end
+
 function ReagentPanel:Create(parent)
-    -- Panel outer — backplate is 1122×1402 (~0.8:1, portrait).
-    -- We size it to fit two rows + title + padding without stretching the art badly.
     local frame = CreateFrame("Frame", nil, parent)
-    frame:SetSize(ROW_W + 16, ROW_H * 2 + 50)   -- 142 × 134
+    frame:SetSize(PANEL_W, PANEL_H)
+    frame:EnableMouse(false)
 
     frame.bg = frame:CreateTexture(nil, "BACKGROUND")
     frame.bg:SetAllPoints()
-    frame.bg:SetTexture(ns.Media.REAGENT_PANEL_BACKPLATE)
-    frame.bg:SetAlpha(1.0)
+    frame.bg:SetTexture("Interface\\Buttons\\WHITE8X8")
+    frame.bg:SetVertexColor(0.018, 0.022, 0.032, 0.68)
+    addBorder(frame, 0.72, 0.55, 0.24, 0.58)
 
     frame.title = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    frame.title:SetPoint("TOP", frame, "TOP", 0, -9)
+    frame.title:SetPoint("TOP", frame, "TOP", 0, -8)
     frame.title:SetText("Reagents")
-    frame.title:SetTextColor(0.90, 0.82, 0.55)
+    frame.title:SetTextColor(0.88, 0.80, 0.54)
 
     frame.rows = {}
     for index, rowData in ipairs(reagentRows) do
         local row = CreateFrame("Frame", nil, frame)
         row:SetSize(ROW_W, ROW_H)
-        row:SetPoint("TOP", frame, "TOP", 0, -28 - ((index - 1) * (ROW_H + 6)))
+        row:SetPoint("TOP", frame, "TOP", 0, -29 - ((index - 1) * (ROW_H + 8)))
+        row:EnableMouse(false)
 
-        -- Row art (baked icon + name in the texture, provides the background style).
         row.bg = row:CreateTexture(nil, "BACKGROUND")
         row.bg:SetAllPoints()
-        row.bg:SetTexture(rowData.rowTexture)
+        row.bg:SetTexture("Interface\\Buttons\\WHITE8X8")
+        row.bg:SetVertexColor(0.04, 0.045, 0.058, 0.34)
+        addBorder(row, 0.55, 0.42, 0.20, 0.30)
 
-        -- Standalone icon overlaid on the left, giving full control over positioning.
+        row.iconFrame = CreateFrame("Frame", nil, row)
+        row.iconFrame:SetSize(ICON_SIZE + 4, ICON_SIZE + 4)
+        row.iconFrame:SetPoint("LEFT", row, "LEFT", 6, 0)
+        row.iconFrame:EnableMouse(false)
+        row.iconFrame.bg = row.iconFrame:CreateTexture(nil, "BACKGROUND")
+        row.iconFrame.bg:SetAllPoints()
+        row.iconFrame.bg:SetTexture("Interface\\Buttons\\WHITE8X8")
+        row.iconFrame.bg:SetVertexColor(0, 0, 0, 0.34)
+        addBorder(row.iconFrame, 0.74, 0.58, 0.26, 0.5)
+
         row.icon = row:CreateTexture(nil, "ARTWORK")
         row.icon:SetSize(ICON_SIZE, ICON_SIZE)
-        row.icon:SetPoint("LEFT", row, "LEFT", 4, 0)
+        row.icon:SetPoint("CENTER", row.iconFrame, "CENTER")
         row.icon:SetTexture(rowData.iconTexture or rowData.fallbackIcon)
         row.icon:SetTexCoord(0.04, 0.96, 0.04, 0.96)
 
-        -- Count number centered over the icon (stack-count badge style).
         row.count = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-        row.count:SetPoint("BOTTOM", row.icon, "BOTTOM", 0, -1)
-        row.count:SetWidth(ICON_SIZE)
-        row.count:SetJustifyH("CENTER")
+        row.count:SetPoint("BOTTOMRIGHT", row.iconFrame, "BOTTOMRIGHT", -1, 1)
+        row.count:SetJustifyH("RIGHT")
+        row.count:SetShadowOffset(1, -1)
+        row.count:SetShadowColor(0, 0, 0, 1)
 
-        -- Item name from GetItemInfo (localized, correct for all locales).
         row.nameLabel = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-        row.nameLabel:SetPoint("LEFT", row.icon, "RIGHT", 5, 0)
-        row.nameLabel:SetWidth(ROW_W - ICON_SIZE - 14)
+        row.nameLabel:SetPoint("LEFT", row.iconFrame, "RIGHT", 9, 1)
+        row.nameLabel:SetPoint("RIGHT", row, "RIGHT", -10, 1)
         row.nameLabel:SetJustifyH("LEFT")
-        row.nameLabel:SetTextColor(0.90, 0.88, 0.76)
+        row.nameLabel:SetTextColor(0.92, 0.90, 0.80)
 
         row.itemID      = rowData.itemID
         row.fallbackLabel = rowData.itemID == ns.Constants.ITEM_RUNE_TELEPORTATION
@@ -87,6 +123,12 @@ function ReagentPanel:Refresh()
     local frame = self.frame
     if not frame then return end
 
+    if ns.db and ns.db.showReagentPanel == false then
+        frame:Hide()
+        return
+    end
+    frame:Show()
+
     for _, row in ipairs(frame.rows) do
         local count = GetItemCount(row.itemID, false, false) or 0
         row.count:SetText(count > 0 and count or "0")
@@ -96,10 +138,7 @@ function ReagentPanel:Refresh()
             row.count:SetTextColor(1, 0.3, 0.3)
         end
 
-        -- Populate label from game data the first time (or if empty).
-        if not row.nameLabel:GetText() or row.nameLabel:GetText() == "" then
-            local name = GetItemInfo and GetItemInfo(row.itemID)
-            row.nameLabel:SetText(name or row.fallbackLabel)
-        end
+        local name = GetItemInfo and GetItemInfo(row.itemID)
+        row.nameLabel:SetText(name or row.fallbackLabel)
     end
 end

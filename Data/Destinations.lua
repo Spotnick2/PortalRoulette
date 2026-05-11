@@ -101,24 +101,9 @@ local karazhanNode = {
     id = "karazhan",
     label = "Karazhan",
     subtitle = "Atiesh only",
-    angleDeg = 330,
-    radius = 202,
-    ringAttachRadius = 156,
-}
-
-local destinationIcons = {
-    orgrimmar = ns.Media.ICON_CITY_ORGRIMMAR,
-    undercity = ns.Media.ICON_CITY_UNDERCITY,
-    thunder_bluff = ns.Media.ICON_CITY_THUNDER_BLUFF,
-    silvermoon = ns.Media.ICON_CITY_SILVERMOON,
-    stonard = ns.Media.ICON_CITY_STONARD,
-    shattrath = ns.Media.ICON_CITY_SHATTRATH,
-    stormwind = ns.Media.ICON_CITY_STORMWIND,
-    ironforge = ns.Media.ICON_CITY_IRONFORGE,
-    darnassus = ns.Media.ICON_CITY_DARNASSUS,
-    exodar = ns.Media.ICON_CITY_THE_EXODAR,
-    theramore = ns.Media.ICON_CITY_THERAMORE,
-    karazhan = ns.Media.ICON_CITY_KARAZHAN,
+    angleDeg = 318,
+    radius = 226,
+    ringAttachRadius = 168,
 }
 
 local function getSpellName(spellID)
@@ -133,8 +118,16 @@ function Destinations:GetFactionDestinations(faction)
     return factions[faction] or factions[ALLIANCE]
 end
 
+function Destinations:GetPlayerFaction()
+    local override = ns.db and ns.db.debugFaction
+    if override == HORDE or override == ALLIANCE then
+        return override
+    end
+    return UnitFactionGroup("player")
+end
+
 function Destinations:GetPlayerDestinations()
-    local faction = UnitFactionGroup("player")
+    local faction = self:GetPlayerFaction()
     return self:GetFactionDestinations(faction)
 end
 
@@ -154,11 +147,6 @@ function Destinations:GetIconForDestination(destination, mode)
         return "Interface\\ICONS\\INV_Misc_QuestionMark", false
     end
 
-    local customIcon = destination and destination.id and destinationIcons[destination.id]
-    if customIcon then
-        return customIcon, true
-    end
-
     local spellID = destination.teleportSpell
     if mode == ns.Mode.PORTAL then
         spellID = destination.portalSpell
@@ -166,4 +154,56 @@ function Destinations:GetIconForDestination(destination, mode)
 
     local icon = spellID and GetSpellTexture(spellID)
     return icon or "Interface\\ICONS\\INV_Misc_QuestionMark", false
+end
+
+local destinationFileNames = {
+    orgrimmar = "orgrimmar",
+    undercity = "undercity",
+    thunder_bluff = "thunder_bluff",
+    silvermoon = "silvermoon",
+    stonard = "stonard",
+    shattrath = "shattrath",
+    stormwind = "stormwind",
+    ironforge = "ironforge",
+    darnassus = "darnassus",
+    exodar = "the_exodar",
+    theramore = "theramore",
+    karazhan = "karazhan",
+}
+
+local function getVisualRootsForFaction(faction)
+    if faction == HORDE then
+        return {
+            iconNormal = ns.Media.CITY_ICON_HORDE_NORMAL_ROOT,
+            iconHover = ns.Media.CITY_ICON_HORDE_HOVER_ROOT,
+            nameplateNormal = ns.Media.CITY_NAMEPLATE_HORDE_NORMAL_ROOT,
+            nameplateHover = ns.Media.CITY_NAMEPLATE_HORDE_HOVER_ROOT,
+        }
+    end
+
+    return {
+        iconNormal = ns.Media.CITY_ICON_ALLIANCE_NORMAL_ROOT,
+        iconHover = ns.Media.CITY_ICON_ALLIANCE_HOVER_ROOT,
+        nameplateNormal = ns.Media.CITY_NAMEPLATE_ALLIANCE_NORMAL_ROOT,
+        nameplateHover = ns.Media.CITY_NAMEPLATE_ALLIANCE_HOVER_ROOT,
+    }
+end
+
+function Destinations:GetVisualsForDestination(destination, faction)
+    if not destination or not destination.id then
+        return nil
+    end
+
+    local roots = getVisualRootsForFaction(faction or UnitFactionGroup("player"))
+    local cityFileName = destinationFileNames[destination.id]
+    if not roots or not cityFileName then
+        return nil
+    end
+
+    return {
+        iconNormal = roots.iconNormal .. cityFileName .. ".tga",
+        iconHover = roots.iconHover .. cityFileName .. ".tga",
+        nameplateNormal = roots.nameplateNormal .. cityFileName .. ".tga",
+        nameplateHover = roots.nameplateHover .. cityFileName .. ".tga",
+    }
 end

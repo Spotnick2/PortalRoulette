@@ -16,11 +16,13 @@ local utilityDefinitions = {
         key = ns.UtilityMode.DARK_PORTAL,
         label = "Dark Portal",
         itemName = ns.Constants.DARK_PORTAL_NAME,
+        tooltipDetail = "Teleport to the Dark Portal.",
     },
     [ns.UtilityMode.NAARU_EMBRACE] = {
         key = ns.UtilityMode.NAARU_EMBRACE,
         label = "Naaru's Embrace",
         itemName = ns.Constants.NAARU_EMBRACE_NAME,
+        tooltipDetail = "Return to Scryer's Tier.",
     },
 }
 
@@ -117,9 +119,57 @@ function UtilityItems:FindItemInBagsByName(itemName)
     return nil
 end
 
+function UtilityItems:GetItemCooldownByID(itemID)
+    if not itemID then
+        return 0, 0
+    end
+
+    if C_Container and C_Container.GetItemCooldown then
+        local start, duration = C_Container.GetItemCooldown(itemID)
+        if start and duration and duration > 0 then
+            return start, duration
+        end
+    end
+
+    if GetItemCooldown then
+        local start, duration = GetItemCooldown(itemID)
+        if start and duration and duration > 0 then
+            return start, duration
+        end
+    end
+
+    local containerSlotCD = C_Container and C_Container.GetContainerItemCooldown
+    for bag = 0, 4 do
+        local slots = getBagSlotCount(bag)
+        for slot = 1, slots do
+            local link = getBagItemLink(bag, slot)
+            if link and getItemLinkItemID(link) == itemID then
+                local start, duration
+                if containerSlotCD then
+                    start, duration = containerSlotCD(bag, slot)
+                elseif GetContainerItemCooldown then
+                    start, duration = GetContainerItemCooldown(bag, slot)
+                end
+                if start and duration and duration > 0 then
+                    return start, duration
+                end
+            end
+        end
+    end
+
+    return 0, 0
+end
+
 function UtilityItems:HasItem(itemID)
     if not itemID then
         return false
+    end
+    if itemID == ns.Constants.ITEM_ATIESH and ns.db then
+        if ns.db.debugAtiesh == "on" then
+            return true
+        elseif ns.db.debugAtiesh == "off" then
+            return false
+        end
     end
     local count = GetItemCount(itemID, false, false) or 0
     if count > 0 then
@@ -138,6 +188,8 @@ function UtilityItems:ResolveNameBasedItemOrSpell(source, definition)
         source.itemID = foundItemID
         source.available = true
         source.icon = GetItemIcon(foundItemID)
+        source.actionType = "item"
+        source.actionValue = "item:" .. foundItemID
         source.macro = "/use item:" .. foundItemID
         return
     end
@@ -147,12 +199,16 @@ function UtilityItems:ResolveNameBasedItemOrSpell(source, definition)
         source.spellName = spellSource.spellName
         source.available = spellSource.available
         source.icon = spellSource.icon or "Interface\\ICONS\\INV_Misc_QuestionMark"
+        source.actionType = "macro"
+        source.actionValue = spellSource.macro
         source.macro = spellSource.macro
         return
     end
 
     source.available = false
     source.icon = "Interface\\ICONS\\INV_Misc_QuestionMark"
+    source.actionType = "macro"
+    source.actionValue = "/use " .. definition.itemName
     source.macro = "/use " .. definition.itemName
 end
 
@@ -165,6 +221,7 @@ function UtilityItems:ResolveSource(mode)
     local source = {
         key = definition.key,
         label = definition.label,
+        tooltipDetail = definition.tooltipDetail,
         available = false,
     }
 
@@ -172,6 +229,8 @@ function UtilityItems:ResolveSource(mode)
         source.itemID = definition.itemID
         source.available = self:HasItem(definition.itemID)
         source.icon = definition.customIcon or GetItemIcon(definition.itemID)
+        source.actionType = "item"
+        source.actionValue = "item:" .. definition.itemID
         source.macro = "/use item:" .. definition.itemID
     else
         self:ResolveNameBasedItemOrSpell(source, definition)
@@ -209,7 +268,10 @@ function UtilityItems:GetSourceForMode(mode)
             itemID = chosen.itemID,
             itemName = chosen.itemName,
             spellName = chosen.spellName,
+            tooltipDetail = chosen.tooltipDetail,
             icon = chosen.icon,
+            actionType = chosen.actionType,
+            actionValue = chosen.actionValue,
             macro = chosen.macro,
         }
         return chosen
