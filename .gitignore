@@ -1,1 +1,6 @@
-.tmp_video_review/*
+.tmp_video_review/
+# Embedded libraries fetched by the packager (.pkgmeta externals) and
+# copied from sibling checkouts by Tools/deploy.ps1. Never commit a copy.
+# The other libraries under Libs/ are vendored and committed.
+Libs/LibGlass-1.0/
+Libs/LibShowcase-1.0/

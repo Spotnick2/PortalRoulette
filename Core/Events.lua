@@ -5,22 +5,27 @@ local Events = {
 }
 ns.Events = Events
 
-local frame = CreateFrame("Frame")
+local frame = CreateFrame("Frame", nil, WorldFrame)
 Events.frame = frame
 
+-- Register a handler. An event the client does not know is reported through
+-- ns.API.eventFailures (/pr debug) instead of breaking the load.
 function Events:Register(eventName, handler)
     if type(eventName) ~= "string" or type(handler) ~= "function" then
-        return
+        return false
     end
 
     local eventHandlers = self.handlers[eventName]
     if not eventHandlers then
+        if not ns.API.RegisterEvent(frame, eventName) then
+            return false
+        end
         eventHandlers = {}
         self.handlers[eventName] = eventHandlers
-        frame:RegisterEvent(eventName)
     end
 
     eventHandlers[#eventHandlers + 1] = handler
+    return true
 end
 
 frame:SetScript("OnEvent", function(_, eventName, ...)

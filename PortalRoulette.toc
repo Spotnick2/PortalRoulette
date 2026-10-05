@@ -1,25 +1,38 @@
-## Interface: 20505
+## Interface: 16001
 ## Title: Portal Roulette
 ## IconTexture: Interface\AddOns\PortalRoulette\Media\Icon_PortalRoulette_128
-## Notes: Mage-only floating portal and teleport roulette for TBC Classic Anniversary.
+## Notes: Mage teleports and portals on one glass wheel. Left-click a destination to teleport, right-click to open a portal.
 ## Author: Spotnick
 ## Version: @project-version@
 ## SavedVariables: PortalRouletteDB
 
+Libs\LibStub\LibStub.lua
+Libs\CallbackHandler-1.0\CallbackHandler-1.0.lua
+Libs\LibDataBroker-1.1\LibDataBroker-1.1.lua
+Libs\LibDBIcon-1.0\LibDBIcon-1.0.lua
+Libs\LibGlass-1.0\LibGlass-1.0.xml
+Libs\LibShowcase-1.0\LibShowcase-1.0.xml
+
 Core\Constants.lua
+Core\Compat.lua
 Core\DB.lua
 Core\Events.lua
 Core\Sound.lua
-Core\CastTracker.lua
+Core\SecureAction.lua
 Data\Destinations.lua
-Data\UtilityItems.lua
-UI\Animations.lua
-Camera\CameraMode.lua
-UI\DestinationNode.lua
-UI\ReagentPanel.lua
-UI\UtilityButton.lua
-UI\RouletteFrame.lua
+Data\Hearth.lua
+Data\Reagents.lua
+Core\CastTracker.lua
+UI\Skin.lua
+UI\Anim.lua
+UI\Wheel\Layout.lua
+UI\Wheel\Node.lua
+UI\Wheel\HearthOrb.lua
+UI\Wheel\Panels.lua
+UI\Wheel\Disc.lua
+UI\Wheel\Presentation.lua
+UI\Wheel\Roulette.lua
 UI\LauncherButton.lua
-UI\MinimapButton.lua
-Options\OptionsPanel.lua
+UI\Minimap.lua
+Options\Options.lua
 Core\Init.lua

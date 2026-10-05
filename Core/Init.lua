@@ -1,6 +1,13 @@
 local _, ns = ...
 
+-- While /pr debug runs, its lines are also kept (PortalRouletteDB.lastDebug)
+-- so they can be read from SavedVariables even if chat was hidden.
+local debugLog
+
 local function printMessage(message)
+    if debugLog then
+        debugLog[#debugLog + 1] = message
+    end
     if DEFAULT_CHAT_FRAME then
         DEFAULT_CHAT_FRAME:AddMessage("|cff8e7dffPortal Roulette|r: " .. message)
     end
@@ -8,37 +15,20 @@ end
 
 ns.Print = printMessage
 
-BINDING_HEADER_PORTALROULETTE = "Portal Roulette"
 BINDING_NAME_PORTALROULETTE_TOGGLE = "Open Portal Roulette"
 
 function PortalRoulette_Toggle()
-    if ns.RouletteFrame then
-        ns.RouletteFrame:Toggle()
+    if ns.Roulette then
+        ns.Roulette:Toggle()
     end
-end
-
-function PortalRoulette_OpenTeleports()
-    if ns.RouletteFrame then
-        ns.RouletteFrame:Open(ns.Mode.TELEPORT)
-    end
-end
-
-function PortalRoulette_OpenPortals()
-    if ns.RouletteFrame then
-        ns.RouletteFrame:Open(ns.Mode.PORTAL)
-    end
-end
-
-local function openOptionsPanel()
-    if not ns.OptionsPanel or not ns.OptionsPanel.Open then
-        return
-    end
-    ns.OptionsPanel:Open()
 end
 
 local function valueToText(value)
     if value == nil then
         return "nil"
+    end
+    if not ns.API.Readable(value) then
+        return "<secret>"
     end
     return tostring(value)
 end
@@ -48,49 +38,54 @@ local function printButtonAttributes(label, button)
         printMessage(label .. ": missing")
         return
     end
-
-    local shown = button:IsShown() and "shown" or "hidden"
-    local enabled = button:IsEnabled() and "enabled" or "disabled"
-    printMessage(label .. ": " .. shown .. ", " .. enabled)
-    printMessage("  type=" .. valueToText(button:GetAttribute("type"))
-        .. " type1=" .. valueToText(button:GetAttribute("type1"))
-        .. " type2=" .. valueToText(button:GetAttribute("type2")))
-    printMessage("  spell=" .. valueToText(button:GetAttribute("spell"))
-        .. " spell1=" .. valueToText(button:GetAttribute("spell1"))
-        .. " spell2=" .. valueToText(button:GetAttribute("spell2")))
-    printMessage("  item=" .. valueToText(button:GetAttribute("item"))
-        .. " macro=" .. valueToText(button:GetAttribute("macrotext")))
+    local parts = {}
+    for _, family in ipairs(ns.SecureAction.FAMILIES) do
+        for _, suffix in ipairs(ns.SecureAction.SUFFIXES) do
+            local v = button:GetAttribute(family .. suffix)
+            if v ~= nil then
+                parts[#parts + 1] = family .. suffix .. "=" .. valueToText(v)
+            end
+        end
+    end
+    printMessage(label .. " (" .. (button:IsShown() and "shown" or "hidden") .. "): "
+        .. (#parts > 0 and table.concat(parts, " ") or "no action"))
 end
 
 local function printDebugState()
-    if not ns.RouletteFrame or not ns.RouletteFrame.frame then
-        printMessage("Roulette frame is not created.")
+    local R = ns.Roulette
+    printMessage("build " .. valueToText(ns.API.ClientBuild()) .. ", combat=" .. valueToText(InCombatLockdown())
+        .. ", preview=" .. valueToText(R.preview) .. ", faction=" .. ns.Destinations:GetPlayerFaction())
+    if #ns.API.eventFailures > 0 then
+        printMessage("events refused: " .. table.concat(ns.API.eventFailures, ", "))
+    end
+    if not R.root then
+        printMessage("The wheel has not been opened yet.")
         return
     end
-
-    ns.RouletteFrame:RefreshAll()
-    printMessage("Debug: mode=" .. valueToText(ns.RouletteFrame.mode)
-        .. " combat=" .. valueToText(InCombatLockdown() and true or false))
-    printButtonAttributes("First city", ns.RouletteFrame.nodeButtons and ns.RouletteFrame.nodeButtons[1])
-    printButtonAttributes("Center utility", ns.RouletteFrame.frame.centerUtilityButton)
-    printButtonAttributes("Lower utility", ns.UtilityButton and ns.UtilityButton.button)
+    R:Refresh()
+    printMessage("reagents: " .. valueToText(R.reagentState) .. ", hearth: "
+        .. valueToText(R.hearthSource and R.hearthSource.id))
+    for _, node in ipairs(R.slots) do
+        local resolved = R.assigned and R.assigned[node]
+        printButtonAttributes((resolved and resolved.name or "empty") .. " @" .. node.clock, node.button)
+    end
+    printButtonAttributes("Hearth orb", R.orb.button)
+    -- Animations actually running (to tell "too subtle" from "not playing").
+    local ticker = ns.Disc.ticker
+    local links, comets = 0, 0
+    for _, link in pairs(R.disc.links) do
+        if link.line:IsShown() then links = links + 1 end
+        if link.comet:IsShown() then comets = comets + 1 end
+    end
+    printMessage("effects: updater " .. ((ticker and ticker:GetScript("OnUpdate")) and "running" or "stopped")
+        .. ", t=" .. string.format("%.1f", R.disc.time or 0) .. "s, links " .. links .. ", comets in flight " .. comets
+        .. " (open=" .. valueToText(R.open) .. ", animations=" .. valueToText(ns.db.animationsEnabled)
+        .. ", idle=" .. valueToText(ns.db.idleAnimationsEnabled) .. ")")
 end
 
-local refreshVisualState
-
 local function handleDebugCommand(parts)
-    local target = parts[2]
-    local value = parts[3]
-    if target == "atiesh" then
-        if value == "on" or value == "off" or value == "auto" then
-            ns.db.debugAtiesh = value
-            printMessage("Debug Atiesh override: " .. value)
-            refreshVisualState()
-        else
-            printMessage("Usage: /pr debug atiesh on|off|auto")
-        end
-        return true
-    elseif target == "faction" then
+    local target, value = parts[2], parts[3]
+    if target == "faction" then
         if value == "horde" then
             ns.db.debugFaction = ns.Constants.FACTION_HORDE
         elseif value == "alliance" then
@@ -99,21 +94,21 @@ local function handleDebugCommand(parts)
             ns.db.debugFaction = "auto"
         else
             printMessage("Usage: /pr debug faction horde|alliance|auto")
-            return true
+            return
         end
-        printMessage("Debug faction override: " .. tostring(ns.db.debugFaction))
-        if ns.RouletteFrame and ns.RouletteFrame.RebuildDestinations then
-            ns.RouletteFrame:RebuildDestinations()
-        else
-            refreshVisualState()
+        printMessage("Faction override: " .. tostring(ns.db.debugFaction))
+        if ns.Roulette.root and not InCombatLockdown() then
+            ns.Roulette:Refresh()
         end
-        return true
-    elseif target == "state" then
-        printMessage("Debug Atiesh: " .. tostring(ns.db.debugAtiesh or "auto"))
-        printMessage("Debug faction: " .. tostring(ns.db.debugFaction or "auto"))
-        return true
+        return
     end
-    return false
+    debugLog = { "at " .. date("%Y-%m-%d %H:%M:%S") }
+    local ok, err = pcall(printDebugState)
+    if not ok then
+        printMessage("debug failed: " .. tostring(err))
+    end
+    ns.db.lastDebug = debugLog
+    debugLog = nil
 end
 
 local function registerSlashCommands()
@@ -123,109 +118,65 @@ local function registerSlashCommands()
 
     SlashCmdList.PORTALROULETTE = function(commandText)
         local text = string.lower((commandText or ""):match("^%s*(.-)%s*$"))
-        if text == "options" or text == "config" then
-            openOptionsPanel()
-            return
+        local parts = {}
+        for part in text:gmatch("%S+") do
+            parts[#parts + 1] = part
         end
-
-        if text == "debug" then
-            printDebugState()
-            return
-        end
-
-        if text:match("^debug%s+") then
-            local parts = {}
-            for part in text:gmatch("%S+") do
-                parts[#parts + 1] = part
+        local cmd = parts[1] or ""
+        if cmd == "options" or cmd == "config" then
+            ns.Options:Open()
+        elseif cmd == "preview" then
+            ns.Roulette:SetPreview(not ns.Roulette.preview)
+            if ns.Roulette.preview and not ns.Roulette.open then
+                ns.Roulette:Open()
             end
-            if handleDebugCommand(parts) then
+        elseif cmd == "debug" then
+            handleDebugCommand(parts)
+        elseif cmd == "reset" then
+            if InCombatLockdown() then
+                printMessage("Not in combat.")
                 return
             end
-        end
-
-        if text == "reset" then
             ns.DB:ResetPositions()
-            if ns.RouletteFrame and ns.RouletteFrame.frame then
-                ns.RouletteFrame:ApplyPosition()
-            end
-            if ns.LauncherButton and ns.LauncherButton.button then
-                ns.LauncherButton:ApplyPosition()
-            end
+            ns.Roulette:ApplyPosition()
+            ns.LauncherButton:ApplyPosition()
             printMessage("Positions reset to defaults.")
-            return
+        elseif cmd == "" then
+            ns.Roulette:Toggle()
+        else
+            printMessage("/pr | options | preview | reset | debug | debug faction horde|alliance|auto")
         end
-
-        if not ns.RouletteFrame then
-            return
-        end
-        ns.RouletteFrame:Toggle()
     end
 end
 
-function refreshVisualState()
-    if ns.RouletteFrame then
-        ns.RouletteFrame:RefreshAll()
+-- A setting changed in the options page.
+local function onOptionChanged(key)
+    local R = ns.Roulette
+    if key == "uiScale" or key == "positions" then
+        R:ApplyScale()
+        R:ApplyPosition()
+        ns.LauncherButton:ApplySettings()
+    elseif key == "launcherScale" or key == "lockLauncher" or key == "launcherTheme" then
+        ns.LauncherButton:ApplySettings()
+    elseif key == "showMinimapButton" then
+        ns.Minimap:RefreshVisibility()
+    elseif key == "utilityMode" then
+        ns.Hearth:Roll()
     end
-    if ns.MinimapButton then
-        ns.MinimapButton:RefreshVisibility()
+    if R.root then
+        R:Refresh()
     end
 end
 
 local function initializeForMage()
-    local function refreshLauncherTheme()
-        if ns.LauncherButton and ns.LauncherButton.RefreshSpecTheme then
-            ns.LauncherButton:RefreshSpecTheme()
-        end
-    end
-
-    ns.RouletteFrame:Initialize()
+    ns.SecureAction.Initialize()
+    ns.Roulette:Initialize()
     ns.LauncherButton:Initialize()
-    ns.MinimapButton:Initialize()
+    ns.Minimap:Initialize()
     ns.CastTracker:Initialize()
+    ns.Options:Register()
+    ns.Options.OnChanged = onOptionChanged
     registerSlashCommands()
-
-    ns.Events:Register("BAG_UPDATE_DELAYED", function()
-        refreshVisualState()
-    end)
-
-    ns.Events:Register("BAG_UPDATE_COOLDOWN", function()
-        refreshVisualState()
-    end)
-
-    ns.Events:Register("SPELL_UPDATE_COOLDOWN", function()
-        refreshVisualState()
-    end)
-
-    ns.Events:Register("SPELLS_CHANGED", function()
-        if ns.RouletteFrame then
-            ns.RouletteFrame:RefreshDestinationNodes()
-        end
-        refreshLauncherTheme()
-    end)
-
-    ns.Events:Register("PLAYER_TALENT_UPDATE", function()
-        refreshLauncherTheme()
-    end)
-
-    ns.Events:Register("CHARACTER_POINTS_CHANGED", function()
-        refreshLauncherTheme()
-    end)
-
-    ns.Events:Register("PLAYER_REGEN_ENABLED", function()
-        refreshVisualState()
-    end)
-
-    ns.Events:Register("PLAYER_REGEN_DISABLED", function()
-        if ns.CameraMode then
-            ns.CameraMode:Exit()
-        end
-    end)
-
-    ns.Events:Register("PLAYER_LOGOUT", function()
-        if ns.CameraMode then
-            ns.CameraMode:Exit()
-        end
-    end)
 end
 
 ns.Events:Register("PLAYER_LOGIN", function()
@@ -238,5 +189,4 @@ ns.Events:Register("PLAYER_LOGIN", function()
     end
 
     initializeForMage()
-    printMessage("Loaded. Left-click launcher for Teleports, right-click for Portals.")
 end)

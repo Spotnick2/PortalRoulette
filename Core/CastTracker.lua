@@ -1,100 +1,75 @@
+-- ============================================================
+-- CastTracker: follows the player's travel casts by spell ID (the
+-- UNIT_SPELLCAST_* payload carries castGUID and spellID on Forever), drives
+-- the wheel's casting state and the optional group broadcast.
+-- ============================================================
+
 local _, ns = ...
+
+local API = ns.API
 
 local CastTracker = {
     activeCast = nil,
-    spellDestinations = {},
+    spells = {},
 }
 ns.CastTracker = CastTracker
 
-local function normalizeSpellName(name)
-    if not name or name == "" then
-        return nil
-    end
-    return string.lower(name)
-end
-
 local function getBroadcastChannel()
-    if IsInGroup and not IsInGroup() then
+    if not IsInGroup() then
         return nil
     end
-    if IsInGroup and IsInGroup(LE_PARTY_CATEGORY_INSTANCE) then
+    if LE_PARTY_CATEGORY_INSTANCE and IsInGroup(LE_PARTY_CATEGORY_INSTANCE) then
         return "INSTANCE_CHAT"
     end
-    if IsInRaid and IsInRaid() then
+    if IsInRaid() then
         return "RAID"
     end
-    if IsInGroup and IsInGroup() then
-        return "PARTY"
-    end
-    return nil
-end
-
-local function addSpell(spellID, destination, mode)
-    if not spellID or not destination then
-        return
-    end
-    local spellName = GetSpellInfo(spellID)
-    local key = normalizeSpellName(spellName)
-    if not key then
-        return
-    end
-    CastTracker.spellDestinations[key] = {
-        destination = destination.label,
-        mode = mode,
-        spellName = spellName,
-    }
-end
-
-local function addUtilitySpell(name, destination)
-    local spellName = GetSpellInfo(name) or name
-    local key = normalizeSpellName(spellName)
-    if not key then
-        return
-    end
-    CastTracker.spellDestinations[key] = {
-        destination = destination,
-        mode = "utility",
-        spellName = spellName,
-    }
+    return "PARTY"
 end
 
 function CastTracker:RefreshSpellMap()
-    self.spellDestinations = {}
-    for _, faction in ipairs({ ns.Constants.FACTION_HORDE, ns.Constants.FACTION_ALLIANCE }) do
-        for _, destination in ipairs(ns.Destinations:GetFactionDestinations(faction)) do
-            addSpell(destination.teleportSpell, destination, ns.Mode.TELEPORT)
-            addSpell(destination.portalSpell, destination, ns.Mode.PORTAL)
-        end
-    end
-    self.spellDestinations[normalizeSpellName(GetItemInfo(ns.Constants.ITEM_ATIESH) or "Atiesh, Greatstaff of the Guardian") or ""] = {
-        destination = "Karazhan",
-        mode = ns.Mode.PORTAL,
-        spellName = "Atiesh",
-    }
-    addUtilitySpell("Hearthstone", GetBindLocation and (GetBindLocation() or "your hearth location") or "your hearth location")
-    addUtilitySpell(ns.Constants.DARK_PORTAL_NAME, "the Dark Portal")
-    addUtilitySpell(ns.Constants.NAARU_EMBRACE_NAME, "Naaru's Embrace")
+    self.spells = ns.Destinations:AllSpells()
+    self.spells[ns.Constants.SPELL_HEARTHSTONE] = { id = "hearth", mode = "utility" }
 end
 
-function CastTracker:GetInfoForSpell(spellName)
-    local key = normalizeSpellName(spellName)
-    return key and self.spellDestinations[key] or nil
+-- A plain spell ID from an event payload, or nil (secret or missing).
+local function spellIDFrom(value)
+    return API.Number(value)
+end
+
+function CastTracker:GetInfo(spellID)
+    spellID = spellIDFrom(spellID)
+    local info = spellID and self.spells[spellID]
+    if not info then
+        return nil
+    end
+    local name = API.SpellName(spellID) or ""
+    return {
+        spellID = spellID,
+        id = info.id,
+        mode = info.mode,
+        destination = info.mode == "utility" and (API.BindLocation() or "") or (name:match("^[^:]+:%s*(.+)$") or name),
+    }
 end
 
 function CastTracker:MaybeBroadcast(info, timing)
-    if not info or not ns.db then
+    local db = ns.db
+    if not info or not db then
         return
     end
-    if timing == "start" and not ns.db.broadcastOnStart then
+    if info.mode == "utility" then
         return
     end
-    if timing == "success" and not ns.db.broadcastOnSuccess then
+    if timing == "start" and not db.broadcastOnStart then
         return
     end
-    if info.mode == ns.Mode.PORTAL and not ns.db.broadcastPortals then
+    if timing == "success" and not db.broadcastOnSuccess then
         return
     end
-    if info.mode == ns.Mode.TELEPORT and not ns.db.broadcastTeleports then
+    if info.mode == ns.Mode.PORTAL and not db.broadcastPortals then
+        return
+    end
+    if info.mode == ns.Mode.TELEPORT and not db.broadcastTeleports then
         return
     end
     local channel = getBroadcastChannel()
@@ -102,9 +77,7 @@ function CastTracker:MaybeBroadcast(info, timing)
         return
     end
     local message
-    if info.mode == "utility" then
-        return
-    elseif info.mode == ns.Mode.PORTAL then
+    if info.mode == ns.Mode.PORTAL then
         message = "Opening a portal to " .. info.destination .. "."
     else
         message = "Teleporting to " .. info.destination .. "."
@@ -112,63 +85,71 @@ function CastTracker:MaybeBroadcast(info, timing)
     SendChatMessage(message, channel)
 end
 
-function CastTracker:StartCast(spellName)
-    local info = self:GetInfoForSpell(spellName)
+function CastTracker:StartCast(castGUID, spellID)
+    local info = self:GetInfo(spellID)
     if not info then
         return
     end
-    local name, _, _, startMS, endMS = UnitCastingInfo("player")
-    if not name and UnitChannelInfo then
-        name, _, _, startMS, endMS = UnitChannelInfo("player")
+    if self.activeCast and self.activeCast.castGUID == castGUID then
+        return -- SENT then START for the same cast
     end
-    self.activeCast = {
-        spellName = spellName,
-        info = info,
-    }
-    if ns.RouletteFrame and ns.RouletteFrame.ShowCastBar then
-        ns.RouletteFrame:ShowCastBar(info, startMS, endMS)
+    self.activeCast = { castGUID = castGUID, info = info }
+    if ns.Roulette and ns.Roulette.OnCastStart then
+        ns.Roulette:OnCastStart(info)
     end
     self:MaybeBroadcast(info, "start")
 end
 
-function CastTracker:FinishCast(spellName, succeeded)
-    local info = (self.activeCast and self.activeCast.info) or self:GetInfoForSpell(spellName)
-    if succeeded then
-        self:MaybeBroadcast(info, "success")
+function CastTracker:FinishCast(castGUID, succeeded)
+    local active = self.activeCast
+    if not active then
+        return
+    end
+    if castGUID and active.castGUID and castGUID ~= active.castGUID then
+        return
     end
     self.activeCast = nil
-    if ns.RouletteFrame and ns.RouletteFrame.HideCastBar then
-        ns.RouletteFrame:HideCastBar()
+    if succeeded then
+        self:MaybeBroadcast(active.info, "success")
     end
+    if ns.Roulette and ns.Roulette.OnCastEnd then
+        ns.Roulette:OnCastEnd(active.info, succeeded)
+    end
+end
+
+-- castGUID may be secret: compare it only when readable.
+local function guid(value)
+    if API.Readable(value) then
+        return value
+    end
+    return nil
 end
 
 function CastTracker:Initialize()
     self:RefreshSpellMap()
-    ns.Events:Register("SPELLS_CHANGED", function()
+    local Events = ns.Events
+    Events:Register("SPELLS_CHANGED", function()
         CastTracker:RefreshSpellMap()
     end)
-    ns.Events:Register("UNIT_SPELLCAST_START", function(_, unit, _, spellID)
-        if unit ~= "player" then return end
-        local spellName = spellID and GetSpellInfo(spellID) or UnitCastingInfo("player")
-        CastTracker:StartCast(spellName)
+    Events:Register("UNIT_SPELLCAST_SENT", function(_, unit, _, castGUID, spellID)
+        if unit == "player" then
+            CastTracker:StartCast(guid(castGUID), spellID)
+        end
     end)
-    ns.Events:Register("UNIT_SPELLCAST_SENT", function(_, unit, arg2, _, spellID)
-        if unit ~= "player" then return end
-        CastTracker:StartCast((spellID and GetSpellInfo(spellID)) or arg2)
+    Events:Register("UNIT_SPELLCAST_START", function(_, unit, castGUID, spellID)
+        if unit == "player" then
+            CastTracker:StartCast(guid(castGUID), spellID)
+        end
     end)
-    ns.Events:Register("UNIT_SPELLCAST_CHANNEL_START", function(_, unit, _, spellID)
-        if unit ~= "player" then return end
-        local spellName = spellID and GetSpellInfo(spellID) or (UnitChannelInfo and UnitChannelInfo("player"))
-        CastTracker:StartCast(spellName)
+    Events:Register("UNIT_SPELLCAST_SUCCEEDED", function(_, unit, castGUID)
+        if unit == "player" then
+            CastTracker:FinishCast(guid(castGUID), true)
+        end
     end)
-    ns.Events:Register("UNIT_SPELLCAST_SUCCEEDED", function(_, unit, _, spellID)
-        if unit ~= "player" then return end
-        CastTracker:FinishCast(spellID and GetSpellInfo(spellID), true)
-    end)
-    for _, eventName in ipairs({ "UNIT_SPELLCAST_STOP", "UNIT_SPELLCAST_FAILED", "UNIT_SPELLCAST_INTERRUPTED", "UNIT_SPELLCAST_CHANNEL_STOP" }) do
-        ns.Events:Register(eventName, function(_, unit)
+    for _, eventName in ipairs({ "UNIT_SPELLCAST_FAILED", "UNIT_SPELLCAST_INTERRUPTED" }) do
+        Events:Register(eventName, function(_, unit, castGUID)
             if unit == "player" then
-                CastTracker:FinishCast(nil, false)
+                CastTracker:FinishCast(guid(castGUID), false)
             end
         end)
     end

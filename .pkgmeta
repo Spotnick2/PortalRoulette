@@ -11,7 +11,10 @@ ignore:
   - .github
   - .gitignore
   - AGENTS.md
+  - CLAUDE.md
   - README.md
   - CHANGELOG.md
   - docs
   - screenshots
+  - tests
+  - Tools
