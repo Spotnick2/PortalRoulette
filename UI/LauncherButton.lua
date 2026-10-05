@@ -370,6 +370,13 @@ function LauncherButton:RefreshAttention()
         -- setting applies to hover.
         style = "alert"
     end
+    local intensity = ns.Anim.Intensity()
+    local motion = ns.Anim.Enabled("idle") and intensity > 0
+    if style == "alert" and not motion then
+        -- Blizzard's alert is all animation: with motion off, the static
+        -- blue border is the attention cue instead.
+        style = "blue"
+    end
     local alert = style == "alert" and self:GetSpellAlert()
     if style == "alert" and not alert then
         style = "blue" -- template unavailable: fall back to our own border
@@ -379,9 +386,8 @@ function LauncherButton:RefreshAttention()
     end
     local blue = active and style == "blue"
     button.attention:SetShown(blue)
-    local intensity = ns.Anim.Intensity()
     button.attention:SetAlpha(0.45 + 0.4 * intensity)
-    if blue and ns.Anim.Enabled("idle") and intensity > 0 then
+    if blue and motion then
         if not button.attentionPulse:IsPlaying() then button.attentionPulse:Play() end
     else
         button.attentionPulse:Stop()

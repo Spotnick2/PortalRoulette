@@ -160,6 +160,7 @@ EditMacro = realEdit
 -- Launcher glow styles. Without the spell-alert template the "alert" style
 -- falls back to the blue border; with it, Blizzard's alert plays on our own
 -- frame (never through ActionButtonSpellAlertManager).
+ns.db.animationsEnabled = true -- turned off by the attention checks above
 L.prompt:Hide()
 button:Show()
 button.hovered = true
@@ -220,4 +221,24 @@ H.check(button.spellAlert:IsShown() and button.spellAlert.ProcStartAnim:IsPlayin
     "and restarts when the launcher shows again")
 L.prompt:Hide()
 L:RefreshAttention()
+
+-- Animation controls apply to the yellow alert too: with motion off, the
+-- alert never plays and the static blue border is shown instead.
+for _, off in ipairs({
+    { animationsEnabled = false },
+    { idleAnimationsEnabled = false },
+    { animationIntensity = 0 },
+}) do
+    local saved = {}
+    for k, v in pairs(off) do saved[k] = ns.db[k]; ns.db[k] = v end
+    L.prompt:Show()
+    L:RefreshAttention()
+    H.check(not button.spellAlert:IsShown() and not button.spellAlert.ProcStartAnim:IsPlaying()
+        and not button.spellAlert.ProcLoop:IsPlaying(), "motion off: the spell alert does not play")
+    H.check(button.attention:IsShown() and not button.attentionPulse:IsPlaying(),
+        "motion off: a static border keeps the launcher noticeable")
+    L.prompt:Hide()
+    L:RefreshAttention()
+    for k, v in pairs(saved) do ns.db[k] = v end
+end
 H.done("test_launcher")
