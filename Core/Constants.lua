@@ -8,15 +8,11 @@ ns.Mode = {
     PORTAL = "portal",
 }
 
-ns.UtilityMode = {
-    HEARTHSTONE = "hearthstone",
-    RANDOM = "random",
-}
-
 ns.Constants = {
     -- Saved-variable schema. 3 was the last TBC schema; 4 the first Forever
-    -- one; 5 turned the cinematic camera on by default.
-    VERSION = 5,
+    -- one; 5 turned the cinematic camera on by default; 6 dropped the
+    -- utility-mode and launcher-theme settings.
+    VERSION = 6,
     CLASS_MAGE = "MAGE",
     FACTION_HORDE = "Horde",
     FACTION_ALLIANCE = "Alliance",
@@ -31,8 +27,7 @@ ns.Constants = {
     -- Hearth-type toys tried in order when owned (none measured yet on Forever).
     HEARTH_TOYS = {},
     DEFAULTS = {
-        version = 5,
-        utilityMode = "hearthstone",
+        version = 6,
         showUnavailableKarazhan = true,
         cinematicCamera = true,
         hideGameUI = true,
@@ -40,7 +35,7 @@ ns.Constants = {
         cameraCastAware = true,
         lockLauncher = false,
         launcherScale = 1.35,
-        launcherTheme = "auto",
+        launcherGlow = "blue",
         actionBarPromptDismissed = false,
         showMinimapButton = true,
         showCompartment = true,

@@ -127,9 +127,7 @@ local function build()
 
     -- Left column.
     local h = heading(panel, "Wheel", sub, 0, -18)
-    local a = cycle(panel, h, "utilityMode", "Center orb", {
-        { "hearthstone", "Hearthstone" }, { "random", "Random owned hearth" } })
-    a = cycle(panel, a, "reagentDisplay", "Reagent counts", {
+    local a = cycle(panel, h, "reagentDisplay", "Reagent counts", {
         { "auto", "Auto" }, { "show", "Always show" }, { "hide", "Hide" } })
     a = toggle(panel, a, "showUnavailableKarazhan", "Show Karazhan without Atiesh")
     a = toggle(panel, a, "confirmGroupedTeleport", "Confirm teleports while grouped")
@@ -165,8 +163,8 @@ local function build()
     h = heading(panel, "Launcher", a, 0, -18)
     a = toggle(panel, h, "lockLauncher", "Lock the launcher")
     a = toggle(panel, a, "showMinimapButton", "Minimap button")
-    a = cycle(panel, a, "launcherTheme", "Launcher accent", {
-        { "auto", "Auto (Arcane)" }, { "arcane", "Arcane" }, { "fire", "Fire" }, { "frost", "Frost" } })
+    a = cycle(panel, a, "launcherGlow", "Launcher glow", {
+        { "blue", "Blue pulse" }, { "alert", "Spell alert (yellow)" }, { "off", "Off" } })
     a = stepper(panel, a, "launcherScale", "Launcher scale", 0.6, 2.0, 0.05, "%.2f")
 
     h = heading(panel, "Group broadcast", a, 0, -18)

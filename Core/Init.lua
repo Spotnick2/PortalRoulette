@@ -165,12 +165,10 @@ local function onOptionChanged(key)
         R:ApplyScale()
         R:ApplyPosition()
         ns.LauncherButton:ApplySettings()
-    elseif key == "launcherScale" or key == "lockLauncher" or key == "launcherTheme" then
+    elseif key == "launcherScale" or key == "lockLauncher" or key == "launcherGlow" then
         ns.LauncherButton:ApplySettings()
     elseif key == "showMinimapButton" then
         ns.Minimap:RefreshVisibility()
-    elseif key == "utilityMode" then
-        ns.Hearth:Roll()
     end
     if R.root then
         R:Refresh()

@@ -302,7 +302,6 @@ function Roulette:Open()
         return
     end
     self.open = true
-    ns.Hearth:Roll()
     self:Resolve()
     SA.RunSyncs() -- out of combat: attributes are current before the first click
     self:Paint()
