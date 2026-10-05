@@ -35,6 +35,18 @@ local validChannels = {
     SFX = true,
     Master = true,
     Ambience = true,
+    Dialog = true,
+}
+
+-- The "game" theme: the client's own UI sounds. Vanilla-era sound kits play
+-- on Forever; newer-expansion kits are refused (PORTING-TBC-TO-FOREVER.md).
+-- Resolved at play time: SOUNDKIT is FrameXML's table.
+local gameKits = {
+    Open = "IG_SPELLBOOK_OPEN",
+    Close = "IG_SPELLBOOK_CLOSE",
+    NodeClick = "IG_MAINMENU_OPTION",
+    HearthstoneClick = "IG_MAINMENU_OPTION",
+    Error = "IG_MAINMENU_OPTION_CHECKBOX_OFF",
 }
 
 function Sound:GetChannel()
@@ -80,15 +92,29 @@ function Sound:IsThrottled(soundKey, options)
     return false
 end
 
+function Sound:GetTheme()
+    local theme = ns.db and ns.db.soundTheme
+    if theme == "game" then
+        return "game"
+    end
+    return "addon"
+end
+
 function Sound:Play(soundKey, options)
-    local path = soundPaths[soundKey]
-    if not path then
-        return false
-    end
-    if type(PlaySoundFile) ~= "function" then
-        return false
-    end
     if not self:IsEnabled(soundKey, options) then
+        return false
+    end
+    if self:GetTheme() == "game" then
+        local kitName = gameKits[soundKey]
+        local kit = kitName and SOUNDKIT and SOUNDKIT[kitName]
+        if not kit or type(PlaySound) ~= "function" or self:IsThrottled(soundKey, options) then
+            return false
+        end
+        local ok, result = pcall(PlaySound, kit, self:GetChannel())
+        return ok and result and true or false
+    end
+    local path = soundPaths[soundKey]
+    if not path or type(PlaySoundFile) ~= "function" then
         return false
     end
     if self:IsThrottled(soundKey, options) then

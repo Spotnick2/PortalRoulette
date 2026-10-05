@@ -1,67 +1,80 @@
 # Portal Roulette agent instructions
 
-## Deployment
-- After local changes, deploy addon files to:
-  - `C:\Program Files (x86)\World of Warcraft\_anniversary_\Interface\AddOns\PortalRoulette`
-- Use the approved PowerShell executable for Windows commands when the default shell runner is unreliable:
-  - `C:\Users\nicol\AppData\Local\Microsoft\WindowsApps\pwsh.exe -Command '...'`
-- Prefer single-quoted `-Command` payloads when the command uses PowerShell variables like `$source`, `$dest`, `$i`, `$_`, or `$LASTEXITCODE`; double-quoted payloads can be expanded by the wrapper before PowerShell receives them.
-- Deploy with a tracked-file copy from `git ls-files`; do not copy untracked review/temp folders such as `.tmp_video_review`.
+Portal Roulette is a mage-only teleport/portal wheel for **WoW: Forever**: Vanilla content on the
+Retail (Mainline) API, client 1.60.1, `## Interface: 16001`. The TBC Anniversary version is frozen
+at tag `v0.1.1-tbc` and no longer supported.
 
-## Addon context (TBC Classic Anniversary)
+Read before changing code:
+- `C:\Projects\References\PORTING-TBC-TO-FOREVER.md`: what changed from TBC, measured.
+- `C:\Projects\References\forever-api-1.60.1.70205.md`: the client's API (grep it; it is huge).
+- `C:\Projects\References\EMBEDDED-LIBRARIES.md`: rules for the embedded libraries.
+- `C:\Projects\LibGlass\docs\GLASS-MATERIAL.md`: the glass material.
+- `C:\Projects\wow-ui-source`: FrameXML (build 70170).
+- `docs/FOREVER-PROBE.md`: what has been measured in game for this addon.
 
-### Core product goals
-- Mage-only addon.
-- One launcher button:
-  - **Left-click** opens Teleport roulette.
-  - **Right-click** opens Portal roulette.
-- Main UI is a **floating no-box arcane wheel** (not a large rectangular window).
+The rule is **measured beats reasoned**. Anything spell-, item- or combat-dependent is confirmed with
+the dev probe (`Tools/PortalRouletteProbe`, `/prprobe`) before code relies on it.
 
-### Visual and UX direction
-- Arcane blue/purple runic circle with subtle glow — **no rectangular box frame**.
-- **Title bar** at top: "Portal Roulette" with decorative runic flanks.
-- **Mode tabs row** below title: `[Teleports]` `[Portals]` tabs + `[⚙]` gear icon on the right.
-  - Left-click launcher -> open panel with Teleports tab active.
-  - Right-click launcher -> open panel with Portals tab active.
-  - User can also click tabs directly to switch modes.
-- **Destination ring**: 6 nodes connected by lines to a central arcane star core, at clock positions 12/10/2/8/4/6.
-  - Horde clockwise from top: Orgrimmar, Thunder Bluff, Stonard, Shattrath, Silvermoon, Undercity.
-  - Alliance clockwise from top: Stormwind, Darnassus, Theramore, Shattrath, The Exodar, Ironforge.
-- **Karazhan bonus node**: outside the main ring at ~4-o'clock, connected by a line; labeled "Karazhan / Atiesh only"; smaller + distinct purple art.
-- **Reagent panel**: floats LEFT of the wheel; two rows: Rune of Teleportation + Rune of Portals.
-- **Hint bar**: below the wheel — "Left Click: Teleport · Right Click: Portal / Reagents are shared."
-- **Single utility button**: large, full-width below hint bar; shows current utility icon + name only.
-- **Utility chip selector** (Hearthstone / Dark Portal / Naaru's Embrace / Random) is in **Options only** — NOT shown on the main overlay.
-- Minimap button (hideable from options).
+## Build, test, deploy
+- Tests: `pwsh tests/run.ps1` (Lua 5.1 at `C:\Program Files (x86)\Lua\5.1\`): `luac -p` over every
+  Lua file, then `tests/test_*.lua` against `tests/wow_stubs.lua`. Reading an unstubbed global is
+  an error. Stub a global only after confirming it in the API dump.
+- Deploy: `pwsh Tools/deploy.ps1` (`-Probe` adds the dev probe, `-ProbeOnly` deploys just the probe).
+  - It deploys to `C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\AddOns`.
+  - It copies git-tracked files only, never untracked scratch folders.
+  - It deploys embedded libraries from sibling checkouts (`..\LibGlass`, `..\LibShowcase`).
+- A brand-new addon folder needs a client restart; otherwise `/reload`. Enable `/console scriptErrors 1`.
+- When the default shell runner is unreliable, use the approved PowerShell executable:
+  `C:\Users\nicol\AppData\Local\Microsoft\WindowsApps\pwsh.exe -Command '...'`. Prefer single-quoted
+  payloads when the command uses PowerShell variables.
 
-### Required gameplay behavior
-- Faction-aware destination sets:
-  - Horde: Orgrimmar, Undercity, Thunder Bluff, Silvermoon, Stonard, Shattrath.
-  - Alliance: Stormwind, Ironforge, Darnassus, The Exodar, Theramore, Shattrath.
-- Karazhan is a **special Atiesh-only bonus node** (smaller, visually distinct, conditional).
-- Reagents are shared globally (Rune of Teleportation + Rune of Portals only).
-- Utility behavior is configured in options; only one active main utility button:
-  - Hearthstone, Dark Portal, Naaru's Embrace, or Random.
+## Product
+- Mage-only. Non-mages get no UI at all.
+- The launcher button opens the wheel. On any destination node, **left-click casts the teleport** and
+  **right-click casts the portal**. There are no mode tabs.
+- The main UI is one **frosted-glass disc** (LibGlass) floating over the world, with no rectangular
+  window. Visual targets: `docs/mockups/forever-layout.png` (layout, the approved one) and
+  `docs/mockups/forever-glass-wheel.png` (glass material).
+  - **Capitals** sit on a diamond inside the disc at 12/3/6 o'clock: Alliance Stormwind/Ironforge/
+    Darnassus, Horde Orgrimmar/Undercity/Thunder Bluff. Labels sit under the beads.
+  - **Dalaran** (Teleport: Dalaran, new in Forever, teleport only) sits inside the disc at 9 o'clock,
+    shown once learned.
+  - **Karazhan** (Atiesh only) is a satellite outside the disc at about 4 o'clock, linked to the rim,
+    as in TBC. A hidden bonus leaves its place empty.
+  - **Center:** a smart hearth orb (Hearthstone, then Crumbling Hearthstone, then owned hearth toys)
+    with a cooldown arc and the bind location.
+  - **Reagent strip** under the disc: Rune of Teleportation and Rune of Portals counts (reagent bag
+    included) and the click hint. It hides its counts when the legacy reagent-free talent applies
+    (states: required / free / unknown; unknown keeps the counts).
+  - **Header pill:** title, gear (options), close.
+- Optional cinematic camera (default OFF) through LibShowcase-1.0: the character faces the camera and
+  the game UI is hidden, all restored on exit, combat, logout and after a crash.
+- Minimap button (LibDBIcon) and Addon Compartment entry, both hideable.
+- `/pr preview` renders the whole wheel on a low-level character with no castable actions.
 
-### Configuration requirements
-- Utility selection (single active mode).
-- Toggle showing unavailable Karazhan.
-- Toggle cinematic camera mode (default OFF).
-- Toggle launcher lock.
-- Toggle minimap button visibility.
-- UI scale setting.
-- Reset position action.
+## Technical guardrails
+- Secure casting (see the plan and `Core/SecureAction.lua`):
+  - `SecureActionButtonTemplate` with `RegisterForClicks("AnyUp", "AnyDown")`.
+  - Numbered attribute families only (`typeN` + `spellN`/`itemN`/`toyN`). Never unnumbered `type`, and
+    **never `typerelease`**, which consumes two reagents.
+  - Secure buttons are stationary and are the only mouse-enabled frames in their footprint. Visuals
+    and animations live on mouse-disabled children.
+  - Attribute writes happen out of combat, via a coalesced rebuild at `PLAYER_REGEN_ENABLED`.
+  - No `SecureHandler*`, state drivers or `WrapScript`: they are broken on this client.
+- Combat:
+  - The parent of secure buttons is protected: no Hide, move, scale or reparent in combat.
+  - Secret values (cooldowns, counts in combat): never compare, truth-test or do arithmetic on an
+    API return without `ns.API.Readable`. Pass them to widgets untouched.
+- SavedVariables load after the addon's files: read them at `PLAYER_LOGIN`, never at file scope.
+- Register events through `ns.API.RegisterEvents` (pcall; a false return is a failure).
+- Options use the Settings canvas API, with the page hidden right after creation. There is no
+  UIDropDownMenu: use radio groups.
+- Animations are AnimationGroups on visual frames. Keep them tasteful and light (fade, slight scale,
+  slow rotation, sheen).
+- Embedded libraries live in `Libs\` (gitignored, pinned in `.pkgmeta`): LibGlass-1.0,
+  LibShowcase-1.0, LibStub, CallbackHandler, LibDataBroker, LibDBIcon.
 
-### Technical guardrails
-- TOC interface number: `20505` (TBC Anniversary, confirmed from AltTracker.toc).
-- Target World of Warcraft Classic TBC-era compatibility (avoid Retail-only assumptions).
-- Prioritize secure casting-safe patterns and combat-lockdown safety.
-- Non-mage characters should not get UI clutter.
-- Camera mode is optional polish only (default OFF); character must **face the camera** (not show back to player) — achieved via yaw swing. Must restore camera state cleanly on exit/error/combat.
-- Keep animations tasteful and lightweight (fade, slight scale, subtle rotation/pulse/hover).
-- Avoid mandatory external libraries; minimap button uses angle-based persistence without LibDBIcon.
-
-### Media notes
-- Use media pack TGA assets in `Media\`.
-- Prefer mockup/media iconography first (custom TGA style), not built-in WoW spell/item icons.
-- Use built-in icons only as fallback when no mockup-equivalent asset exists.
+## Media
+- Addon TGAs live in `Media\`. Generated art comes from scripts in `Tools\`: never hand-edit a
+  generated TGA.
+- Prefer the addon's own iconography. Built-in icons are a fallback.

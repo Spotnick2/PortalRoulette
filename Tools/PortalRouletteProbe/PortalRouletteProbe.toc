@@ -1,0 +1,8 @@
+## Interface: 16001
+## Title: Portal Roulette Probe (dev)
+## Notes: Development-only measurement tool for the Forever port of Portal Roulette. /prprobe help. Not shipped to players.
+## Author: Spotnick
+## Version: dev
+## SavedVariables: PortalRouletteProbeDB
+
+PortalRouletteProbe.lua
