@@ -57,14 +57,16 @@ R:FinishClose()
 for _ = 1, 30 do WoW.tick(0.05) end
 WoW.runTimers(1)
 
--- The header's eye button shows the game UI and hides it again.
+-- r3: with a Blizzard dialog already up, HideGameUI refuses ("dialog"):
+-- the wheel opens over the visible UI and the root stays under UIParent.
+local pending = CreateFrame("Frame", "StaticPopup2", UIParent)
+WoW.shownDialogs = { pending }
 H.slash("PORTALROULETTE", "")
-H.eq(WoW.uiVisible, false, "hidden")
-R:ToggleGameUI()
-H.eq(WoW.uiVisible, true, "the eye button shows the game UI")
-H.check(R.open, "the wheel stays open")
-R:ToggleGameUI()
-H.eq(WoW.uiVisible, false, "and hides it again")
+H.check(R.open, "the wheel opens with a dialog up")
+H.eq(WoW.uiVisible, true, "the game UI stays visible while a dialog is up")
+H.eq(R.root:GetParent(), UIParent, "the root is not lifted")
+H.eq(ns.Presentation:IsGameUIHidden(), false, "the wrapper knows the UI is not hidden")
+WoW.shownDialogs = {}
 R:Close()
 R:FinishClose()
 for _ = 1, 30 do WoW.tick(0.05) end

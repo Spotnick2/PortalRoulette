@@ -377,19 +377,6 @@ function Roulette:FinishClose()
     ns.Presentation:Exit("close")
 end
 
--- The header's eye button: bring the game UI back (to chat) or hide it
--- again, without closing the wheel.
-function Roulette:ToggleGameUI()
-    if not self.open or InCombatLockdown() then
-        return
-    end
-    if ns.Presentation:IsGameUIHidden() then
-        ns.Presentation:ShowGameUI()
-    else
-        ns.Presentation:HideGameUIAgain(self.root)
-        end
-end
-
 function Roulette:Toggle()
     if self.open then
         self:Close()

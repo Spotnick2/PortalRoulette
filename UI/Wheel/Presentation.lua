@@ -15,7 +15,7 @@ local _, ns = ...
 local Presentation = {}
 ns.Presentation = Presentation
 
-local NEEDS_MINOR = 2 -- onGameUIShown and the dialog behaviour arrived in MINOR 2
+local NEEDS_MINOR = 3 -- r3, the first release: onGameUIShown, dialog-aware HideGameUI
 
 function Presentation:Lib()
     if self.lib ~= nil then
@@ -85,17 +85,6 @@ function Presentation:ShowGameUI()
     self.uiHidden = false
     sc:RestoreGameUI()
     self.active = self.camera
-end
-
--- Hide the game UI again (after ShowGameUI), out of combat.
-function Presentation:HideGameUIAgain(root)
-    local sc = self:Lib()
-    if not sc or self.uiHidden or InCombatLockdown() then
-        return
-    end
-    local ok = sc:HideGameUI(root)
-    self.uiHidden = ok and true or false
-    self.active = self.uiHidden or self.camera
 end
 
 function Presentation:IsGameUIHidden()
