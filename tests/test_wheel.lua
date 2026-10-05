@@ -117,7 +117,9 @@ H.eq(#WoW.blocked, 0, "still nothing blocked: " .. table.concat(WoW.blocked, ", 
 -- handler is involved.
 H.slash("PORTALROULETTE", "")
 H.check(R.open, "open before Escape")
+WoW.time = WoW.time + 1
 R.escape:Hide()
+WoW.runTimers(0) -- the close is decided a frame later
 H.check(not R.open, "Escape (CloseSpecialWindows) closes the wheel")
 local found = false
 for _, name in ipairs(UISpecialFrames) do if name == "PortalRouletteEscape" then found = true end end

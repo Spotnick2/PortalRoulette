@@ -134,11 +134,19 @@ function Roulette:Create()
     escape:SetScript("OnHide", function()
         if Roulette.syncingEscape then return end -- our own SyncEscape
         Roulette:Trace("escape proxy hidden")
-        if Roulette.open and not Roulette.closingFromEscape then
-            Roulette.closingFromEscape = true
+        -- Decide a frame later. Measured on 70205: a ready check hides
+        -- special windows from client code, in the same frame as its event.
+        -- A prompt in that frame means it was not an Escape press: re-arm.
+        local hiddenAt = GetTime()
+        C_Timer.After(0, function()
+            if not Roulette.open then return end
+            if Roulette.promptAt and Roulette.promptAt >= hiddenAt then
+                Roulette:Trace("special windows hidden by a prompt: kept open")
+                Roulette:SyncEscape()
+                return
+            end
             Roulette:Close()
-            Roulette.closingFromEscape = false
-        end
+        end)
     end)
     if UISpecialFrames then
         table.insert(UISpecialFrames, "PortalRouletteEscape")
@@ -322,8 +330,8 @@ end
 -- read from SavedVariables after /reload.
 function Roulette:Trace(what)
     local db = ns.db
-    if not db then return end
-    db.trace = db.trace or {}
+    if not db or not db.debugTrace then return end
+    if type(db.trace) ~= "table" then db.trace = {} end
     local stack = debugstack and debugstack(3, 3, 0) or ""
     stack = stack:gsub("Interface/AddOns/", ""):gsub("\n", " | ")
     table.insert(db.trace, date("%H:%M:%S") .. " " .. tostring(what) .. " :: " .. stack)
@@ -331,10 +339,10 @@ function Roulette:Trace(what)
 end
 
 function Roulette:Close()
-    if self.open then self:Trace("Close") end
     if not self.open then
         return
     end
+    self:Trace("Close")
     if InCombatLockdown() then
         return -- closed at combat entry; nothing to do under lockdown
     end
@@ -370,6 +378,13 @@ function Roulette:UpdateNodes(elapsed)
                 ns.Node.PaintGlow(node)
             end
             Anim.UpdateSparkle(node.sparkle, elapsed, node.usable)
+        end
+    end
+    self.retryHideIn = (self.retryHideIn or 1) - elapsed
+    if self.retryHideIn <= 0 then
+        self.retryHideIn = 1
+        if ns.Presentation:RetryHide(self.root) then
+            self:SyncEscape()
         end
     end
     ns.HearthOrb.UpdateHover(self.orb, elapsed)
@@ -460,10 +475,12 @@ end
 -- Esc / Alt+Z through LibShowcase, or another forced restore.
 function Roulette:OnForcedExit(reason)
     self:Trace("forced exit: " .. tostring(reason))
+    ns.Presentation:MarkClosed()
+    self:Disarm()
+    self:HideInfo()
     if self.open and not InCombatLockdown() then
         self.open = false
-        self.escape:Hide()
-        self:HideInfo()
+        self:SyncEscape()
         Disc.Stop(self.disc)
         self.root:Hide()
     end
@@ -749,6 +766,19 @@ function Roulette:Initialize()
         hooksecurefunc(ChatFrameUtil, "ActivateChat", onChatActivated)
     elseif ChatEdit_ActivateChat then
         hooksecurefunc("ChatEdit_ActivateChat", onChatActivated)
+    end
+
+    -- When did a prompt last appear? The Escape proxy uses it to tell a
+    -- client-side close of special windows from an Escape press.
+    local function promptShown()
+        Roulette.promptAt = GetTime()
+    end
+    for _, event in ipairs({ "READY_CHECK", "LFG_PROPOSAL_SHOW", "LFG_ROLE_CHECK_SHOW",
+        "ROLE_POLL_BEGIN", "PVP_ROLE_POPUP_SHOW", "START_LOOT_ROLL" }) do
+        Events:Register(event, promptShown)
+    end
+    if StaticPopup_Show then
+        hooksecurefunc("StaticPopup_Show", promptShown)
     end
 
     -- Dialogs (guild/party invites, ready checks) shown while the game UI is

@@ -57,6 +57,7 @@ ns.Constants = {
         broadcastOnSuccess = false,
         confirmGroupedTeleport = true,
         debugFaction = "auto",
+        debugTrace = false,
         soundChannel = "SFX",
         soundTheme = "addon",
         uiScale = 1.0,

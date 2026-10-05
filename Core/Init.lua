@@ -85,6 +85,15 @@ end
 
 local function handleDebugCommand(parts)
     local target, value = parts[2], parts[3]
+    if target == "trace" then
+        if value == "on" or value == "off" then
+            ns.db.debugTrace = value == "on"
+            if value == "on" then ns.db.trace = {} end
+        end
+        printMessage("Close trace " .. (ns.db.debugTrace and "on" or "off")
+            .. " (PortalRouletteDB.trace, read after /reload). /pr debug trace on|off")
+        return
+    end
     if target == "faction" then
         if value == "horde" then
             ns.db.debugFaction = ns.Constants.FACTION_HORDE
