@@ -6,6 +6,8 @@ Warcraft: Forever**.
 Open the wheel, then left-click a destination to teleport or right-click it to open a portal. Your
 hearthstone sits in the middle.
 
+![Portal Roulette on a Horde mage](docs/screenshots/hero.jpg)
+
 ## Features
 
 - **One wheel per faction.**
@@ -35,6 +37,21 @@ hearthstone sits in the middle.
   group.
 - **Launcher button** you can drag onto an action bar. It glows until you place it, and hides itself
   once it's on a bar. Also: a minimap button, an Addon Compartment entry and a key binding.
+
+## Screenshots
+
+**One wheel per faction**, Horde and Alliance:
+
+![The Horde and Alliance wheels](docs/screenshots/wheels.jpg)
+
+**Before and after learning**: unlearned destinations are greyed out. Hovering a destination shows
+both spells and what they need:
+
+![An unlearned wheel and the hover tooltip](docs/screenshots/states.jpg)
+
+**The launcher** glows until you drag it onto an action bar:
+
+![The launcher with its placement prompt](docs/screenshots/launcher.jpg)
 
 ## Launcher
 
