@@ -72,6 +72,26 @@ R:FinishClose()
 for _ = 1, 30 do WoW.tick(0.05) end
 WoW.runTimers(1)
 
+-- Measured on 70205: a ready check hides "special windows" from client code
+-- before the library reveals the UI. With the UI hidden the Escape proxy is
+-- not armed, so that hide cannot close the wheel; once the UI is back the
+-- proxy is armed again so Escape still closes it.
+H.slash("PORTALROULETTE", "")
+H.eq(WoW.uiVisible, false, "UI hidden while the wheel is open")
+H.check(not R.escape:IsShown(), "the Escape proxy is not armed while the UI is hidden")
+for _, name in ipairs(UISpecialFrames) do _G[name]:Hide() end -- the client's hide
+WoW.fire("READY_CHECK", "Friend", 35)
+H.check(R.open, "a ready check does not close the wheel")
+H.eq(WoW.uiVisible, true, "the ready check brings the game UI back")
+WoW.runTimers(0)
+H.check(R.escape:IsShown(), "the Escape proxy is armed again once the UI is visible")
+R.escape:Hide() -- Escape
+H.check(not R.open, "Escape still closes the wheel afterwards")
+R:FinishClose()
+WoW.fire("READY_CHECK_FINISHED")
+for _ = 1, 30 do WoW.tick(0.05) end
+WoW.runTimers(1)
+
 -- Normal close.
 H.slash("PORTALROULETTE", "")
 H.eq(WoW.uiVisible, false, "hidden again")

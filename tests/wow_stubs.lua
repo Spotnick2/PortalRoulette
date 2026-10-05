@@ -595,6 +595,7 @@ function StaticPopup_Show(which, a, b, data)
 end
 
 SlashCmdList = {}
+function debugstack() return "stub:1: in function" end
 C_Texture = { GetAtlasExists = function(name) return WoW.atlases == nil or WoW.atlases[name] == true end }
 ChatFrameUtil = { ActivateChat = function() end }
 WoW.shownDialogs = {}

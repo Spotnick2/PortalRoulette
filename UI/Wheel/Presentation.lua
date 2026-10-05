@@ -38,11 +38,16 @@ function Presentation:Lib()
             onForcedExit = function(reason)
                 if ns.Roulette then ns.Roulette:OnForcedExit(reason) end
             end,
+            debug = function(msg)
+                if ns.Roulette then ns.Roulette:Trace("LibShowcase: " .. tostring(msg)) end
+            end,
             -- The library brought the game UI back by itself (a dialog such
             -- as a guild invite appeared): the wheel stays open.
-            onGameUIShown = function()
+            onGameUIShown = function(reason)
+                if ns.Roulette then ns.Roulette:Trace("game UI shown: " .. tostring(reason)) end
                 Presentation.uiHidden = false
                 Presentation.active = Presentation.camera
+                if ns.Roulette then ns.Roulette:OnGameUIShown() end
             end,
         })
         if ok and sc then
@@ -85,6 +90,7 @@ function Presentation:ShowGameUI()
     self.uiHidden = false
     sc:RestoreGameUI()
     self.active = self.camera
+    if ns.Roulette then ns.Roulette:OnGameUIShown() end
 end
 
 function Presentation:IsGameUIHidden()

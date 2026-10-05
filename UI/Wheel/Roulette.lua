@@ -132,6 +132,8 @@ function Roulette:Create()
     local escape = CreateFrame("Frame", "PortalRouletteEscape")
     escape:Hide()
     escape:SetScript("OnHide", function()
+        if Roulette.syncingEscape then return end -- our own SyncEscape
+        Roulette:Trace("escape proxy hidden")
         if Roulette.open and not Roulette.closingFromEscape then
             Roulette.closingFromEscape = true
             Roulette:Close()
@@ -143,6 +145,27 @@ function Roulette:Create()
     end
     self.escape = escape
     return root
+end
+
+-- The Escape proxy is armed only while the game UI is visible. With the UI
+-- hidden, Escape goes through LibShowcase (the engine's SetUIVisibility(true)
+-- -> onForcedExit), and the proxy must stay out of the way: measured on
+-- 70205, a ready check hides special windows from client code, which closed
+-- the wheel through the proxy before the library could reveal the UI.
+function Roulette:SyncEscape()
+    if not self.escape then return end
+    local want = self.open and not ns.Presentation:IsGameUIHidden()
+    if want ~= self.escape:IsShown() then
+        self.syncingEscape = true
+        self.escape:SetShown(want)
+        self.syncingEscape = false
+    end
+end
+
+-- The game UI came back while the wheel stays open (a dialog, chat): arm the
+-- proxy a frame later, after whatever hid special windows has run.
+function Roulette:OnGameUIShown()
+    C_Timer.After(0, function() Roulette:SyncEscape() end)
 end
 
 ------------------------------------------------------------
@@ -278,8 +301,9 @@ function Roulette:Open()
 
     self.closeAnim:Stop()
     self.root:Show()
-    self.escape:Show()
+    -- (armed after Presentation:Enter below, once we know the UI state)
     ns.Presentation:Enter(self.root)
+    self:SyncEscape()
     Disc.Start(self.disc)
     if Anim.Enabled() then
         self.stage:SetAlpha(1)
@@ -293,7 +317,21 @@ function Roulette:Open()
     if ns.Sound then ns.Sound:Play("Open") end
 end
 
+-- Diagnostics: the last 20 close reasons (with a short call stack) and
+-- LibShowcase debug lines, kept in PortalRouletteDB.trace so a report can be
+-- read from SavedVariables after /reload.
+function Roulette:Trace(what)
+    local db = ns.db
+    if not db then return end
+    db.trace = db.trace or {}
+    local stack = debugstack and debugstack(3, 3, 0) or ""
+    stack = stack:gsub("Interface/AddOns/", ""):gsub("\n", " | ")
+    table.insert(db.trace, date("%H:%M:%S") .. " " .. tostring(what) .. " :: " .. stack)
+    while #db.trace > 20 do table.remove(db.trace, 1) end
+end
+
 function Roulette:Close()
+    if self.open then self:Trace("Close") end
     if not self.open then
         return
     end
@@ -388,6 +426,7 @@ end
 -- Combat entry: runs inside PLAYER_REGEN_DISABLED, which is still
 -- unlocked (measured), so the wheel can close synchronously.
 function Roulette:OnCombatStart()
+    if self.open then self:Trace("combat start") end
     self:Disarm()
     if not self.open then
         return
@@ -420,6 +459,7 @@ end
 
 -- Esc / Alt+Z through LibShowcase, or another forced restore.
 function Roulette:OnForcedExit(reason)
+    self:Trace("forced exit: " .. tostring(reason))
     if self.open and not InCombatLockdown() then
         self.open = false
         self.escape:Hide()
