@@ -3,7 +3,7 @@
 **Portal Roulette** puts every mage teleport and portal on one frosted-glass wheel, for **World of
 Warcraft: Forever**.
 
-Open the wheel, then left-click a destination to teleport or right-click it to open a portal. The
+Open the wheel, then left-click a destination to teleport or right-click it to open a portal. Your
 hearthstone sits in the middle.
 
 ## Features
@@ -11,24 +11,51 @@ hearthstone sits in the middle.
 - **One wheel per faction.**
   - Alliance: Stormwind, Ironforge, Darnassus.
   - Horde: Orgrimmar, Undercity, Thunder Bluff.
-  - Every faction: Dalaran (Forever's new Teleport: Dalaran), and Karazhan as a satellite node for
-    Atiesh owners.
+  - Every faction: Dalaran (Forever's new Teleport: Dalaran) inside the wheel, and Karazhan as a
+    satellite linked to the wheel for Atiesh owners.
 - **Left-click teleports, right-click opens a portal**, from secure, combat-safe buttons.
-  Destinations you haven't learned yet are shown dimmed with the level they unlock at.
-- **The hearthstone in the centre.** It uses your Hearthstone, Crumbling Hearthstone or a hearth toy,
-  and shows its cooldown and your bind location.
-- **Reagent counts** for Rune of Teleportation and Rune of Portals (reagent bag included). They hide
-  themselves once you have the Reagent Economy perk.
-- **Arcane glass look.** Slowly circulating energy, glowing links with pulses of light running out
-  to each destination, and a gentle shimmer across the glass.
-- **Optional cinematic camera.** Your character turns to face the camera while the game UI steps
-  aside. Everything is restored on close, in combat, at logout and even after a crash.
+  Destinations you haven't learned yet stay on the wheel, dimmed, and their tooltip shows the level
+  you learn them at.
+- **Your hearthstone in the centre**, with its cooldown and your bind location. A Crumbling
+  Hearthstone is used only when you have no Hearthstone.
+- **Reagent counts** for Rune of Teleportation and Rune of Portals (reagent bag included), with a
+  warning on a destination you can't afford. They hide themselves once you have the Reagent Economy
+  perk.
+- **Arcane glass look.** Slowly circulating energy, small lights orbiting the rim, glowing links with
+  pulses of light running out to each destination, and an occasional shimmer across the glass.
+- **Cinematic presentation** (on by default). The game UI steps aside and your character turns to face
+  the camera. Everything is restored when you close the wheel, enter combat or log out, and even after
+  a crash.
+- **Never in your way.**
+  - A ready check, group or guild invite, dungeon proposal or loot roll brings the game UI back, with
+    the wheel still open. The UI hides again once you've answered.
+  - Pressing Enter to chat brings the game UI back too.
+  - Combat closes the wheel instantly.
 - **Group friendly.** It can announce your portals, and asks before you teleport away from your
   group.
-- **Launcher button** you can drag onto an action bar, a minimap button, an Addon Compartment entry
-  and a key binding.
-- **Options** under Options → AddOns → Portal Roulette: animation, sound set and channel, camera,
-  reagents and launcher.
+- **Launcher button** you can drag onto an action bar. It glows until you place it, and hides itself
+  once it's on a bar. Also: a minimap button, an Addon Compartment entry and a key binding.
+
+## Launcher
+
+| Action | What it does |
+|---|---|
+| Click | Open or close the wheel |
+| Drag | Place the Portal Roulette macro on an action bar |
+| Shift-drag | Move the launcher (unless locked in the options) |
+| Shift-right-click | Open the options |
+
+## Options
+
+Options → AddOns → Portal Roulette:
+
+- **Wheel:** reagent counts (auto, always, hidden), Karazhan without Atiesh, grouped-teleport
+  confirmation, wheel scale.
+- **Animation:** all animations, idle motion, hover effects.
+- **Sound:** sounds, hover sounds, sound set (Portal Roulette or game UI sounds), volume channel.
+- **Presentation:** hide the game UI, cinematic camera, camera orbit, cast framing.
+- **Launcher:** lock, minimap button, glow (blue pulse, spell alert or off), scale.
+- **Group broadcast:** announce portals or teleports.
 
 ## Commands
 
@@ -39,6 +66,7 @@ hearthstone sits in the middle.
 | `/pr preview` | Show every destination without casting (handy on a low-level mage) |
 | `/pr reset` | Reset the wheel and launcher positions |
 | `/pr debug` | Print the wheel's state (for bug reports) |
+| `/pr debug trace on\|off` | Record why the wheel closes, to SavedVariables (for bug reports) |
 
 ## Requirements
 
@@ -50,7 +78,8 @@ LibStub, CallbackHandler-1.0, LibDataBroker-1.1, LibDBIcon-1.0.
 
 ## Development
 
-- Tests: `pwsh tests/run.ps1` (Lua 5.1).
+- Tests: `pwsh tests/run.ps1` (Lua 5.1). It also checks that the sibling LibGlass and LibShowcase
+  checkouts match the tags pinned in `.pkgmeta`.
 - Deploy to the game: `pwsh Tools/deploy.ps1` (`-Probe` also installs the measurement probe). LibGlass
   and LibShowcase come from sibling checkouts (`..\LibGlass`, `..\LibShowcase`).
 - Generated art: `python Tools/make_art.py` (effects), `Tools/make_city_art.py` and
