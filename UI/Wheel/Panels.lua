@@ -164,6 +164,41 @@ function Panels.UpdateReagentStrip(strip, reagentState)
 end
 
 ------------------------------------------------------------
+-- Confirm pill: the grouped-teleport question, on our own glass (never a
+-- Blizzard StaticPopup, which addon code would taint).
+------------------------------------------------------------
+
+function Panels.CreateConfirm(stage, onYes)
+    local pill = CreateFrame("Frame", nil, stage)
+    pill:SetSize(300, 64)
+    pill:SetPoint("CENTER", stage, "CENTER", 0, Layout.DISC_Y)
+    pill:SetFrameLevel(stage:GetFrameLevel() + 60)
+    pill:EnableMouse(true)
+    pill.glass = Skin:Pill(pill)
+    local top = pill.glass.top or pill
+    pill.text = Skin:Font(top, 13, "CENTER")
+    pill.text:SetPoint("TOP", 0, -10)
+    pill.text:SetWidth(280)
+    local function choice(label, x, fn)
+        local b = CreateFrame("Button", nil, top)
+        b:SetSize(80, 22)
+        b:SetPoint("BOTTOM", pill, "BOTTOM", x, 8)
+        b.glass = Skin:Pill(b)
+        local fs = Skin:Font(b.glass.top or b, 12, "CENTER")
+        fs:SetPoint("CENTER")
+        fs:SetText(label)
+        b:SetScript("OnClick", fn)
+        b:SetScript("OnEnter", function() fs:SetTextColor(0.7, 0.85, 1) end)
+        b:SetScript("OnLeave", function() fs:SetTextColor(1, 1, 1) end)
+        return b
+    end
+    pill.yes = choice(YES or "Yes", -46, function() pill:Hide() onYes() end)
+    pill.no = choice(NO or "No", 46, function() pill:Hide() end)
+    pill:Hide()
+    return pill
+end
+
+------------------------------------------------------------
 -- Info pill: the hovered node's actions, outside the disc on its side.
 ------------------------------------------------------------
 

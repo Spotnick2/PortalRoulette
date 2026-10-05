@@ -30,18 +30,21 @@ WoW.leaveCombat()
 WoW.runTimers(1)
 H.eq(R.root:GetParent(), UIParent, "the root is back under UIParent")
 
--- A dialog shown while the UI is hidden (a guild invite) is lifted, so
--- Escape never declines it unseen.
+-- A dialog shown while the UI is hidden (a guild invite) brings the game UI
+-- back, so Escape never declines it unseen; Blizzard's dialog frame itself
+-- is never reparented (that would risk tainting its Accept button).
 H.slash("PORTALROULETTE", "")
 local invite = CreateFrame("Frame", "StaticPopup1", UIParent)
 WoW.shownDialogs = { invite }
 StaticPopup_Show("GUILD_INVITE", "Someone", "Guild")
-H.eq(invite:GetParent(), nil, "the invite popup is lifted above the hidden UI")
+H.eq(WoW.uiVisible, true, "an invite brings the game UI back")
+H.eq(invite:GetParent(), UIParent, "the dialog frame is left alone")
+H.check(R.open, "the wheel stays open")
 WoW.shownDialogs = {}
 R:Close()
 R:FinishClose()
+for _ = 1, 30 do WoW.tick(0.05) end
 WoW.runTimers(1)
-H.eq(invite:GetParent(), UIParent, "and put back on close")
 
 -- Typing in chat brings the game UI back; the wheel stays open.
 H.slash("PORTALROULETTE", "")

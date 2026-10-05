@@ -447,24 +447,31 @@ end
 -- Grouped-teleport confirmation
 ------------------------------------------------------------
 
-StaticPopupDialogs = StaticPopupDialogs or {}
-StaticPopupDialogs.PORTALROULETTE_CONFIRM_TELEPORT = {
-    text = "You are in a group. Teleport to %s yourself?",
-    button1 = YES or "Yes",
-    button2 = NO or "No",
-    OnAccept = function()
-        Roulette:Arm()
-    end,
-    timeout = 0,
-    whileDead = false,
-    hideOnEscape = true,
-    preferredIndex = 3,
-}
+-- Our own glass prompt, not a Blizzard StaticPopup: StaticPopup_Show from
+-- addon code taints the shared dialog frames, and a later Quit / Logout /
+-- invite dialog reusing one then fails its protected call (measured on
+-- 70205: ADDON_ACTION_FORBIDDEN on ForceQuit after a probe's StaticPopup).
+function Roulette:ShowConfirm(resolved)
+    local pill = self.confirm
+    if not pill then
+        pill = Panels.CreateConfirm(self.stage, function() Roulette:Arm() end)
+        self.confirm = pill
+    end
+    pill.text:SetText("You are in a group. Teleport to " .. (resolved.name or "?") .. " yourself?")
+    pill:Show()
+end
+
+function Roulette:HideConfirm()
+    if self.confirm then
+        self.confirm:Hide()
+    end
+end
 
 function Roulette:Arm()
     if InCombatLockdown() then
         return
     end
+    self:HideConfirm()
     self.armed = { expires = GetTime() + CONFIRM_SECONDS }
     SA.RunSyncs()
     printf("Teleport armed: click the destination again within " .. CONFIRM_SECONDS .. " seconds.")
@@ -477,6 +484,7 @@ function Roulette:Arm()
 end
 
 function Roulette:Disarm()
+    self:HideConfirm()
     if self.armed then
         self.armed = nil
         SA.MarkDirty()
@@ -568,8 +576,7 @@ function Roulette:OnNodeClick(node, mouseButton)
         return
     end
     if mouseButton == "LeftButton" and resolved.teleportKnown and self:NeedsConfirm() and not InCombatLockdown() then
-        local popup = StaticPopup_Show("PORTALROULETTE_CONFIRM_TELEPORT", resolved.name)
-        ns.Presentation:LiftPopup(popup)
+        self:ShowConfirm(resolved)
         return
     end
     if ns.Sound then ns.Sound:Play("NodeClick") end
@@ -702,23 +709,29 @@ function Roulette:Initialize()
 
     -- A dialog that appears while the game UI is hidden (a guild or party
     -- invite, a ready check...) would be invisible, and Escape would decline
-    -- it unseen (StaticPopup_EscapePressed runs first). Lift it above the
-    -- hidden UI so the player sees it and chooses.
-    local function liftShownDialogs()
-        if Roulette.open and ns.Presentation.active and StaticPopup_ForEachShownDialog then
-            StaticPopup_ForEachShownDialog(function(dialog)
-                ns.Presentation:LiftPopup(dialog)
-            end)
+    -- it unseen (StaticPopup_EscapePressed runs first). Bring the game UI
+    -- back so the player sees it and answers; the wheel stays open.
+    -- Blizzard's dialog frames are never touched (no reparent, strata or
+    -- hooks on them): addon changes to those shared frames risk tainting
+    -- their protected buttons (Accept, Quit, Logout).
+    local function onDialogShown()
+        if not Roulette.open or not StaticPopup_ForEachShownDialog then
+            return
+        end
+        local any = false
+        StaticPopup_ForEachShownDialog(function() any = true end)
+        if any then
+            ns.Presentation:ShowGameUI()
         end
     end
-    Roulette.LiftShownDialogs = liftShownDialogs
+    Roulette.LiftShownDialogs = onDialogShown
     if StaticPopup_Show then
-        hooksecurefunc("StaticPopup_Show", liftShownDialogs)
+        hooksecurefunc("StaticPopup_Show", onDialogShown)
     end
     if StaticPopupSpecial_Show then
-        hooksecurefunc("StaticPopupSpecial_Show", function(frame)
-            if Roulette.open and ns.Presentation.active then
-                ns.Presentation:LiftFrame(frame)
+        hooksecurefunc("StaticPopupSpecial_Show", function()
+            if Roulette.open then
+                ns.Presentation:ShowGameUI()
             end
         end)
     end
