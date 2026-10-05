@@ -5,10 +5,14 @@ ns.LauncherButton = LauncherButton
 
 local MACRO_NAME = "Portal Roulette"
 local MACRO_BODY = "/pr"
-local MACRO_ICON = "achievement_dungeon_outland_dungeonmaster"
+-- Macro pickup needs a client-resolved icon. The custom TGA is valid on our
+-- own textures but leaves the macro icon unset on Forever (owner test).
+-- The macro icon: a Forever client icon (file ID; macro icons cannot be
+-- addon textures). Chosen by the owner, 2026-10-05.
+local MACRO_ICON = 5929586
+-- Icons earlier versions set on the /pr macro, upgraded to MACRO_ICON.
+local PREVIOUS_DEFAULT_ICONS = { [135748] = true } -- Portal: Stormwind's texture
 local BASE_BUTTON_SIZE = 52
-local TEX_COORD_MIN = 0.12
-local TEX_COORD_MAX = 0.88
 local MAX_ACTION_SLOTS = 180
 
 local THEME_KEY_ARCANE = "arcane"
@@ -22,24 +26,12 @@ local THEME_LABEL_BY_KEY = {
 
 local launcherThemes = {
     [THEME_KEY_ARCANE] = {
-        normal = ns.Media.LAUNCHER_ARCANE_NORMAL,
-        hover = ns.Media.LAUNCHER_ARCANE_HOVER,
-        pushed = ns.Media.LAUNCHER_ARCANE_PUSHED,
-        macroIcon = MACRO_ICON,
         color = { 0.64, 0.38, 1.0 },
     },
     [THEME_KEY_FIRE] = {
-        normal = ns.Media.LAUNCHER_FIRE_NORMAL,
-        hover = ns.Media.LAUNCHER_FIRE_HOVER,
-        pushed = ns.Media.LAUNCHER_FIRE_PUSHED,
-        macroIcon = MACRO_ICON,
         color = { 1.0, 0.42, 0.16 },
     },
     [THEME_KEY_FROST] = {
-        normal = ns.Media.LAUNCHER_FROST_NORMAL,
-        hover = ns.Media.LAUNCHER_FROST_HOVER,
-        pushed = ns.Media.LAUNCHER_FROST_PUSHED,
-        macroIcon = MACRO_ICON,
         color = { 0.38, 0.68, 1.0 },
     },
 }
@@ -75,9 +67,9 @@ function LauncherButton:ApplyTheme(themeKey)
     local theme = launcherThemes[resolvedKey] or launcherThemes[THEME_KEY_ARCANE]
     self.themeKey = resolvedKey
     local button = self.button
-    button.art:SetTexture(button.hovered and theme.hover or theme.normal)
+    button.art:SetTexture(ns.Media.LAUNCHER_PORTAL)
     local c = theme.color or { 0.64, 0.38, 1.0 }
-    ns.Skin:SetRimColor(button.glass, c[1], c[2], c[3], 0.9)
+    ns.Skin:SetRimColor(button.glass, 0.65 + c[1] * 0.35, 0.65 + c[2] * 0.35, 0.65 + c[3] * 0.35, 0.8)
     button.glow:SetVertexColor(c[1], c[2], c[3])
 end
 
@@ -95,8 +87,22 @@ function LauncherButton:RefreshSpecTheme()
 end
 
 function LauncherButton:GetDesiredMacroIcon()
-    local theme = self:GetActiveTheme()
-    return theme.macroIcon or MACRO_ICON
+    return MACRO_ICON
+end
+
+-- An icon that needs replacing: none, an invalid ID, the question mark
+-- (134400), or our own addon texture path in any spelling the client might
+-- hand back (case, slashes, with or without .tga). Macro icons cannot be
+-- addon textures, so those show as a question mark.
+local QUESTION_MARK = 134400
+local function needsMacroIcon(icon)
+    if icon == nil or icon == "" or icon == QUESTION_MARK then
+        return true
+    end
+    if type(icon) == "number" then
+        return icon <= 0 or PREVIOUS_DEFAULT_ICONS[icon] == true
+    end
+    return type(icon) == "string" and icon:lower():find("portalroulette", 1, true) ~= nil
 end
 
 function LauncherButton:IsLauncherMacroOnActionBar()
@@ -163,20 +169,35 @@ function LauncherButton:RegisterActionBarEvents()
     end
 
     local eventFrame = CreateFrame("Frame")
-    eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
-    eventFrame:RegisterEvent("ACTIONBAR_SLOT_CHANGED")
-    eventFrame:RegisterEvent("UPDATE_MACROS")
-    eventFrame:SetScript("OnEvent", function()
+    ns.API.RegisterEvents(eventFrame, "PLAYER_ENTERING_WORLD", "ACTIONBAR_SLOT_CHANGED", "UPDATE_MACROS", "PLAYER_REGEN_ENABLED")
+    eventFrame:SetScript("OnEvent", function(_, event)
+        -- Macros may not be loaded at login: retry the icon repair once they
+        -- are, and after combat if it was deferred.
+        if event == "UPDATE_MACROS" or event == "PLAYER_ENTERING_WORLD"
+            or (event == "PLAYER_REGEN_ENABLED" and LauncherButton.pendingMacroIcon) then
+            LauncherButton:RefreshExistingMacroIcon()
+        end
         LauncherButton:ScheduleVisibilityRefresh()
     end)
     self.eventFrame = eventFrame
 end
 
-local function isMissingMacroIcon(iconTexture)
-    if type(iconTexture) ~= "string" or iconTexture == "" then
-        return true
+-- Repair our previously exported custom icon once, preserving user-selected
+-- icons and macro bodies. Defer writes until out of combat.
+function LauncherButton:RefreshExistingMacroIcon()
+    if InCombatLockdown() then
+        self.pendingMacroIcon = true
+        return
     end
-    return string.find(string.lower(iconTexture), "questionmark", 1, true) ~= nil
+    self.pendingMacroIcon = nil
+    if type(GetMacroIndexByName) ~= "function" or type(GetMacroInfo) ~= "function" then return end
+    local index = GetMacroIndexByName(MACRO_NAME)
+    if not index or index == 0 then return end
+    local name, icon, body = GetMacroInfo(index)
+    if name == MACRO_NAME and body == MACRO_BODY and needsMacroIcon(icon) then
+        -- Guarded: a refused edit must not abort the launcher's setup.
+        if type(EditMacro) == "function" then pcall(EditMacro, index, nil, self:GetDesiredMacroIcon()) end
+    end
 end
 
 function LauncherButton:CreateOrUpdateMacro()
@@ -187,33 +208,34 @@ function LauncherButton:CreateOrUpdateMacro()
         return nil, "combat"
     end
 
-    local desiredIcon = self:GetDesiredMacroIcon() or MACRO_ICON
+    local desiredIcon = self:GetDesiredMacroIcon()
     local macroIndex = GetMacroIndexByName(MACRO_NAME)
     if not macroIndex or macroIndex == 0 then
         if type(CreateMacro) ~= "function" then
             return nil, "api"
         end
 
-        macroIndex = CreateMacro(MACRO_NAME, desiredIcon, MACRO_BODY, true)
-        if not macroIndex then
+        local ok, index = pcall(CreateMacro, MACRO_NAME, desiredIcon, MACRO_BODY, true)
+        macroIndex = ok and index or nil
+        if not macroIndex or macroIndex == 0 then
             ns.Print("Unable to create character macro '" .. MACRO_NAME .. "'. Macro slots may be full. Create it manually with body '/pr'.")
             return nil, "limit"
         end
     elseif type(EditMacro) == "function" then
-        local globalCount = type(GetNumMacros) == "function" and (select(1, GetNumMacros()) or 0) or 0
-        local isCharacterMacro = macroIndex > globalCount
-        EditMacro(macroIndex, MACRO_NAME, desiredIcon, MACRO_BODY, isCharacterMacro)
-    end
-
-    if type(GetMacroInfo) == "function" and type(EditMacro) == "function" then
-        local _, iconTexture = GetMacroInfo(macroIndex)
-        if isMissingMacroIcon(iconTexture) then
-            local globalCount = type(GetNumMacros) == "function" and (select(1, GetNumMacros()) or 0) or 0
-            local isCharacterMacro = macroIndex > globalCount
-            EditMacro(macroIndex, MACRO_NAME, MACRO_ICON, MACRO_BODY, isCharacterMacro)
+        local _, icon, body = GetMacroInfo(macroIndex)
+        local repairIcon = needsMacroIcon(icon)
+        if repairIcon or body ~= MACRO_BODY then
+            -- FrameXML uses four arguments and retains the returned index:
+            -- editing can reorder macros. Never infer a bank from its count.
+            local ok, index = pcall(EditMacro, macroIndex, nil, repairIcon and desiredIcon or nil, MACRO_BODY)
+            if not ok then
+                ns.Print("Unable to update the launcher macro: " .. tostring(index))
+                return nil, "reported"
+            end
+            macroIndex = index or GetMacroIndexByName(MACRO_NAME)
         end
     end
-
+    if not macroIndex or macroIndex == 0 then return nil, "api" end
     return macroIndex
 end
 
@@ -225,14 +247,19 @@ function LauncherButton:PickupLauncherMacro()
 
     local macroIndex, reason = self:CreateOrUpdateMacro()
     if not macroIndex then
-        if reason ~= "limit" and reason ~= "combat" then
+        if reason ~= "limit" and reason ~= "combat" and reason ~= "reported" then
             ns.Print("Unable to prepare the Portal Roulette macro.")
         end
         return
     end
 
     if type(PickupMacro) == "function" then
-        PickupMacro(macroIndex)
+        local ok, err = pcall(PickupMacro, macroIndex)
+        if not ok then
+            ns.Print("Unable to pick up the launcher macro: " .. tostring(err))
+        elseif GetCursorInfo() ~= "macro" then
+            ns.Print("The client did not put the launcher macro on the cursor. Open /macro and drag 'Portal Roulette' from there.")
+        end
     end
     self:ScheduleVisibilityRefresh()
 end
@@ -243,13 +270,22 @@ function LauncherButton:CreatePrompt()
     end
     local Skin = ns.Skin
     local prompt = CreateFrame("Frame", nil, UIParent)
-    prompt:SetSize(196, 46)
+    prompt:SetSize(184, 46)
     -- The launcher's own strata, just above it: DIALOG would draw over the
     -- Settings panel and other windows.
     prompt:SetFrameStrata(self.button:GetFrameStrata())
     prompt:SetFrameLevel(self.button:GetFrameLevel() + 5)
     prompt.glass = Skin:Pill(prompt)
+    if prompt.glass.grain then prompt.glass.grain:SetAlpha(0.04) end
+    if prompt.glass.wash then prompt.glass.wash:SetAlpha(0.3) end
     local top = prompt.glass.top or prompt
+
+    local pointer = prompt:CreateTexture(nil, "BACKGROUND")
+    pointer:SetSize(16, 8)
+    pointer:SetPoint("TOP", prompt, "BOTTOM", 0, 1)
+    pointer:SetTexture(ns.Media.LAUNCHER_POINTER)
+    pointer:SetVertexColor(0.58, 0.72, 0.92, 0.65)
+    prompt.pointer = pointer
 
     local function dismissPrompt()
         ns.db.actionBarPromptDismissed = true
@@ -268,7 +304,7 @@ function LauncherButton:CreatePrompt()
 
     local subtitle = Skin:Font(top, 12, "LEFT")
     subtitle:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -3)
-    subtitle:SetText("Drag me to an action bar.")
+    subtitle:SetText("Drag onto an action bar")
     subtitle:SetTextColor(1, 1, 1, 0.7)
     prompt.subtitle = subtitle
 
@@ -328,10 +364,28 @@ function LauncherButton:RefreshPromptVisibility()
 
     if ns.db.actionBarPromptDismissed or not self.button or not self.button:IsShown() then
         self.prompt:Hide()
+        self:RefreshAttention()
         return
     end
     self:PositionPrompt()
     self.prompt:Show()
+    self:RefreshAttention()
+end
+
+-- Blue action-button attention, like ForeverCombatAssistant. A visual-only
+-- child pulses while the placement hint or hover tooltip is showing.
+function LauncherButton:RefreshAttention()
+    local button = self.button
+    if not button then return end
+    local active = button:IsShown() and (button.hovered or (self.prompt and self.prompt:IsShown()))
+    button.attention:SetShown(active and true or false)
+    local intensity = ns.Anim.Intensity()
+    button.attention:SetAlpha(0.45 + 0.4 * intensity)
+    if active and ns.Anim.Enabled("idle") and intensity > 0 then
+        if not button.attentionPulse:IsPlaying() then button.attentionPulse:Play() end
+    else
+        button.attentionPulse:Stop()
+    end
 end
 
 local function showTooltip(selfButton)
@@ -353,8 +407,8 @@ local function showTooltip(selfButton)
     GameTooltip:Show()
 end
 
--- A glass bead: the theme's rune art masked to a circle inside a small
--- glass disc, a soft accent glow on hover, a press nudge.
+-- A recognizable action-bar border inside a glass surround. Decoration
+-- never handles the mouse: the framed button owns click and drag.
 function LauncherButton:Create()
     if self.button then
         return
@@ -370,22 +424,65 @@ function LauncherButton:Create()
     button:RegisterForDrag("LeftButton")
 
     local glow = button:CreateTexture(nil, "BACKGROUND", nil, -8)
-    glow:SetPoint("TOPLEFT", -12, 12)
-    glow:SetPoint("BOTTOMRIGHT", 12, -12)
+    glow:SetPoint("TOPLEFT", -10, 10)
+    glow:SetPoint("BOTTOMRIGHT", 10, -10)
     glow:SetTexture(ns.Media.GLOW) -- generated by Tools/make_art.py
     glow:SetBlendMode("ADD")
     glow:SetAlpha(0)
     button.glow = glow
 
-    button.glass = Skin:Disc(button, "disc_small")
-    local artHost = CreateFrame("Frame", nil, button)
-    artHost:SetPoint("TOPLEFT", 4, -4)
-    artHost:SetPoint("BOTTOMRIGHT", -4, 4)
-    local art = Skin:RoundTexture(artHost, "ARTWORK", 1)
-    art:SetTexCoord(TEX_COORD_MIN, TEX_COORD_MAX, TEX_COORD_MIN, TEX_COORD_MAX)
-    button.art, button.artHost = art, artHost
+    button.glass = Skin:Pill(button)
+    if button.glass.top then button.glass.top:EnableMouse(false) end
+    local art = button:CreateTexture(nil, "ARTWORK", nil, 1)
+    art:SetPoint("TOPLEFT", 6, -6)
+    art:SetPoint("BOTTOMRIGHT", -6, 6)
+    button.art = art
+    local border = (button.glass.top or button):CreateTexture(nil, "OVERLAY", nil, 4)
+    border:SetAllPoints(button)
+    -- The action-bar icon frame atlas (Mainline FrameXML); not probed on
+    -- 70205, so fall back to no frame rather than a missing-texture square.
+    local hasAtlas = C_Texture and C_Texture.GetAtlasExists and C_Texture.GetAtlasExists("UI-HUD-ActionBar-IconFrame")
+    if hasAtlas then
+        border:SetAtlas("UI-HUD-ActionBar-IconFrame")
+    else
+        border:Hide()
+    end
+    button.border = border
+    local highlight = button:CreateTexture(nil, "ARTWORK", nil, 2)
+    highlight:SetAllPoints(art)
+    highlight:SetTexture(ns.Media.WHITE)
+    highlight:SetVertexColor(0.65, 0.8, 1)
+    highlight:SetAlpha(0)
+    if button.glass.mask then highlight:AddMaskTexture(button.glass.mask) end
+    button.highlight = highlight
+    if button.glass.rim then button.glass.rim:SetAlpha(0.65) end
+
+    local attention = CreateFrame("Frame", nil, button)
+    attention:SetPoint("TOPLEFT", -2, 2)
+    attention:SetPoint("BOTTOMRIGHT", 2, -2)
+    attention:SetFrameLevel(button:GetFrameLevel() + 12)
+    attention:EnableMouse(false)
+    local light = CreateFrame("Frame", nil, attention)
+    light:SetAllPoints()
+    light:EnableMouse(false)
+    for _, side in ipairs({ "TOP", "BOTTOM", "LEFT", "RIGHT" }) do
+        local edge = light:CreateTexture(nil, "OVERLAY")
+        edge:SetColorTexture(0.25, 0.62, 1, 0.95)
+        if side == "TOP" or side == "BOTTOM" then
+            edge:SetHeight(2)
+            edge:SetPoint(side .. "LEFT")
+            edge:SetPoint(side .. "RIGHT")
+        else
+            edge:SetWidth(2)
+            edge:SetPoint("TOP" .. side)
+            edge:SetPoint("BOTTOM" .. side)
+        end
+    end
+    button.attention = attention
+    button.attentionPulse = ns.Anim.Pulse(light, 1.6, 0.3)
 
     button:SetScript("OnClick", function(_, mouseButton)
+        if button.dragged then return end
         if mouseButton == "RightButton" and IsShiftKeyDown() then
             if ns.Options then ns.Options:Open() end
             return
@@ -394,6 +491,7 @@ function LauncherButton:Create()
     end)
 
     button:SetScript("OnDragStart", function(selfButton)
+        selfButton.dragged = true
         if IsShiftKeyDown() then
             if ns.db.lockLauncher or InCombatLockdown() then
                 return
@@ -420,27 +518,43 @@ function LauncherButton:Create()
 
     button:SetScript("OnEnter", function(selfButton)
         selfButton.hovered = true
-        glow:SetAlpha(0.55)
-        if selfButton.glass.rim then selfButton.glass.rim:SetAlpha(1) end
+        glow:SetAlpha(0.3 * ns.Anim.HoverStrength())
+        highlight:SetAlpha(0.08 * ns.Anim.HoverStrength())
+        if selfButton.glass.rim then selfButton.glass.rim:SetAlpha(0.85) end
         LauncherButton:ApplyTheme(LauncherButton.themeKey)
         showTooltip(selfButton)
+        LauncherButton:RefreshAttention()
     end)
 
     button:SetScript("OnLeave", function(selfButton)
         selfButton.hovered = false
         glow:SetAlpha(0)
-        if selfButton.glass.rim then selfButton.glass.rim:SetAlpha(0.7) end
+        highlight:SetAlpha(0)
+        art:SetVertexColor(1, 1, 1)
+        if selfButton.glass.rim then selfButton.glass.rim:SetAlpha(0.65) end
         LauncherButton:ApplyTheme(LauncherButton.themeKey)
         GameTooltip:Hide()
+        LauncherButton:RefreshAttention()
     end)
 
     button:SetScript("OnMouseDown", function()
-        artHost:SetPoint("TOPLEFT", 5, -5)
-        artHost:SetPoint("BOTTOMRIGHT", -3, 3)
+        button.dragged = false
+        art:SetVertexColor(0.78, 0.82, 0.9)
     end)
     button:SetScript("OnMouseUp", function()
-        artHost:SetPoint("TOPLEFT", 4, -4)
-        artHost:SetPoint("BOTTOMRIGHT", -4, 4)
+        art:SetVertexColor(1, 1, 1)
+    end)
+    -- The launcher hides with UIParent while the wheel owns the screen:
+    -- only touch the tooltip if it is ours, and bring the attention border
+    -- back when the button shows again.
+    button:SetScript("OnHide", function(selfButton)
+        selfButton.hovered = false
+        selfButton.attentionPulse:Stop()
+        selfButton.attention:Hide()
+        if GameTooltip:IsOwned(selfButton) then GameTooltip:Hide() end
+    end)
+    button:SetScript("OnShow", function()
+        LauncherButton:RefreshAttention()
     end)
 
     self.button = button
@@ -473,6 +587,7 @@ function LauncherButton:Initialize()
     end
     self:Create()
     self:RegisterActionBarEvents()
+    self:RefreshExistingMacroIcon()
     self:ApplySettings()
     self:ScheduleSpecThemeRefresh()
     self:RefreshVisibility()

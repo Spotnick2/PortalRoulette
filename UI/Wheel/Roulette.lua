@@ -280,7 +280,6 @@ function Roulette:Open()
     self.root:Show()
     self.escape:Show()
     ns.Presentation:Enter(self.root)
-    if self.LiftShownDialogs then self.LiftShownDialogs() end
     Disc.Start(self.disc)
     if Anim.Enabled() then
         self.stage:SetAlpha(1)
@@ -321,12 +320,23 @@ end
 -- Per frame while open (driven by Disc's updater): smooth each node's
 -- hover glow.
 function Roulette:UpdateNodes(elapsed)
+    -- Repaint a node's glow only when its hover amount or the animation
+    -- intensity changed: no per-frame work for idle or hidden nodes.
+    local strength = Anim.HoverStrength()
     for _, node in ipairs(self.slots) do
-        if node.hover ~= node.hoverTarget then
-            node.hover = Disc.Approach(node.hover, node.hoverTarget, elapsed, 0.18, 0.26)
-            ns.Node.PaintGlow(node)
+        if node.button:IsShown() then
+            local before = node.hover
+            node.hover = Anim.ApproachHover(node.hover, node.hoverTarget, elapsed)
+            if node.hover ~= before or node.paintedStrength ~= strength then
+                node.paintedStrength = strength
+                ns.Node.PaintGlow(node)
+            end
+            Anim.UpdateSparkle(node.sparkle, elapsed, node.usable)
         end
     end
+    ns.HearthOrb.UpdateHover(self.orb, elapsed)
+    Anim.UpdateSparkle(self.orb.sparkle, elapsed, self.orb.source ~= nil or self.preview)
+    Panels.UpdateHeader(self.header, elapsed)
 end
 
 -- Node and orb visuals animate with their own groups: they hang off the
@@ -349,6 +359,14 @@ end
 
 function Roulette:FinishClose()
     Disc.Stop(self.disc)
+    Panels.StopHeader(self.header)
+    ns.HearthOrb.ResetHover(self.orb)
+    for _, node in ipairs(self.slots) do
+        ns.Node.SetHover(node, false)
+        node.hover = 0
+        ns.Node.PaintGlow(node)
+        Anim.StopSparkle(node.sparkle)
+    end
     self:ResetVisuals()
     if InCombatLockdown() then
         self.pendingHide = true
@@ -369,8 +387,7 @@ function Roulette:ToggleGameUI()
         ns.Presentation:ShowGameUI()
     else
         ns.Presentation:HideGameUIAgain(self.root)
-        if self.LiftShownDialogs then self.LiftShownDialogs() end
-    end
+        end
 end
 
 function Roulette:Toggle()
@@ -707,32 +724,7 @@ function Roulette:Initialize()
         hooksecurefunc("ChatEdit_ActivateChat", onChatActivated)
     end
 
-    -- A dialog that appears while the game UI is hidden (a guild or party
-    -- invite, a ready check...) would be invisible, and Escape would decline
-    -- it unseen (StaticPopup_EscapePressed runs first). Bring the game UI
-    -- back so the player sees it and answers; the wheel stays open.
-    -- Blizzard's dialog frames are never touched (no reparent, strata or
-    -- hooks on them): addon changes to those shared frames risk tainting
-    -- their protected buttons (Accept, Quit, Logout).
-    local function onDialogShown()
-        if not Roulette.open or not StaticPopup_ForEachShownDialog then
-            return
-        end
-        local any = false
-        StaticPopup_ForEachShownDialog(function() any = true end)
-        if any then
-            ns.Presentation:ShowGameUI()
-        end
-    end
-    Roulette.LiftShownDialogs = onDialogShown
-    if StaticPopup_Show then
-        hooksecurefunc("StaticPopup_Show", onDialogShown)
-    end
-    if StaticPopupSpecial_Show then
-        hooksecurefunc("StaticPopupSpecial_Show", function()
-            if Roulette.open then
-                ns.Presentation:ShowGameUI()
-            end
-        end)
-    end
+    -- Dialogs (guild/party invites, ready checks) shown while the game UI is
+    -- hidden: LibShowcase brings the UI back by itself and tells us through
+    -- onGameUIShown. Blizzard's dialog frames are never touched.
 end

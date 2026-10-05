@@ -15,7 +15,7 @@ local HearthOrb = {}
 ns.HearthOrb = HearthOrb
 
 function HearthOrb.Create(root)
-    local orb = {}
+    local orb = { hover = 0, hoverTarget = 0 }
     local size = Layout.ORB
 
     local button = SA.Create(root, "PortalRouletteHearthOrb")
@@ -37,19 +37,34 @@ function HearthOrb.Create(root)
     halo:SetBlendMode("ADD")
     halo:SetVertexColor(0.42, 0.62, 1)
     halo:SetAlpha(0.5)
-    orb.halo = halo -- steady: the orb is the permanent focal point
+    orb.halo = halo
 
-    -- The TBC orb art: a gold ring around the blue hearthstone, with
-    -- normal / hover / pressed states.
-    local art = visual:CreateTexture(nil, "ARTWORK", nil, 0)
+    -- Only the artwork and its cooldown grow. The outer visual, bind label
+    -- and secure hit target keep their original size and position.
+    local face = CreateFrame("Frame", nil, visual)
+    face:SetSize(size, size)
+    face:SetPoint("CENTER")
+    face:EnableMouse(false)
+    orb.face = face
+    local art = face:CreateTexture(nil, "ARTWORK", nil, 0)
     art:SetAllPoints()
     art:SetTexture(ns.Media.HEARTH_ORB_NORMAL)
     orb.art = art
 
+    local light = face:CreateTexture(nil, "ARTWORK", nil, 1)
+    light:SetSize(size * 0.62, size * 0.62)
+    light:SetPoint("CENTER")
+    light:SetTexture(ns.Media.GLOW)
+    light:SetBlendMode("ADD")
+    light:SetVertexColor(0.35, 0.7, 1)
+    light:SetAlpha(0)
+    orb.hoverLight = light
+
     -- Another hearth source (Crumbling Hearthstone, a toy) shows its own
     -- icon inside the ring, over the stone.
     local inset = size * 0.2
-    local iconHost = CreateFrame("Frame", nil, visual)
+    local iconHost = CreateFrame("Frame", nil, face)
+    iconHost:EnableMouse(false)
     iconHost:SetPoint("TOPLEFT", inset, -inset)
     iconHost:SetPoint("BOTTOMRIGHT", -inset, inset)
     local icon = Skin:RoundTexture(iconHost, "ARTWORK", 2)
@@ -59,7 +74,8 @@ function HearthOrb.Create(root)
     icon:Hide()
     orb.icon = icon
 
-    local cooldown = CreateFrame("Cooldown", nil, visual, "CooldownFrameTemplate")
+    local cooldown = CreateFrame("Cooldown", nil, face, "CooldownFrameTemplate")
+    cooldown:EnableMouse(false)
     cooldown:SetPoint("TOPLEFT", inset, -inset)
     cooldown:SetPoint("BOTTOMRIGHT", -inset, inset)
     cooldown:SetSwipeTexture(ns.Media.CIRCLE_MASK)
@@ -68,6 +84,7 @@ function HearthOrb.Create(root)
         cooldown:SetUseCircularEdge(true)
     end
     orb.cooldown = cooldown
+    orb.sparkle = Anim.Sparkle(face, 27, -size * 0.31, size * 0.34, 2.6, 9.7)
 
     local bind = CreateFrame("Frame", nil, visual)
     bind:SetSize(120, 20)
@@ -77,22 +94,22 @@ function HearthOrb.Create(root)
     orb.bindText:SetPoint("CENTER")
     orb.bind = bind
 
-    orb.hoverGrow, orb.hoverShrink = Anim.HoverPair(visual, 1.06, 0.12)
     orb.appear = Anim.Appear(visual, 0.24, 0.5, 0.04)
     orb.disappear = Anim.Disappear(visual, 0.15, 0.8)
-    button:SetScript("OnMouseDown", function() art:SetTexture(ns.Media.HEARTH_ORB_PRESSED) end)
+    button:SetScript("OnMouseDown", function() art:SetVertexColor(0.85, 0.85, 0.9) end)
     button:SetScript("OnMouseUp", function()
-        art:SetTexture(button:IsMouseOver() and ns.Media.HEARTH_ORB_HOVER or ns.Media.HEARTH_ORB_NORMAL)
+        art:SetVertexColor(1, 1, 1)
     end)
     button:SetScript("OnEnter", function()
-        art:SetTexture(ns.Media.HEARTH_ORB_HOVER)
-        if Anim.Enabled("hover") then orb.hoverShrink:Stop() orb.hoverGrow:Play() end
+        orb.hoverTarget = 1
+        HearthOrb.UpdateHover(orb, 0)
         if ns.Sound then ns.Sound:Play("HearthstoneHover") end
         if ns.Roulette then ns.Roulette:OnOrbEnter(orb) end
     end)
     button:SetScript("OnLeave", function()
-        art:SetTexture(ns.Media.HEARTH_ORB_NORMAL)
-        if Anim.Enabled("hover") then orb.hoverGrow:Stop() orb.hoverShrink:Play() end
+        art:SetVertexColor(1, 1, 1)
+        orb.hoverTarget = 0
+        HearthOrb.UpdateHover(orb, 0)
         if ns.Roulette then ns.Roulette:OnOrbLeave(orb) end
     end)
     button:SetScript("PostClick", function(_, mouseButton, down)
@@ -100,6 +117,22 @@ function HearthOrb.Create(root)
         if ns.Roulette then ns.Roulette:OnOrbClick(orb, mouseButton) end
     end)
     return orb
+end
+
+function HearthOrb.UpdateHover(orb, elapsed)
+    orb.hover = Anim.ApproachHover(orb.hover, orb.hoverTarget, elapsed)
+    local h = orb.hover * Anim.HoverStrength()
+    orb.halo:SetAlpha(0.5 + 0.18 * h)
+    orb.hoverLight:SetAlpha(0.12 * h)
+    local growth = Anim.Enabled("hover") and Anim.Intensity() or 0
+    orb.face:SetScale(1 + 0.085 * orb.hover * growth)
+end
+
+function HearthOrb.ResetHover(orb)
+    orb.hover, orb.hoverTarget = 0, 0
+    orb.art:SetVertexColor(1, 1, 1)
+    HearthOrb.UpdateHover(orb, 0)
+    Anim.StopSparkle(orb.sparkle)
 end
 
 function HearthOrb.Update(orb, source)

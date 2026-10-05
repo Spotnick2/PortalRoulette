@@ -96,6 +96,20 @@ Run 1: build 70205, 2026-10-04. Level-10 High Order Skyborne mage (Alliance), bo
 - The reagent-free talent on/off tooltip comparison, which gates the tooltip signal in Auto mode.
 - Karazhan through an equipped Atiesh.
 
+## Launcher pickup investigation (2026-10-05)
+
+- Owner observation: normal left-drag reaches the launcher handler, but after
+  `pcall(PickupMacro, index)` returns successfully, `GetCursorInfo()` does not
+  report a macro. Repeated three times. Shift-drag moves the launcher correctly.
+- The saved launcher macro exists with body `/pr` and the custom launcher TGA
+  path. This does not establish that the client resolves that icon for pickup.
+- Owner isolated the cause in Blizzard's `/macro` window: **no icon was set**,
+  and dragging failed there too. Assigning an icon made the same macro draggable.
+  This confirms icon resolution, rather than the launcher's mouse handler, is the
+  cause of this report. The launcher now supplies a native numeric icon for macros
+  and preserves icons selected manually. Its own custom textures remain separate.
+- Unit-test pickup fakes verify addon control flow only, not client acceptance.
+
 ## Run 2 (build 70205, 2026-10-04)
 - **Reagent Economy** perk spell IDs: 1225503, 1262636, 1262638, 1262643, 1262647, 1262650, 1262654 and 1262662 (one per class?). None is known at level 10. Detection is "free" when `IsPlayerSpell` is true for any of them. Which ID belongs to mages is still OPEN until the perk can be taken.
 - Teleport: Dalaran tooltips:

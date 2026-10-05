@@ -32,7 +32,7 @@ function Minimap:Initialize()
         self.object = LDB:NewDataObject(NAME, {
             type = "launcher",
             text = "Portal Roulette",
-            icon = ns.Media.ICON_PORTAL_ROULETTE_64,
+            icon = ns.Media.LAUNCHER_PORTAL,
             OnClick = onClick,
             OnTooltipShow = onTooltip,
         })
@@ -44,7 +44,7 @@ function Minimap:Initialize()
         and ns.db.showCompartment ~= false then
         local ok = pcall(AddonCompartmentFrame.RegisterAddon, AddonCompartmentFrame, {
             text = "Portal Roulette",
-            icon = ns.Media.ICON_PORTAL_ROULETTE_64,
+            icon = ns.Media.LAUNCHER_PORTAL,
             notCheckable = true,
             func = function(_, _, _, _, mouseButton) onClick(nil, mouseButton) end,
             funcOnEnter = function(button)

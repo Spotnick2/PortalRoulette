@@ -1,107 +1,59 @@
 # Portal Roulette
 
-**Portal Roulette** is a mage-only portal and teleport launcher for **World of Warcraft: The Burning Crusade Classic Anniversary**.
+**Portal Roulette** puts every mage teleport and portal on one frosted-glass wheel, for **World of
+Warcraft: Forever**.
 
-It provides a floating arcane roulette wheel for mage teleports, portals, and a configurable utility action, with faction-aware destinations and TBC Classic-safe secure buttons.
+Open the wheel, then left-click a destination to teleport or right-click it to open a portal. The
+hearthstone sits in the middle.
 
 ## Features
 
-- Mage-only launcher button
-- Left-click launcher opens Teleports
-- Right-click launcher opens Portals
-- Floating arcane destination wheel
-- Horde and Alliance destination sets
-- Karazhan bonus node for Atiesh users
-- Shared reagent display for:
-  - Rune of Teleportation
-  - Rune of Portals
-- Configurable utility action:
-  - Hearthstone
-  - Dark Portal
-  - Naaru's Embrace
-  - Random
-- Optional cinematic camera presentation
-- Minimap button with saved position
-- Launcher can be dragged to an action bar as a macro
-- Launcher hides automatically when its macro is already on an action bar
-- In-game options panel
+- **One wheel per faction.**
+  - Alliance: Stormwind, Ironforge, Darnassus.
+  - Horde: Orgrimmar, Undercity, Thunder Bluff.
+  - Every faction: Dalaran (Forever's new Teleport: Dalaran), and Karazhan as a satellite node for
+    Atiesh owners.
+- **Left-click teleports, right-click opens a portal**, from secure, combat-safe buttons.
+  Destinations you haven't learned yet are shown dimmed with the level they unlock at.
+- **The hearthstone in the centre.** It uses your Hearthstone, Crumbling Hearthstone or a hearth toy,
+  and shows its cooldown and your bind location.
+- **Reagent counts** for Rune of Teleportation and Rune of Portals (reagent bag included). They hide
+  themselves once you have the Reagent Economy perk.
+- **Arcane glass look.** Slowly circulating energy, glowing links with pulses of light running out
+  to each destination, and a gentle shimmer across the glass.
+- **Optional cinematic camera.** Your character turns to face the camera while the game UI steps
+  aside. Everything is restored on close, in combat, at logout and even after a crash.
+- **Group friendly.** It can announce your portals, and asks before you teleport away from your
+  group.
+- **Launcher button** you can drag onto an action bar, a minimap button, an Addon Compartment entry
+  and a key binding.
+- **Options** under Options → AddOns → Portal Roulette: animation, sound set and channel, camera,
+  reagents and launcher.
 
-## Destinations
+## Commands
 
-### Horde
+| Command | What it does |
+|---|---|
+| `/pr` | Open or close the wheel |
+| `/pr options` | Open the options |
+| `/pr preview` | Show every destination without casting (handy on a low-level mage) |
+| `/pr reset` | Reset the wheel and launcher positions |
+| `/pr debug` | Print the wheel's state (for bug reports) |
 
-- Orgrimmar
-- Undercity
-- Thunder Bluff
-- Silvermoon
-- Stonard
-- Shattrath
-- Karazhan, when available through Atiesh
+## Requirements
 
-### Alliance
+- WoW: Forever (Interface 16001). The TBC Anniversary version is frozen at tag `v0.1.1-tbc`.
+- Mage characters only. Other classes get no UI at all.
 
-- Stormwind
-- Ironforge
-- Darnassus
-- The Exodar
-- Theramore
-- Shattrath
-- Karazhan, when available through Atiesh
+Embedded libraries (installed automatically with the release): LibGlass-1.0, LibShowcase-1.0,
+LibStub, CallbackHandler-1.0, LibDataBroker-1.1, LibDBIcon-1.0.
 
-## Options
+## Development
 
-Portal Roulette includes an in-game options panel for:
-
-- Cinematic camera mode
-- Launcher lock and scale
-- Minimap button visibility
-- Reagent panel visibility
-- Options and close button visibility
-- Animation controls
-- Portal vortex controls
-- Utility action selection
-- Karazhan visibility behavior
-- Grouped teleport confirmation
-- Sound controls
-- UI position reset
-
-## Slash Commands
-
-```text
-/pr
-/portalroulette
-```
-
-Use the slash command to open or toggle Portal Roulette.
-
-## Installation
-
-### CurseForge
-
-Install through the CurseForge client when available.
-
-### Manual
-
-1. Download the latest release.
-2. Extract the addon folder to:
-
-   ```text
-   World of Warcraft/_anniversary_/Interface/AddOns/
-   ```
-
-3. Ensure the final folder is:
-
-   ```text
-   AddOns/PortalRoulette/
-   ```
-
-4. Enable **Portal Roulette** from the in-game AddOns list.
-
-## Supported Version
-
-- World of Warcraft: **TBC Classic Anniversary**
-- Interface: `20505`
-
-## Author
-
-Spotnick
+- Tests: `pwsh tests/run.ps1` (Lua 5.1).
+- Deploy to the game: `pwsh Tools/deploy.ps1` (`-Probe` also installs the measurement probe). LibGlass
+  and LibShowcase come from sibling checkouts (`..\LibGlass`, `..\LibShowcase`).
+- Generated art: `python Tools/make_art.py` (effects), `Tools/make_city_art.py` and
+  `Tools/make_launcher_art.py`.
+- What has been measured in game is in `docs/FOREVER-PROBE.md`. Agent instructions are in
+  `AGENTS.md`.

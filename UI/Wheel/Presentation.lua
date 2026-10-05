@@ -15,7 +15,7 @@ local _, ns = ...
 local Presentation = {}
 ns.Presentation = Presentation
 
-local NEEDS_MINOR = 1
+local NEEDS_MINOR = 2 -- onGameUIShown and the dialog behaviour arrived in MINOR 2
 
 function Presentation:Lib()
     if self.lib ~= nil then
@@ -37,6 +37,12 @@ function Presentation:Lib()
             anchorStrata = "HIGH",
             onForcedExit = function(reason)
                 if ns.Roulette then ns.Roulette:OnForcedExit(reason) end
+            end,
+            -- The library brought the game UI back by itself (a dialog such
+            -- as a guild invite appeared): the wheel stays open.
+            onGameUIShown = function()
+                Presentation.uiHidden = false
+                Presentation.active = Presentation.camera
             end,
         })
         if ok and sc then
@@ -105,12 +111,6 @@ function Presentation:LiftFrame(frame)
     end
 end
 
-function Presentation:LiftPopup(dialog)
-    local sc = self:Lib()
-    if sc and self.active and dialog then
-        sc:LiftPopup(dialog)
-    end
-end
 
 -- A normal close: the camera eases back (the library restores the UI and
 -- finishes later); without a camera, the UI comes back now.

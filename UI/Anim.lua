@@ -13,9 +13,64 @@ local function intensity()
     if not db or db.animationsEnabled == false then
         return 0
     end
-    return tonumber(db.animationIntensity) or 1
+    return math.max(0, math.min(1, tonumber(db.animationIntensity) or 1))
 end
 Anim.Intensity = intensity
+
+-- A brief glass catchlight, staggered by the owner. Driven by the wheel's
+-- existing visible-only clock; the animation itself lives on a texture.
+function Anim.Sparkle(parent, size, x, y, delay, period)
+    local tex = parent:CreateTexture(nil, "OVERLAY", nil, 6)
+    tex:SetSize(size, size)
+    tex:SetPoint("CENTER", parent, "CENTER", x, y)
+    tex:SetTexture(ns.Media.TITLE_GLINT)
+    tex:SetBlendMode("ADD")
+    tex:SetAlpha(0)
+    local group = tex:CreateAnimationGroup()
+    local up = group:CreateAnimation("Alpha")
+    up:SetFromAlpha(0)
+    up:SetToAlpha(1)
+    up:SetDuration(0.18)
+    up:SetOrder(1)
+    local down = group:CreateAnimation("Alpha")
+    down:SetFromAlpha(1)
+    down:SetToAlpha(0)
+    down:SetDuration(0.65)
+    down:SetOrder(2)
+    return { tex = tex, group = group, wait = delay, delay = delay, period = period }
+end
+
+function Anim.StopSparkle(sparkle)
+    sparkle.group:Stop()
+    sparkle.tex:SetAlpha(0)
+    sparkle.wait = sparkle.delay
+end
+
+function Anim.UpdateSparkle(sparkle, elapsed, usable)
+    if not usable or not Anim.Enabled("idle") or intensity() == 0 then
+        Anim.StopSparkle(sparkle)
+        return
+    end
+    sparkle.tex:SetVertexColor(0.72, 0.86, 1, 0.85 * intensity())
+    sparkle.wait = sparkle.wait - elapsed
+    if sparkle.wait <= 0 then
+        sparkle.group:Stop()
+        sparkle.group:Play()
+        sparkle.wait = sparkle.period
+    end
+end
+
+-- Keep a small, immediate rim/line cue when motion is disabled. Intensity
+-- controls the additional light and movement, not basic mouse feedback.
+function Anim.HoverStrength()
+    return Anim.Enabled("hover") and (0.25 + 0.75 * intensity()) or 0.25
+end
+
+function Anim.ApproachHover(value, target, elapsed)
+    if not Anim.Enabled("hover") or intensity() == 0 then return target end
+    if target > value then return math.min(target, value + elapsed / 0.18) end
+    return math.max(target, value - elapsed / 0.26)
+end
 
 function Anim.Enabled(kind)
     local db = ns.db

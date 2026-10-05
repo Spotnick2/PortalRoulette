@@ -1,10 +1,11 @@
 ## Interface: 16001
 ## Title: Portal Roulette
-## IconTexture: Interface\AddOns\PortalRoulette\Media\Icon_PortalRoulette_128
+## IconTexture: Interface\AddOns\PortalRoulette\Media\Launcher\Portal_256.tga
 ## Notes: Mage teleports and portals on one glass wheel. Left-click a destination to teleport, right-click to open a portal.
 ## Author: Spotnick
 ## Version: @project-version@
 ## SavedVariables: PortalRouletteDB
+## X-Curse-Project-ID: 1540067
 
 Libs\LibStub\LibStub.lua
 Libs\CallbackHandler-1.0\CallbackHandler-1.0.lua

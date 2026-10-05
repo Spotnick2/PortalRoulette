@@ -165,7 +165,7 @@ local function build()
     h = heading(panel, "Launcher", a, 0, -18)
     a = toggle(panel, h, "lockLauncher", "Lock the launcher")
     a = toggle(panel, a, "showMinimapButton", "Minimap button")
-    a = cycle(panel, a, "launcherTheme", "Launcher theme", {
+    a = cycle(panel, a, "launcherTheme", "Launcher accent", {
         { "auto", "Auto (Arcane)" }, { "arcane", "Arcane" }, { "fire", "Fire" }, { "frost", "Frost" } })
     a = stepper(panel, a, "launcherScale", "Launcher scale", 0.6, 2.0, 0.05, "%.2f")
 

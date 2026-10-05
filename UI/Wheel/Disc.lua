@@ -2,9 +2,8 @@
 -- Disc: the smoked-glass disc and the arcane light under it.
 --
 -- Visual target (the motion brief from the animated mockup):
---   * Energy wisps circulate slowly beneath the glass: two feathered,
---     broken-strand textures turning at different speeds, each with its own
---     slow opacity drift (never in sync), plus a few motes.
+--   * Mist, broken curls and fine filaments circulate beneath stationary
+--     glass, with independent slow rotation, breathing and opacity drift.
 --   * Links are narrow streams of light (core, body, faint halo, faded
 --     ends). A short comet travels outward along each, staggered, with a
 --     quiet gap between passes. Hovering a node brightens its link, its
@@ -29,16 +28,17 @@ local Disc = {}
 ns.Disc = Disc
 
 local TWO_PI = math.pi * 2
+-- Rune etching sways four degrees out and back over four seconds; the
+-- glass rim itself stays fixed. Two seconds per leg, easing at both ends.
+local RUNE_SWAY, RUNE_PERIOD = math.rad(2), 4
 
--- Wisp layers, as in the animated mockup: a slower one close to the
--- middle, and a faster one on top of it spanning the whole wheel.
 -- texture key, size factor, seconds per turn, base alpha, drift period (s),
--- drift depth.
+-- drift depth, initial angle (radians), size breathing fraction.
 local LAYERS = {
-    { "WISPS_B", 0.62, 40, 0.80, 9.1, 0.25 },
-    { "WISPS_A", 1.00, 17, 0.60, 6.3, 0.30 },
-    -- Small dots running around the outer ring: one full tour in 5 s.
-    { "ORBIT_DOTS", 0.98, 5, 0.95, 3.7, 0.20 },
+    { "MIST",       1.02,  53, 0.34, 11.3, 0.24, 0.7, 0.018 },
+    { "WISPS_A",    0.98,  31, 0.52,  8.7, 0.24, 2.1, 0.012 },
+    { "WISPS_B",    0.92, -47, 0.38,  7.1, 0.20, 4.3, 0.008 },
+    { "ORBIT_DOTS", 0.98,  16, 0.52,  5.9, 0.16, 1.4, 0 },
 }
 
 -- The diagonal light streak: every SHIMMER_EVERY seconds (plus a little
@@ -75,7 +75,9 @@ function Disc.Create(root)
     for i, spec in ipairs(LAYERS) do
         local tex = layerTexture(disc, M[spec[1]], Layout.DISC * spec[2], i)
         disc.layers[i] = { tex = tex, period = spec[3], base = spec[4], drift = spec[5], depth = spec[6],
-                           phase = i * 1.7 }
+                           phase = i * 1.7, angle = spec[7], size = Layout.DISC * spec[2],
+                           breath = spec[8] }
+        tex:SetRotation(spec[7])
     end
 
     -- Very faint etched markings, subordinate to the destinations.
@@ -103,7 +105,6 @@ local function newLink(disc, key)
     line:SetThickness(14)
     line:SetBlendMode("ADD")
     local comet = parent:CreateTexture(nil, "ARTWORK", nil, 4)
-    comet:SetSize(46, 46)
     comet:SetTexture(M.COMET)
     comet:SetBlendMode("ADD")
     comet:Hide()
@@ -111,6 +112,7 @@ local function newLink(disc, key)
         disc = disc, line = line, comet = comet, glow = 0, target = 0,
         -- Staggered first pass so the spokes never flash together.
         wait = (key * 0.71) % 1 * GAP_MAX, progress = -1, seed = (key * 0.37) % 1,
+        initialWait = (key * 0.71) % 1 * GAP_MAX,
     }
     disc.links[key] = link
     return link
@@ -127,6 +129,9 @@ function Disc.Link(disc, key, x, y, inner, nodeSize, color, level)
     local stop = (nodeSize or Layout.NODE) / 2 + 2
     link.sx, link.sy = ux * inner, uy * inner
     link.ex, link.ey = x - ux * stop, y - uy * stop
+    link.length = math.max(0, len - inner - stop)
+    link.pulseSize = math.min(40, link.length * 0.45)
+    link.comet:SetSize(link.pulseSize, link.pulseSize)
     link.line:SetStartPoint("CENTER", disc, link.sx, link.sy)
     link.line:SetEndPoint("CENTER", disc, link.ex, link.ey)
     link.comet:SetRotation(math.atan2(uy, ux))
@@ -137,7 +142,7 @@ function Disc.Link(disc, key, x, y, inner, nodeSize, color, level)
         level = 0
     end
     link.level = level
-    link.active = level > 0
+    link.active = level > 0 and link.length > 0
     link.line:Show()
     Disc.PaintLink(link)
 end
@@ -147,6 +152,8 @@ function Disc.HideLink(disc, key)
     if link then
         link.line:Hide()
         link.comet:Hide()
+        link.glow, link.target, link.progress = 0, 0, -1
+        link.wait = link.initialWait
     end
 end
 
@@ -154,14 +161,21 @@ end
 function Disc.SetLinkLit(disc, key, lit)
     local link = disc.links[key]
     if link then
+        local entered = lit and link.target == 0
         link.target = lit and 1 or 0
+        if entered and link.active and link.progress < 0 and Anim.Enabled("hover")
+            and Anim.Intensity() > 0 then
+            link.wait = math.min(link.wait, 0.08)
+        end
+        link.glow = Anim.ApproachHover(link.glow, link.target, 0)
+        Disc.PaintLink(link)
     end
 end
 
 function Disc.PaintLink(link)
     local c = link.color
     local idle = link.active and (0.16 + 0.22 * link.level) or 0.16
-    local a = idle + (0.95 - idle) * link.glow
+    local a = idle + (0.95 - idle) * link.glow * Anim.HoverStrength()
     link.line:SetVertexColor(c[1], c[2], c[3], a)
 end
 
@@ -174,11 +188,10 @@ function Disc.SetIntent(disc, mode)
     disc.inner:SetVertexColor(c[1], c[2], c[3], 0.22)
     disc.runes:SetVertexColor(c[1] + 0.2, c[2] + 0.2, 1, 0.16)
     for i, layer in ipairs(disc.layers) do
-        -- The slower layer leans violet, the faster one follows the intent:
-        -- depth from two hues.
-        local mix = i == 1 and ns.Colors.PORTAL or c
+        -- Just the sparse filaments lean violet; smoke follows intent.
+        local mix = i == 3 and ns.Colors.PORTAL or c
         layer.r, layer.g, layer.b = mix[1], mix[2], mix[3]
-        layer.tex:SetVertexColor(mix[1], mix[2], mix[3], layer.base)
+        layer.tex:SetVertexColor(mix[1], mix[2], mix[3], layer.base * (0.55 + 0.45 * Anim.Intensity()))
     end
 end
 
@@ -186,38 +199,37 @@ end
 -- The per-frame update (only while the wheel is open)
 ------------------------------------------------------------
 
--- Move `value` toward `target`, taking inTime to rise fully and outTime
--- to fall fully.
-function Disc.Approach(value, target, elapsed, inTime, outTime)
-    if target > value then
-        return math.min(target, value + elapsed / inTime)
-    end
-    return math.max(target, value - elapsed / outTime)
-end
-
 function Disc.Update(disc, elapsed)
-    local idle = Anim.Enabled("idle")
-    local t = disc.time + elapsed
-    disc.time = t
+    local intensity = Anim.Intensity()
+    local idle = Anim.Enabled("idle") and intensity > 0
+    -- Pausing idle motion freezes its phase; re-enabling does not jump ahead.
+    if idle then disc.time = disc.time + elapsed end
+    local t = disc.time
 
     for _, layer in ipairs(disc.layers) do
         if idle then
-            layer.tex:SetRotation(-TWO_PI * t / layer.period)
+            layer.tex:SetRotation(layer.angle - TWO_PI * t / layer.period)
+            if layer.breath ~= 0 then
+                local size = layer.size * (1 + layer.breath * intensity * math.sin(TWO_PI * t / (layer.drift * 1.7) + layer.phase))
+                layer.tex:SetSize(size, size)
+            end
         end
         local drift = idle and math.sin(TWO_PI * t / layer.drift + layer.phase) or 0
-        local a = layer.base * (1 - layer.depth * 0.5 + layer.depth * 0.5 * drift)
+        local a = layer.base * (0.55 + 0.45 * intensity)
+            * (1 - layer.depth * 0.5 + layer.depth * 0.5 * drift * intensity)
         layer.tex:SetVertexColor(layer.r, layer.g, layer.b, a)
     end
     if idle then
-        disc.runes:SetRotation(TWO_PI * t / 160)
+        disc.runes:SetRotation(RUNE_SWAY * intensity * (1 - math.cos(TWO_PI * t / RUNE_PERIOD)))
     end
     Disc.UpdateShimmer(disc, elapsed, idle)
 
     for _, link in pairs(disc.links) do
         if link.line:IsShown() then
             local before = link.glow
-            link.glow = Disc.Approach(link.glow, link.target, elapsed, 0.18, 0.28)
-            if link.glow ~= before then
+            link.glow = Anim.ApproachHover(link.glow, link.target, elapsed)
+            if link.glow ~= before or link.paintedIntensity ~= intensity then
+                link.paintedIntensity = intensity
                 Disc.PaintLink(link)
             end
             Disc.UpdateComet(link, elapsed, idle)
@@ -252,7 +264,7 @@ function Disc.UpdateShimmer(disc, elapsed, idle)
     tex:ClearAllPoints()
     tex:SetPoint("CENTER", disc, "CENTER", off * 0.7071, -off * 0.7071)
     local fade = math.sin(p * math.pi)
-    tex:SetVertexColor(0.85, 0.9, 1, 0.22 * fade)
+    tex:SetVertexColor(0.85, 0.9, 1, 0.12 * fade * Anim.Intensity())
     tex:Show()
 end
 
@@ -260,6 +272,7 @@ function Disc.UpdateComet(link, elapsed, idle)
     local comet = link.comet
     if not idle or not link.active then
         comet:Hide()
+        link.progress = -1
         return
     end
     if link.progress < 0 then
@@ -270,25 +283,31 @@ function Disc.UpdateComet(link, elapsed, idle)
         end
         link.progress = 0
     end
-    -- A hovered link runs a little faster, brighter and more often.
-    link.progress = link.progress + elapsed * (1 + link.glow * 0.5) / TRAVEL
+    local hover = Anim.Enabled("hover") and link.glow * Anim.Intensity() or 0
+    -- Constant speed, including when hover changes during a visible pass.
+    link.progress = link.progress + elapsed / TRAVEL
     local p = link.progress
     if p >= 1 then
         link.progress = -1
         link.seed = (link.seed * 7.31 + 0.37) % 1
-        link.wait = (GAP_MIN + (GAP_MAX - GAP_MIN) * link.seed) * (1 - link.glow * 0.6)
+        link.wait = (GAP_MIN + (GAP_MAX - GAP_MIN) * link.seed) * (1 - hover * 0.6)
         comet:Hide()
         return
     end
-    local eased = p * p * (3 - 2 * p)
+    -- Keep the entire longitudinal texture footprint between the rims.
+    -- The head is at u=.82, hence +.32*size ahead of the anchor; its tail
+    -- starts at u=.25. A <=45%-of-spoke quad leaves >=55% for travel.
+    local along = link.pulseSize * 0.5 + (link.length - link.pulseSize) * p
+    local fraction = along / link.length
     comet:ClearAllPoints()
     comet:SetPoint("CENTER", link.disc, "CENTER",
-        link.sx + (link.ex - link.sx) * eased, link.sy + (link.ey - link.sy) * eased)
+        link.sx + (link.ex - link.sx) * fraction, link.sy + (link.ey - link.sy) * fraction)
     -- Fade in out of the orb, fade out before the destination rim.
     local fade = math.min(1, p / 0.15) * math.min(1, (1 - p) / 0.3)
     local c = link.color
-    local strength = link.level + (1 - link.level) * link.glow -- hover lifts a dim flow too
-    comet:SetVertexColor(c[1] * 0.6 + 0.4, c[2] * 0.6 + 0.4, 1, fade * (0.65 + 0.35 * link.glow) * strength)
+    local strength = link.level + (1 - link.level) * hover
+    comet:SetVertexColor(c[1] * 0.6 + 0.4, c[2] * 0.6 + 0.4, 1,
+        fade * (0.65 + 0.35 * hover) * strength * Anim.Intensity())
     comet:Show()
 end
 
@@ -315,9 +334,12 @@ function Disc.Stop(disc)
     if ticker then
         ticker:SetScript("OnUpdate", nil)
     end
+    disc.shimmer:Hide()
+    disc.shimmerT, disc.shimmerWait = -1, 1
     for _, link in pairs(disc.links) do
         link.comet:Hide()
         link.glow, link.target, link.progress = 0, 0, -1
+        link.wait = link.initialWait
         Disc.PaintLink(link)
     end
 end

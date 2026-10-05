@@ -68,6 +68,25 @@ function Skin:Disc(host, size)
         local ok, g = pcall(glass.Disc, host, size)
         if ok and g then
             g.mask = g.mask or circleMask(host)
+            if size == "disc" then
+                -- Tune this wheel surface only. LibGlass r2 puts body layers
+                -- below our BORDER energy and rims on g.top, above it.
+                -- Each layer guarded: a later LibGlass layout must not
+                -- break wheel creation.
+                if g.tint then g.tint:SetColorTexture(0.10, 0.15, 0.23, 0.14) end
+                if g.grain then g.grain:SetAlpha(0.06) end
+                if g.wash then g.wash:SetAlpha(0.22) end
+                if g.shadow then g.shadow:SetAlpha(0.45) end
+                if g.rim then
+                    g.rim:SetTexture(ns.Media.DISC_RIM)
+                    g.rim:SetVertexColor(0.78, 0.88, 1, 1)
+                    g.rim:SetAlpha(0.82)
+                end
+                if g.dark then
+                    g.dark:SetTexture(ns.Media.DISC_RIM_DARK)
+                    g.dark:SetVertexColor(0, 0, 0, 1)
+                end
+            end
             return g
         end
     end

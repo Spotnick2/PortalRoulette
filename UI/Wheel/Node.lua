@@ -92,6 +92,8 @@ function Node.Create(root, index, size)
     spec:SetBlendMode("ADD")
     spec:SetVertexColor(1, 1, 1, 0.55)
     node.spec = spec
+    node.sparkle = Anim.Sparkle(top, 22, -size * 0.31, size * 0.31,
+        1.1 + index * 1.35, 7.8 + index * 0.73)
 
     -- Missing-reagent pip, top right of the bead.
     local pip = (node.glass.top or visual):CreateTexture(nil, "OVERLAY", nil, 7)
@@ -133,25 +135,23 @@ end
 
 function Node.SetHover(node, on)
     node.hovered = on
-    node.hoverTarget = (on and ns.Anim.Enabled("hover")) and 1 or 0
-    if not ns.Anim.Enabled("hover") then
-        node.hover = 0
-        Node.PaintGlow(node)
-    end
+    node.hoverTarget = on and 1 or 0
+    node.hover = Anim.ApproachHover(node.hover, node.hoverTarget, 0)
+    Node.PaintGlow(node)
 end
 
--- Paint the edge, halo and scale for the current hover amount (0..1).
+-- Paint the edge and halo for the current hover amount (0..1).
 -- Fades in about 0.18 s and out about 0.26 s (Roulette:UpdateNodes).
 function Node.PaintGlow(node)
-    local h = node.hover or 0
+    local h = (node.hover or 0) * Anim.HoverStrength()
     local c = node.color or ns.Colors.TELEPORT
     local live = node.usable ~= false
-    local edge = live and (0.5 + 0.5 * h) or 0.18
+    local edge = live and (0.42 + 0.48 * h) or 0.18
     node.ring:SetVertexColor(c[1] * 0.5 + 0.5, c[2] * 0.5 + 0.5, 1, edge)
-    local haloSize = node.size * (1.55 + 0.3 * h)
+    local haloSize = node.size * (1.55 + 0.18 * h)
     node.halo:SetSize(haloSize, haloSize)
-    node.halo:SetVertexColor(c[1], c[2], c[3], live and (0.10 + 0.28 * h) or 0)
-    node.visual:SetScale(1 + 0.03 * h)
+    node.halo:SetVertexColor(c[1], c[2], c[3], live and (0.07 + 0.20 * h) or 0)
+    -- Icons and labels stay stationary on hover: only the light changes.
 end
 
 -- Paint the bead for `resolved` (see Destinations:Resolve).
@@ -170,7 +170,7 @@ function Node.Update(node, resolved, state)
     node.visual:SetAlpha(usable and 1 or 0.55)
 
     local color = resolved.kind == "bonus" and ns.Colors.BONUS or ns.Colors.TELEPORT
-    Skin:SetRimColor(node.glass, color[1], color[2], color[3], 0.9)
+    Skin:SetRimColor(node.glass, color[1], color[2], color[3], 0.45)
     node.color = color
     node.usable = usable or state.preview
     Node.PaintGlow(node)

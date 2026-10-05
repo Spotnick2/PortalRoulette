@@ -248,6 +248,10 @@ function Frame:ClearAllPoints()
 end
 function Frame:GetPoint() return "CENTER", nil, "CENTER", 0, 0 end
 function Frame:GetFontString() return self._fs end
+-- SimpleTextureBaseAPI, confirmed in the 70205 dump. Record source paths
+-- so material tests can distinguish surface overrides from library defaults.
+function Frame:SetTexture(file) self._texture = file end
+function Frame:GetTexture() return self._texture end
 -- Records what the texture would be drawn with: a secret channel is
 -- unwrapped here, as the client does, never by the addon.
 function Frame:SetVertexColor(r, g, b)
@@ -292,6 +296,8 @@ end
 
 UIParent = NewRegion("Frame", nil, "UIParent")
 GameTooltip = NewRegion("GameTooltip", UIParent, "GameTooltip")
+function GameTooltip:IsOwned(f) return self._owner == f end
+function GameTooltip:SetOwner(f) self._owner = f end
 GameFontNormal, GameFontHighlight = {}, {}
 
 ------------------------------------------------------------
@@ -589,6 +595,7 @@ function StaticPopup_Show(which, a, b, data)
 end
 
 SlashCmdList = {}
+C_Texture = { GetAtlasExists = function(name) return WoW.atlases == nil or WoW.atlases[name] == true end }
 ChatFrameUtil = { ActivateChat = function() end }
 WoW.shownDialogs = {}
 function StaticPopupSpecial_Show(frame) if frame then frame:Show() end end

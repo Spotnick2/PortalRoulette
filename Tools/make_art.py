@@ -4,6 +4,11 @@
 
 Writes uncompressed 32-bit TGAs (bottom-left origin, power-of-two sizes) to
 Media/Glass/:
+  Mist / WispsA / WispsB: complementary smoke, curls and fine filaments
+  DiscRim / DiscRimDark: thin directional wheel lip and contrast edge
+  NodeRing / Specular: directional bead light
+  LinkGlow / Comet: static stream and traveling head/tail
+  Shimmer / OrbitDots / Motes: supporting energy accents
   RuneBand_512.tga  a ring of etched runes between two hairline circles,
                     white with the shape in alpha (tinted and rotated in game)
   Spark_64.tga      a soft round spark for the energy running along links
@@ -14,6 +19,7 @@ Requires Pillow and numpy.
 import math
 import os
 import random
+import sys
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
@@ -100,28 +106,32 @@ def fractal(size, seed, octaves=4, base=4):
     return total / norm
 
 
-def wisps(size=512, seed=11, arms=5, twist=2.6, sharp=10.0):
-    """Translucent broken energy strands circulating around the centre: thin
-    bright filaments with feathered edges and transparent gaps, no blades.
-    Strands follow a gentle log spiral, warped by noise so no two are alike;
-    a second noise field carves gaps and varies brightness along them."""
+def wisps(size=512, seed=11, kind="curl"):
+    """Complementary smoke, broken curls and sparse filaments. Warped spiral
+    distance gives soft cross-sections; independent noise breaks their length.
+    All three retain clear gaps and fade well before the stationary rim."""
     y, x = np.mgrid[0:size, 0:size].astype(np.float32)
     c = (size - 1) / 2
     dx, dy = (x - c) / c, (y - c) / c
     r = np.sqrt(dx * dx + dy * dy) + 1e-6
     theta = np.arctan2(dy, dx)
-    warp = (fractal(size, seed, 4, 3) - 0.5) * 2.4
-    phase = arms * (theta + twist * np.log(r + 0.08)) + warp * 2.2
-    strands = (0.5 + 0.5 * np.cos(phase)) ** sharp           # thin filaments
-    fine = (0.5 + 0.5 * np.cos(phase * 3.0 + warp * 4)) ** (sharp * 2.5) * 0.6
-    gaps = np.clip((fractal(size, seed + 50, 4, 4) - 0.35) * 2.2, 0, 1)
-    shimmer = 0.55 + 0.45 * fractal(size, seed + 90, 3, 8)
+    warp = (fractal(size, seed, 4, 5) - 0.5) * 2.0
+    arms, width, threshold = {
+        "mist": (4, 1.15, 0.26),
+        "curl": (6, 0.42, 0.36),
+        "filament": (7, 0.09, 0.46),
+    }[kind]
+    phase = arms * (theta + 2.2 * np.log(r + 0.15)) + warp * 3.0
+    distance = np.arctan2(np.sin(phase), np.cos(phase))
+    strands = np.exp(-(distance / width) ** 2)
+    gaps = np.clip((fractal(size, seed + 50, 4, 6) - threshold) * 3.2, 0, 1)
+    detail = 0.45 + 0.55 * fractal(size, seed + 90, 3, 12)
     # Clear under the orb and fade before the rim.
-    window = np.clip((r - 0.2) / 0.18, 0, 1) * np.clip((0.96 - r) / 0.25, 0, 1)
-    a = (strands + fine) * gaps * shimmer * window
+    window = np.clip((r - 0.23) / 0.16, 0, 1) * np.clip((0.94 - r) / 0.23, 0, 1)
+    a = strands * gaps * detail * window
     halo = np.asarray(Image.fromarray((np.clip(a, 0, 1) * 255).astype(np.uint8), "L")
-                      .filter(ImageFilter.GaussianBlur(size / 90)), np.float32) / 255.0
-    return np.clip(a * 0.85 + halo * 0.5, 0, 1)
+                      .filter(ImageFilter.GaussianBlur(size / 65)), np.float32) / 255.0
+    return np.clip(a * 0.75 + halo * 0.35, 0, 1)
 
 
 def motes(size=512, seed=23, count=26):
@@ -138,15 +148,33 @@ def motes(size=512, seed=23, count=26):
     return a
 
 
-def node_ring(size=128, width=0.035, glow=0.10):
-    """A thin luminous edge with a soft falloff on both sides, for beads."""
+def node_ring(size=128, width=0.014, glow=0.065):
+    """Crisp directional lip with a broader, quieter halo."""
     y, x = np.mgrid[0:size, 0:size].astype(np.float32)
     c = (size - 1) / 2
     r = np.sqrt((x - c) ** 2 + (y - c) ** 2) / c
     edge = 0.86
     core = np.exp(-((r - edge) / width) ** 2)
-    soft = np.exp(-((r - edge) / glow) ** 2) * 0.35
-    return np.clip(core + soft, 0, 1)
+    soft = np.exp(-((r - edge) / glow) ** 2) * 0.20
+    light = np.clip((-(x - c) - (y - c)) / (c * np.sqrt(2)), 0, 1)
+    catch = np.clip((y - c) / c, 0, 1) ** 6
+    return np.clip((core + soft) * (0.24 + 0.76 * light + 0.18 * catch), 0, 1)
+
+
+def disc_rim(size=512, dark=False):
+    """Wheel-specific hairline glass: upper-left light, faint lower catch.
+    Separate from LibGlass's shared bevel, so other addons retain their style."""
+    y, x = np.mgrid[0:size, 0:size].astype(np.float32)
+    c = (size - 1) / 2
+    dx, dy = (x - c) / c, (y - c) / c
+    r = np.sqrt(dx * dx + dy * dy)
+    if dark:
+        return np.exp(-((r - 0.990) / 0.0035) ** 2) * 0.38
+    light = np.clip((-dx - dy) / np.sqrt(2), 0, 1) ** 0.7
+    core = np.exp(-((r - 0.985) / 0.0035) ** 2)
+    halo = np.exp(-((r - 0.981) / 0.012) ** 2) * 0.12
+    catch = np.exp(-((r - 0.970) / 0.003) ** 2) * np.clip(dy, 0, 1) ** 8 * 0.17
+    return np.clip((core + halo) * (0.12 + 0.8 * light) + catch, 0, 1)
 
 
 def specular(size=64):
@@ -162,6 +190,17 @@ def specular(size=64):
     arc = np.exp(-(d / 0.45) ** 2)
     band = np.exp(-((r - 0.78) / 0.07) ** 2)
     return np.clip(arc * band, 0, 1)
+
+
+def title_glint(size=64):
+    """Four-point light, with feathered rays; tinted through the glass UI."""
+    y, x = np.mgrid[0:size, 0:size].astype(np.float32)
+    c = (size - 1) / 2
+    dx, dy = (x - c) / c, (y - c) / c
+    core = np.exp(-(dx * dx + dy * dy) / 0.016)
+    horizontal = np.exp(-(dy / 0.025) ** 2) * np.clip(1 - np.abs(dx), 0, 1) ** 2
+    vertical = np.exp(-(dx / 0.025) ** 2) * np.clip(1 - np.abs(dy), 0, 1) ** 2
+    return np.clip(core * 0.75 + horizontal * 0.65 + vertical * 0.65, 0, 1)
 
 
 def link_glow(w=256, h=32):
@@ -186,7 +225,8 @@ def comet(size=64):
     head = np.exp(-((u - 0.82) / 0.07) ** 2)
     tail = np.clip((u - 0.25) / 0.57, 0, 1) ** 2 * (u < 0.82)
     along = np.maximum(head, tail * 0.7)
-    across = np.exp(-(v / 0.18) ** 2) + np.exp(-(v / 0.5) ** 2) * 0.25
+    # Retain a readable head when the runtime quad shrinks to ~21 UI units.
+    across = np.exp(-(v / 0.28) ** 2) + np.exp(-(v / 0.7) ** 2) * 0.25
     return np.clip(along * across, 0, 1)
 
 
@@ -223,17 +263,42 @@ def orbit_dots(size=512, radius=0.9):
 
 def main():
     save_tga(rune_band(), "RuneBand_512.tga")
-    save_tga(radial(64, 2.2), "Spark_64.tga")
     save_tga(radial(128, 1.6), "Glow_128.tga")
-    save_tga(wisps(seed=11, arms=5, twist=2.6), "WispsA_512.tga")
-    save_tga(wisps(seed=37, arms=3, twist=-1.9, sharp=14.0), "WispsB_512.tga")
-    save_tga(motes(), "Motes_512.tga")
+    save_tga(wisps(seed=71, kind="mist"), "Mist_512.tga")
+    save_tga(wisps(seed=11, kind="curl"), "WispsA_512.tga")
+    save_tga(wisps(seed=37, kind="filament"), "WispsB_512.tga")
+    save_tga(disc_rim(), "DiscRim_512.tga")
+    save_tga(disc_rim(dark=True), "DiscRimDark_512.tga")
     save_tga(node_ring(), "NodeRing_128.tga")
     save_tga(specular(), "Specular_64.tga")
+    save_tga(title_glint(), "TitleGlint_64.tga")
     save_tga(link_glow(), "LinkGlow_256x32.tga")
     save_tga(comet(), "Comet_64.tga")
     save_tga(shimmer(), "Shimmer_256.tga")
     save_tga(orbit_dots(), "OrbitDots_512.tga")
+    if "--preview" in sys.argv:
+        preview()
+
+
+def preview():
+    """Actual alpha assets on dark/snow swatches; not a WoW renderer capture."""
+    files = ["Mist_512.tga", "WispsA_512.tga", "WispsB_512.tga",
+             "DiscRim_512.tga", "NodeRing_128.tga", "Comet_64.tga"]
+    tile, pad = 256, 28
+    sheet = Image.new("RGB", (len(files) * tile, (tile + pad) * 2), (18, 22, 30))
+    draw = ImageDraw.Draw(sheet)
+    for row, bg in enumerate(((0.045, 0.065, 0.10), (0.52, 0.62, 0.65))):
+        for col, name in enumerate(files):
+            alpha = np.asarray(Image.open(os.path.join(OUT, name)).getchannel("A")
+                               .resize((tile, tile), Image.Resampling.LANCZOS), dtype=np.float32) / 255
+            # Full asset alpha for shape inspection; runtime layers are quieter.
+            color = np.clip(np.array(bg) + alpha[..., None] * np.array((0.28, 0.57, 1.0)), 0, 1)
+            sheet.paste(Image.fromarray((color * 255).astype(np.uint8)), (col * tile, row * (tile + pad)))
+            draw.text((col * tile + 5, row * (tile + pad) + tile + 5), name, fill="white")
+    dest = os.path.join(OUT, "..", "..", ".tmp_video_review", "effects-assets.png")
+    os.makedirs(os.path.dirname(dest), exist_ok=True)
+    sheet.save(dest)
+    print("preview", os.path.abspath(dest))
 
 
 if __name__ == "__main__":

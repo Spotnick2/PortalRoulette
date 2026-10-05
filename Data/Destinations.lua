@@ -4,8 +4,8 @@
 --
 -- teleport / portal: candidate spell IDs. Resolve() prefers one the player
 -- KNOWS, then one that EXISTS (shown as not learned yet), else the
--- destination is hidden. Names and icons always come from the IDs, so they
--- are localized by the client.
+-- destination is hidden. Names come from spell IDs for localization; city
+-- scenes are addon art, with spell icons as a fallback.
 -- ============================================================
 
 local _, ns = ...
@@ -133,19 +133,17 @@ function Destinations:GetName(resolved)
     return DISPLAY_NAMES[resolved.id] or resolved.id
 end
 
--- The city art shipped in Media\CityIcons, falling back to the spell icon.
+-- Borderless city scenes exported by Tools/make_city_art.py. The existing
+-- node mask, glass and hover glow supply the frame; both states share art.
 local ICON_FILES = {
-    stormwind = "Alliance\\Normal\\stormwind", ironforge = "Alliance\\Normal\\ironforge",
-    darnassus = "Alliance\\Normal\\darnassus", orgrimmar = "Horde\\Normal\\orgrimmar",
-    undercity = "Horde\\Normal\\undercity", thunder_bluff = "Horde\\Normal\\thunder_bluff",
-    karazhan = "Alliance\\Normal\\karazhan",
+    stormwind = "Scenes\\stormwind", ironforge = "Scenes\\ironforge",
+    darnassus = "Scenes\\darnassus", orgrimmar = "Scenes\\orgrimmar",
+    undercity = "Scenes\\undercity", thunder_bluff = "Scenes\\thunder_bluff",
+    dalaran = "Scenes\\dalaran", karazhan = "Scenes\\karazhan",
 }
 function Destinations:GetIcon(resolved, hover)
     local file = ICON_FILES[resolved.id]
     if file then
-        if hover then
-            file = file:gsub("\\Normal\\", "\\Hover\\")
-        end
         return ns.Media.CITY_ICON_ROOT .. file .. ".tga"
     end
     local spellID = resolved.teleportID or resolved.portalID

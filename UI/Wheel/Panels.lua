@@ -48,18 +48,46 @@ function Panels.CreateHeader(root)
     header:SetSize(280, Layout.HEADER_H)
     header:SetPoint("TOP", root, "TOP", -24, -4)
     header.glass = Skin:Pill(header)
-    local title = Skin:Font(header.glass.top or header, 16, "CENTER")
+    local g = header.glass
+    -- Retain liquid glass, with a much clearer reading surface and thin lip.
+    if g.tint then g.tint:SetColorTexture(0.10, 0.13, 0.22, 0.12) end
+    if g.grain then g.grain:SetAlpha(0.025) end
+    if g.wash then g.wash:SetAlpha(0.2) end
+    if g.shadow then g.shadow:SetAlpha(0.35) end
+    if g.rim then g.rim:SetAlpha(0.3) end
+    if g.dark then g.dark:SetAlpha(0.4) end
+    local top = g.top or header
+    local title = Skin:Font(top, 20, "CENTER")
+    title:SetFont("Fonts\\FRIZQT__.TTF", 20, "")
+    title:SetWidth(232)
     title:SetPoint("CENTER")
     title:SetText("PORTAL ROULETTE")
-    title:SetTextColor(0.92, 0.94, 1, 0.95)
+    title:SetTextColor(0.82, 0.86, 1, 1)
+    title:SetShadowOffset(1.5, -1.5)
+    title:SetShadowColor(0.02, 0.03, 0.08, 1)
     header.title = title
 
-    -- TEMPORARY (development): runs /pr debug with the wheel open. The
-    -- output goes to chat (seen after closing) and to PortalRouletteDB.lastDebug.
-    header.ui = roundButton(root, 30, "Interface\\Icons\\INV_Misc_Spyglass_03", function()
-        if SlashCmdList and SlashCmdList.PORTALROULETTE then SlashCmdList.PORTALROULETTE("debug") end
-    end, "Debug (temporary): /pr debug")
-    header.ui:SetPoint("RIGHT", header, "LEFT", -10, 0)
+    header.glints = {}
+    header.time = 0
+    -- Same masked LibGlass sweep used by GlassUnitFrames on target change.
+    -- A separate visual host lets intensity dim the sweep without dimming text.
+    local scan = CreateFrame("Frame", nil, header)
+    scan:SetAllPoints(header)
+    scan:SetFrameLevel(header:GetFrameLevel() + 9)
+    scan:EnableMouse(false)
+    header.sheenHost = scan
+    header.sheen = Skin:Sheen({ size = g.size, top = scan }, scan, 280, Layout.HEADER_H)
+    header.sheenWait = 0.8
+    for i, side in ipairs({ "LEFT", "RIGHT" }) do
+        local glint = top:CreateTexture(nil, "OVERLAY", nil, 6)
+        glint:SetSize(24, 24)
+        glint:SetPoint(side, header, side, i == 1 and 8 or -8, 0)
+        glint:SetTexture(ns.Media.TITLE_GLINT)
+        glint:SetBlendMode("ADD")
+        glint:SetVertexColor(0.58, 0.68, 1)
+        header.glints[i] = glint
+    end
+    Panels.UpdateHeader(header, 0)
 
     header.gear = roundButton(root, 30, "Interface\\Buttons\\UI-OptionsButton", function()
         if ns.Roulette then ns.Roulette:OpenOptions() end
@@ -87,6 +115,36 @@ function Panels.CreateHeader(root)
         end
     end)
     return header
+end
+
+-- Shares the wheel's visible-only updater (also works with UIParent hidden).
+-- Only the ornament light breathes; the wordmark and glass remain stationary.
+function Panels.UpdateHeader(header, elapsed)
+    local intensity = ns.Anim.Intensity()
+    local idle = ns.Anim.Enabled("idle") and intensity > 0
+    if idle then header.time = header.time + elapsed end
+    if header.sheen then
+        header.sheenHost:SetAlpha(0.5 * intensity)
+        if idle then
+            header.sheenWait = header.sheenWait - elapsed
+            if header.sheenWait <= 0 then
+                header.sheen:Stop()
+                header.sheen:Play()
+                header.sheenWait = 8
+            end
+        else
+            Panels.StopHeader(header)
+        end
+    end
+    for i, glint in ipairs(header.glints) do
+        local wave = idle and (0.5 + 0.5 * math.sin(header.time * math.pi / 3.5 + i * math.pi)) or 0
+        glint:SetAlpha(0.35 + 0.3 * wave * intensity)
+    end
+end
+
+function Panels.StopHeader(header)
+    if header.sheen then header.sheen:Stop() end
+    header.sheenWait = 0.8
 end
 
 ------------------------------------------------------------
