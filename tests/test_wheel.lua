@@ -126,6 +126,17 @@ for _, name in ipairs(UISpecialFrames) do if name == "PortalRouletteEscape" then
 H.check(found, "the proxy is registered in UISpecialFrames")
 R:FinishClose()
 
+-- Close and reopen in the same frame (a macro toggling twice): the deferred
+-- Escape decision from the first opening must not close the second.
+if not R.open then H.slash("PORTALROULETTE", "") end
+R:Close()
+R:FinishClose()
+H.slash("PORTALROULETTE", "")
+WoW.runTimers(0)
+H.check(R.open, "a reopen in the same frame stays open")
+R:Close()
+R:FinishClose()
+
 -- Close path.
 H.slash("PORTALROULETTE", "")
 H.check(R.open, "reopens after combat")

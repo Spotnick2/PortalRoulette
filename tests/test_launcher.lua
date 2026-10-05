@@ -207,4 +207,17 @@ L:RefreshAttention()
 H.check(button.attention:IsShown() and not button.spellAlert:IsShown(), "without the prompt, hover uses the setting (blue)")
 button.hovered = false
 L:RefreshAttention()
+
+-- Hiding the launcher (the wheel hides the game UI) and showing it again
+-- restarts the spell alert while the prompt is up.
+L.prompt:Show()
+L:RefreshAttention()
+button:Hide()
+H.check(not button.spellAlert:IsShown(), "the spell alert hides with the launcher")
+button:Show()
+L:RefreshAttention()
+H.check(button.spellAlert:IsShown() and button.spellAlert.ProcStartAnim:IsPlaying(),
+    "and restarts when the launcher shows again")
+L.prompt:Hide()
+L:RefreshAttention()
 H.done("test_launcher")

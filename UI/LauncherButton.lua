@@ -551,6 +551,13 @@ function LauncherButton:Create()
         selfButton.hovered = false
         selfButton.attentionPulse:Stop()
         selfButton.attention:Hide()
+        -- Hide the spell alert too: its template stops the loop on hide, and
+        -- a child left "shown" would never restart when the UI comes back.
+        if selfButton.spellAlert then
+            selfButton.spellAlert.ProcStartAnim:Stop()
+            selfButton.spellAlert.ProcLoop:Stop()
+            selfButton.spellAlert:Hide()
+        end
         if GameTooltip:IsOwned(selfButton) then GameTooltip:Hide() end
     end)
     button:SetScript("OnShow", function()

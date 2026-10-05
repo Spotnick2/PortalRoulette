@@ -133,13 +133,15 @@ function Roulette:Create()
     escape:Hide()
     escape:SetScript("OnHide", function()
         if Roulette.syncingEscape then return end -- our own SyncEscape
+        if not Roulette.open then return end -- hidden by our own Close
         Roulette:Trace("escape proxy hidden")
         -- Decide a frame later. Measured on 70205: a ready check hides
         -- special windows from client code, in the same frame as its event.
         -- A prompt in that frame means it was not an Escape press: re-arm.
-        local hiddenAt = GetTime()
+        local hiddenAt, generation = GetTime(), Roulette.openGeneration
         C_Timer.After(0, function()
-            if not Roulette.open then return end
+            -- Only for the opening that was hidden: never a later reopen.
+            if not Roulette.open or Roulette.openGeneration ~= generation then return end
             if Roulette.promptAt and Roulette.promptAt >= hiddenAt then
                 Roulette:Trace("special windows hidden by a prompt: kept open")
                 Roulette:SyncEscape()
@@ -302,6 +304,7 @@ function Roulette:Open()
         return
     end
     self.open = true
+    self.openGeneration = (self.openGeneration or 0) + 1
     self:Resolve()
     SA.RunSyncs() -- out of combat: attributes are current before the first click
     self:Paint()
