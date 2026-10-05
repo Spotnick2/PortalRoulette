@@ -132,17 +132,50 @@ function Roulette:Create()
     local escape = CreateFrame("Frame", "PortalRouletteEscape")
     escape:Hide()
     escape:SetScript("OnHide", function()
-        if Roulette.open and not Roulette.closingFromEscape then
-            Roulette.closingFromEscape = true
+        if Roulette.syncingEscape then return end -- our own SyncEscape
+        if not Roulette.open then return end -- hidden by our own Close
+        Roulette:Trace("escape proxy hidden")
+        -- Decide a frame later. Measured on 70205: a ready check hides
+        -- special windows from client code, in the same frame as its event.
+        -- A prompt in that frame means it was not an Escape press: re-arm.
+        local hiddenAt, generation = GetTime(), Roulette.openGeneration
+        C_Timer.After(0, function()
+            -- Only for the opening that was hidden: never a later reopen.
+            if not Roulette.open or Roulette.openGeneration ~= generation then return end
+            if Roulette.promptAt and Roulette.promptAt >= hiddenAt then
+                Roulette:Trace("special windows hidden by a prompt: kept open")
+                Roulette:SyncEscape()
+                return
+            end
             Roulette:Close()
-            Roulette.closingFromEscape = false
-        end
+        end)
     end)
     if UISpecialFrames then
         table.insert(UISpecialFrames, "PortalRouletteEscape")
     end
     self.escape = escape
     return root
+end
+
+-- The Escape proxy is armed only while the game UI is visible. With the UI
+-- hidden, Escape goes through LibShowcase (the engine's SetUIVisibility(true)
+-- -> onForcedExit), and the proxy must stay out of the way: measured on
+-- 70205, a ready check hides special windows from client code, which closed
+-- the wheel through the proxy before the library could reveal the UI.
+function Roulette:SyncEscape()
+    if not self.escape then return end
+    local want = self.open and not ns.Presentation:IsGameUIHidden()
+    if want ~= self.escape:IsShown() then
+        self.syncingEscape = true
+        self.escape:SetShown(want)
+        self.syncingEscape = false
+    end
+end
+
+-- The game UI came back while the wheel stays open (a dialog, chat): arm the
+-- proxy a frame later, after whatever hid special windows has run.
+function Roulette:OnGameUIShown()
+    C_Timer.After(0, function() Roulette:SyncEscape() end)
 end
 
 ------------------------------------------------------------
@@ -271,15 +304,16 @@ function Roulette:Open()
         return
     end
     self.open = true
-    ns.Hearth:Roll()
+    self.openGeneration = (self.openGeneration or 0) + 1
     self:Resolve()
     SA.RunSyncs() -- out of combat: attributes are current before the first click
     self:Paint()
 
     self.closeAnim:Stop()
     self.root:Show()
-    self.escape:Show()
+    -- (armed after Presentation:Enter below, once we know the UI state)
     ns.Presentation:Enter(self.root)
+    self:SyncEscape()
     Disc.Start(self.disc)
     if Anim.Enabled() then
         self.stage:SetAlpha(1)
@@ -293,10 +327,24 @@ function Roulette:Open()
     if ns.Sound then ns.Sound:Play("Open") end
 end
 
+-- Diagnostics: the last 20 close reasons (with a short call stack) and
+-- LibShowcase debug lines, kept in PortalRouletteDB.trace so a report can be
+-- read from SavedVariables after /reload.
+function Roulette:Trace(what)
+    local db = ns.db
+    if not db or not db.debugTrace then return end
+    if type(db.trace) ~= "table" then db.trace = {} end
+    local stack = debugstack and debugstack(3, 3, 0) or ""
+    stack = stack:gsub("Interface/AddOns/", ""):gsub("\n", " | ")
+    table.insert(db.trace, date("%H:%M:%S") .. " " .. tostring(what) .. " :: " .. stack)
+    while #db.trace > 20 do table.remove(db.trace, 1) end
+end
+
 function Roulette:Close()
     if not self.open then
         return
     end
+    self:Trace("Close")
     if InCombatLockdown() then
         return -- closed at combat entry; nothing to do under lockdown
     end
@@ -332,6 +380,13 @@ function Roulette:UpdateNodes(elapsed)
                 ns.Node.PaintGlow(node)
             end
             Anim.UpdateSparkle(node.sparkle, elapsed, node.usable)
+        end
+    end
+    self.retryHideIn = (self.retryHideIn or 1) - elapsed
+    if self.retryHideIn <= 0 then
+        self.retryHideIn = 1
+        if ns.Presentation:RetryHide(self.root) then
+            self:SyncEscape()
         end
     end
     ns.HearthOrb.UpdateHover(self.orb, elapsed)
@@ -377,19 +432,6 @@ function Roulette:FinishClose()
     ns.Presentation:Exit("close")
 end
 
--- The header's eye button: bring the game UI back (to chat) or hide it
--- again, without closing the wheel.
-function Roulette:ToggleGameUI()
-    if not self.open or InCombatLockdown() then
-        return
-    end
-    if ns.Presentation:IsGameUIHidden() then
-        ns.Presentation:ShowGameUI()
-    else
-        ns.Presentation:HideGameUIAgain(self.root)
-        end
-end
-
 function Roulette:Toggle()
     if self.open then
         self:Close()
@@ -401,6 +443,7 @@ end
 -- Combat entry: runs inside PLAYER_REGEN_DISABLED, which is still
 -- unlocked (measured), so the wheel can close synchronously.
 function Roulette:OnCombatStart()
+    if self.open then self:Trace("combat start") end
     self:Disarm()
     if not self.open then
         return
@@ -433,10 +476,13 @@ end
 
 -- Esc / Alt+Z through LibShowcase, or another forced restore.
 function Roulette:OnForcedExit(reason)
+    self:Trace("forced exit: " .. tostring(reason))
+    ns.Presentation:MarkClosed()
+    self:Disarm()
+    self:HideInfo()
     if self.open and not InCombatLockdown() then
         self.open = false
-        self.escape:Hide()
-        self:HideInfo()
+        self:SyncEscape()
         Disc.Stop(self.disc)
         self.root:Hide()
     end
@@ -722,6 +768,19 @@ function Roulette:Initialize()
         hooksecurefunc(ChatFrameUtil, "ActivateChat", onChatActivated)
     elseif ChatEdit_ActivateChat then
         hooksecurefunc("ChatEdit_ActivateChat", onChatActivated)
+    end
+
+    -- When did a prompt last appear? The Escape proxy uses it to tell a
+    -- client-side close of special windows from an Escape press.
+    local function promptShown()
+        Roulette.promptAt = GetTime()
+    end
+    for _, event in ipairs({ "READY_CHECK", "LFG_PROPOSAL_SHOW", "LFG_ROLE_CHECK_SHOW",
+        "ROLE_POLL_BEGIN", "PVP_ROLE_POPUP_SHOW", "START_LOOT_ROLL" }) do
+        Events:Register(event, promptShown)
+    end
+    if StaticPopup_Show then
+        hooksecurefunc("StaticPopup_Show", promptShown)
     end
 
     -- Dialogs (guild/party invites, ready checks) shown while the game UI is

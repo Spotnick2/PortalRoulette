@@ -1,5 +1,5 @@
 -- The glass reskin must keep drag-to-macro behavior, action-bar visibility,
--- theme settings and the shared entry-point icon. Macro APIs are listed in
+-- and the shared entry-point icon. Macro APIs are listed in
 -- the 70205 dump; these fakes record their existing call contract.
 dofile("tests/wow_stubs.lua")
 local H = dofile("tests/harness.lua")
@@ -80,9 +80,8 @@ WoW.spells[10059] = nil
 H.eq(L:GetDesiredMacroIcon(), 5929586, "the macro icon does not depend on any spell being cached")
 WoW.spells[10059] = { name = "Portal: Stormwind", icon = 135748 }
 
-L:ApplyTheme("fire")
-H.eq(L.themeKey, "fire", "theme choice is retained")
-H.eq(button.art:GetTexture(), ns.Media.LAUNCHER_PORTAL, "theme colors light rather than swapping detailed art")
+L:ApplyTheme()
+H.eq(button.art:GetTexture(), ns.Media.LAUNCHER_PORTAL, "the launcher keeps the portal art")
 button:GetScript("OnEnter")(button)
 H.check(button.highlight:GetAlpha() > 0, "hover adds glass light")
 button:GetScript("OnLeave")(button)
@@ -158,4 +157,88 @@ EditMacro = function() error("refused") end
 macro = { name = "Portal Roulette", icon = customIcon, body = "/pr" }
 H.check(pcall(L.RefreshExistingMacroIcon, L), "a refused EditMacro is contained")
 EditMacro = realEdit
+-- Launcher glow styles. Without the spell-alert template the "alert" style
+-- falls back to the blue border; with it, Blizzard's alert plays on our own
+-- frame (never through ActionButtonSpellAlertManager).
+ns.db.animationsEnabled = true -- turned off by the attention checks above
+L.prompt:Hide()
+button:Show()
+button.hovered = true
+ns.db.launcherGlow = "blue"
+L:RefreshAttention()
+H.check(button.attention:IsShown(), "blue: the border shows on hover")
+ns.db.launcherGlow = "alert"
+button.spellAlert = nil
+L:RefreshAttention()
+H.check(button.attention:IsShown() and not button.spellAlert, "alert without the template falls back to blue")
+
+local realCreate = CreateFrame
+CreateFrame = function(kind, name, parent, template)
+    local f = realCreate(kind, name, parent, template)
+    if template == "ActionButtonSpellAlertTemplate" then
+        f.ProcStartAnim = f:CreateAnimationGroup()
+        f.ProcLoop = f:CreateAnimationGroup()
+    end
+    return f
+end
+button.spellAlert = nil
+L:RefreshAttention()
+CreateFrame = realCreate
+H.check(button.spellAlert and button.spellAlert:IsShown(), "alert: Blizzard's spell alert shows on hover")
+H.check(button.spellAlert.ProcStartAnim:IsPlaying(), "and plays its start animation")
+H.check(not button.attention:IsShown(), "the blue border is off with the alert style")
+button.hovered = false
+L:RefreshAttention()
+H.check(not button.spellAlert:IsShown(), "the alert hides when no longer hovered")
+ns.db.launcherGlow = "off"
+button.hovered = true
+L:RefreshAttention()
+H.check(not button.attention:IsShown() and not button.spellAlert:IsShown(), "off: no glow at all")
+button.hovered = false
+
+-- The "drag me" prompt (fresh install) always uses the spell alert, whatever
+-- the hover setting says; without the prompt the setting applies.
+ns.db.launcherGlow = "blue"
+L.prompt:Show()
+L:RefreshAttention()
+H.check(button.spellAlert:IsShown() and not button.attention:IsShown(), "the prompt overrides the setting with the spell alert")
+L.prompt:Hide()
+button.hovered = true
+L:RefreshAttention()
+H.check(button.attention:IsShown() and not button.spellAlert:IsShown(), "without the prompt, hover uses the setting (blue)")
+button.hovered = false
+L:RefreshAttention()
+
+-- Hiding the launcher (the wheel hides the game UI) and showing it again
+-- restarts the spell alert while the prompt is up.
+L.prompt:Show()
+L:RefreshAttention()
+button:Hide()
+H.check(not button.spellAlert:IsShown(), "the spell alert hides with the launcher")
+button:Show()
+L:RefreshAttention()
+H.check(button.spellAlert:IsShown() and button.spellAlert.ProcStartAnim:IsPlaying(),
+    "and restarts when the launcher shows again")
+L.prompt:Hide()
+L:RefreshAttention()
+
+-- Animation controls apply to the yellow alert too: with motion off, the
+-- alert never plays and the static blue border is shown instead.
+for _, off in ipairs({
+    { animationsEnabled = false },
+    { idleAnimationsEnabled = false },
+    { animationIntensity = 0 },
+}) do
+    local saved = {}
+    for k, v in pairs(off) do saved[k] = ns.db[k]; ns.db[k] = v end
+    L.prompt:Show()
+    L:RefreshAttention()
+    H.check(not button.spellAlert:IsShown() and not button.spellAlert.ProcStartAnim:IsPlaying()
+        and not button.spellAlert.ProcLoop:IsPlaying(), "motion off: the spell alert does not play")
+    H.check(button.attention:IsShown() and not button.attentionPulse:IsPlaying(),
+        "motion off: a static border keeps the launcher noticeable")
+    L.prompt:Hide()
+    L:RefreshAttention()
+    for k, v in pairs(saved) do ns.db[k] = v end
+end
 H.done("test_launcher")

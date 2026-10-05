@@ -15,26 +15,8 @@ local PREVIOUS_DEFAULT_ICONS = { [135748] = true } -- Portal: Stormwind's textur
 local BASE_BUTTON_SIZE = 52
 local MAX_ACTION_SLOTS = 180
 
-local THEME_KEY_ARCANE = "arcane"
-local THEME_KEY_FIRE = "fire"
-local THEME_KEY_FROST = "frost"
-local THEME_LABEL_BY_KEY = {
-    [THEME_KEY_ARCANE] = "Arcane",
-    [THEME_KEY_FIRE] = "Fire",
-    [THEME_KEY_FROST] = "Frost",
-}
-
-local launcherThemes = {
-    [THEME_KEY_ARCANE] = {
-        color = { 0.64, 0.38, 1.0 },
-    },
-    [THEME_KEY_FIRE] = {
-        color = { 1.0, 0.42, 0.16 },
-    },
-    [THEME_KEY_FROST] = {
-        color = { 0.38, 0.68, 1.0 },
-    },
-}
+-- The launcher's accent (rim tint and hover glow): arcane violet.
+local ACCENT = { 0.64, 0.38, 1.0 }
 
 local function round(value)
     if value >= 0 then
@@ -43,32 +25,13 @@ local function round(value)
     return math.ceil(value - 0.5)
 end
 
--- Forever has no talent tabs (GetTalentTabInfo is gone and
--- C_SpecializationInfo reports a single "Mage" spec, measured on 70205), so
--- the theme is a choice in the options. "auto" is Arcane.
-local function getDesiredThemeKey()
-    local key = ns.db and ns.db.launcherTheme
-    if launcherThemes[key] then
-        return key
-    end
-    return THEME_KEY_ARCANE
-end
-
-function LauncherButton:GetActiveTheme()
-    local key = self.themeKey or THEME_KEY_ARCANE
-    return launcherThemes[key] or launcherThemes[THEME_KEY_ARCANE]
-end
-
-function LauncherButton:ApplyTheme(themeKey)
+function LauncherButton:ApplyTheme()
     if not self.button then
         return
     end
-    local resolvedKey = themeKey or THEME_KEY_ARCANE
-    local theme = launcherThemes[resolvedKey] or launcherThemes[THEME_KEY_ARCANE]
-    self.themeKey = resolvedKey
     local button = self.button
     button.art:SetTexture(ns.Media.LAUNCHER_PORTAL)
-    local c = theme.color or { 0.64, 0.38, 1.0 }
+    local c = ACCENT
     ns.Skin:SetRimColor(button.glass, 0.65 + c[1] * 0.35, 0.65 + c[2] * 0.35, 0.65 + c[3] * 0.35, 0.8)
     button.glow:SetVertexColor(c[1], c[2], c[3])
 end
@@ -83,7 +46,7 @@ function LauncherButton:PositionPrompt()
 end
 
 function LauncherButton:RefreshSpecTheme()
-    self:ApplyTheme(getDesiredThemeKey())
+    self:ApplyTheme()
 end
 
 function LauncherButton:GetDesiredMacroIcon()
@@ -325,25 +288,6 @@ function LauncherButton:CreatePrompt()
     self:PositionPrompt()
 end
 
-function LauncherButton:GetActiveThemeLabel()
-    return THEME_LABEL_BY_KEY[self.themeKey] or THEME_LABEL_BY_KEY[THEME_KEY_ARCANE]
-end
-
-function LauncherButton:ScheduleSpecThemeRefresh()
-    if not (C_Timer and C_Timer.After) then
-        return
-    end
-
-    self._themeRefreshToken = (self._themeRefreshToken or 0) + 1
-    local token = self._themeRefreshToken
-    C_Timer.After(0.25, function()
-        if LauncherButton._themeRefreshToken ~= token or not LauncherButton.button then
-            return
-        end
-        LauncherButton:RefreshSpecTheme()
-    end)
-end
-
 function LauncherButton:GetScale()
     return tonumber(ns.db and ns.db.launcherScale) or 1.35
 end
@@ -374,14 +318,76 @@ end
 
 -- Blue action-button attention, like ForeverCombatAssistant. A visual-only
 -- child pulses while the placement hint or hover tooltip is showing.
+-- The yellow "spell alert" glow Blizzard puts on proc'd action buttons (and
+-- on the Issue Reporter). Our own frame from ActionButtonSpellAlertTemplate,
+-- animated directly: never through ActionButtonSpellAlertManager, whose
+-- shared table the real action bars use (an addon write would taint it).
+-- Nil when the template is unavailable.
+function LauncherButton:GetSpellAlert()
+    local button = self.button
+    if button.spellAlert == nil then
+        local ok, frame = pcall(CreateFrame, "Frame", nil, button, "ActionButtonSpellAlertTemplate")
+        if ok and frame and type(frame.ProcStartAnim) == "table" and type(frame.ProcLoop) == "table" then
+            local w, h = button:GetSize()
+            frame:SetSize(w * 1.4, h * 1.4)
+            frame:SetPoint("CENTER", button, "CENTER", 0, 0)
+            frame:SetFrameLevel(button:GetFrameLevel() + 12)
+            frame:EnableMouse(false)
+            frame:Hide()
+            button.spellAlert = frame
+        else
+            button.spellAlert = false
+        end
+    end
+    return button.spellAlert or nil
+end
+
+local function showSpellAlert(alert, on)
+    if on then
+        if not alert:IsShown() then
+            alert:Show()
+            alert.ProcStartAnim:Play() -- its OnFinished starts the loop
+        end
+    elseif alert:IsShown() then
+        alert.ProcStartAnim:Stop()
+        alert.ProcLoop:Stop()
+        alert:Hide()
+    end
+end
+
+-- The launcher's attention glow, while hovered or while the "drag me to an
+-- action bar" prompt shows. On hover the style comes from the options: "blue" (our pulsing
+-- border), "alert" (Blizzard's yellow spell-alert glow) or "off".
 function LauncherButton:RefreshAttention()
     local button = self.button
     if not button then return end
-    local active = button:IsShown() and (button.hovered or (self.prompt and self.prompt:IsShown()))
-    button.attention:SetShown(active and true or false)
+    local prompting = self.prompt and self.prompt:IsShown() and true or false
+    local active = button:IsShown() and (button.hovered or prompting) and true or false
+    local style = ns.db and ns.db.launcherGlow or "blue"
+    if prompting then
+        -- The "drag me to an action bar" prompt (a fresh install) always
+        -- uses the yellow spell alert so the launcher gets noticed; the
+        -- setting applies to hover.
+        style = "alert"
+    end
     local intensity = ns.Anim.Intensity()
+    local motion = ns.Anim.Enabled("idle") and intensity > 0
+    if style == "alert" and not motion then
+        -- Blizzard's alert is all animation: with motion off, the static
+        -- blue border is the attention cue instead.
+        style = "blue"
+    end
+    local alert = style == "alert" and self:GetSpellAlert()
+    if style == "alert" and not alert then
+        style = "blue" -- template unavailable: fall back to our own border
+    end
+    if button.spellAlert then
+        showSpellAlert(button.spellAlert, active and style == "alert")
+    end
+    local blue = active and style == "blue"
+    button.attention:SetShown(blue)
     button.attention:SetAlpha(0.45 + 0.4 * intensity)
-    if active and ns.Anim.Enabled("idle") and intensity > 0 then
+    if blue and motion then
         if not button.attentionPulse:IsPlaying() then button.attentionPulse:Play() end
     else
         button.attentionPulse:Stop()
@@ -395,9 +401,9 @@ local function showTooltip(selfButton)
     GameTooltip:AddLine("Click: open the wheel", 1, 1, 1)
     GameTooltip:AddLine("Drag: place on an action bar", 0.75, 0.8, 0.9)
     if ns.db.lockLauncher then
-        GameTooltip:AddLine("Shift-drag: locked", 1, 0.45, 0.45)
+        GameTooltip:AddLine("Position locked (unlock it in the options to move)", 1, 0.45, 0.45)
     else
-        GameTooltip:AddLine("Shift-drag: move", 0.75, 0.8, 0.9)
+        GameTooltip:AddLine("Shift-drag: move (lock it in the options)", 0.75, 0.8, 0.9)
     end
     GameTooltip:AddLine("Shift-right-click: options", 0.75, 0.8, 0.9)
     local key1 = GetBindingKey("PORTALROULETTE_TOGGLE")
@@ -551,6 +557,13 @@ function LauncherButton:Create()
         selfButton.hovered = false
         selfButton.attentionPulse:Stop()
         selfButton.attention:Hide()
+        -- Hide the spell alert too: its template stops the loop on hide, and
+        -- a child left "shown" would never restart when the UI comes back.
+        if selfButton.spellAlert then
+            selfButton.spellAlert.ProcStartAnim:Stop()
+            selfButton.spellAlert.ProcLoop:Stop()
+            selfButton.spellAlert:Hide()
+        end
         if GameTooltip:IsOwned(selfButton) then GameTooltip:Hide() end
     end)
     button:SetScript("OnShow", function()
@@ -579,6 +592,7 @@ function LauncherButton:ApplySettings()
     self:ApplyPosition()
     self:RefreshSpecTheme()
     self:RefreshVisibility()
+    self:RefreshAttention()
 end
 
 function LauncherButton:Initialize()
@@ -589,6 +603,5 @@ function LauncherButton:Initialize()
     self:RegisterActionBarEvents()
     self:RefreshExistingMacroIcon()
     self:ApplySettings()
-    self:ScheduleSpecThemeRefresh()
     self:RefreshVisibility()
 end

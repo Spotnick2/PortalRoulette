@@ -4,7 +4,8 @@
 -- Order: the Hearthstone (PlayerHasHearthstone() is only a hint: measured
 -- nil on 70205 with one in the backpack, so item 6948 is counted
 -- directly), then Crumbling Hearthstone (single use), then owned hearth
--- toys. "Random" picks once per wheel open, not on every refresh.
+-- toys. Always the first available: a single-use Crumbling Hearthstone is
+-- only used when there is no Hearthstone.
 -- ============================================================
 
 local _, ns = ...
@@ -58,27 +59,11 @@ function Hearth:Available()
     return list
 end
 
--- Call once per wheel open: settles which source Random uses.
-function Hearth:Roll()
-    self.rolled = nil
-    local list = self:Available()
-    if #list > 1 and ns.db and ns.db.utilityMode == ns.UtilityMode.RANDOM then
-        self.rolled = list[math.random(#list)].id
-    end
-end
-
 -- The source to use now, or nil when the player has none.
 function Hearth:Current()
     local list = self:Available()
     if #list == 0 then
         return nil
-    end
-    if self.rolled then
-        for _, source in ipairs(list) do
-            if source.id == self.rolled then
-                return source
-            end
-        end
     end
     return list[1]
 end

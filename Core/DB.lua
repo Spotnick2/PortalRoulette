@@ -36,7 +36,13 @@ end
 -- before defaults are merged, so nothing the player set is lost.
 local function migrate(saved)
     local version = tonumber(saved.version) or 0
-    if version >= 5 then
+    if version >= 6 then
+        return
+    end
+    -- Schema 6: the center-orb utility mode and the launcher theme are gone
+    -- (the orb always prefers the Hearthstone; the launcher has one accent).
+    saved.utilityMode, saved.launcherTheme = nil, nil
+    if version == 5 then
         return
     end
     if version == 4 then
@@ -53,11 +59,6 @@ local function migrate(saved)
         minimapPos = angle or 220,
         hide = saved.showMinimapButton == false,
     }
-
-    -- The TBC utility modes no longer exist.
-    if saved.utilityMode ~= "hearthstone" and saved.utilityMode ~= "random" then
-        saved.utilityMode = "hearthstone"
-    end
 
     -- The camera is on by default on Forever.
     saved.cinematicCamera = true

@@ -23,10 +23,11 @@ local ns = H.loadAddon({ savedDB = saved })
 local db = PortalRouletteDB
 
 -- Migration v3 -> v4.
-H.eq(db.version, 5, "schema is 5")
+H.eq(db.version, 6, "schema is 6")
 H.eq(db.minimap.minimapPos, 137, "the minimap angle survives")
 H.eq(db.minimap.hide, true, "a hidden minimap button stays hidden")
-H.eq(db.utilityMode, "hearthstone", "a TBC utility mode becomes hearthstone")
+H.eq(db.utilityMode, nil, "the removed utility mode is dropped")
+H.eq(db.launcherTheme, nil, "the removed launcher theme is dropped")
 H.eq(db.cinematicCamera, true, "the camera is on by default")
 H.eq(db.debugAtiesh, nil, "removed keys are dropped")
 H.eq(db.uiScale, 1.2, "player settings survive")
@@ -82,12 +83,7 @@ WoW.counts[282006] = 1
 WoW.items[282006] = "Crumbling Hearthstone"
 H.eq(ns.Hearth:Current().id, 282006, "Crumbling Hearthstone is the fallback")
 WoW.counts[6948] = 1
-db.utilityMode = "random"
-math.randomseed(1)
-ns.Hearth:Roll()
-local first = ns.Hearth:Current().id
-for _ = 1, 10 do H.eq(ns.Hearth:Current().id, first, "random holds within one open") end
-db.utilityMode = "hearthstone"
+H.eq(ns.Hearth:Current().id, 6948, "with both, the Hearthstone is used, never the single-use one")
 
 -- Reagents: required / free / unknown.
 WoW.items[17031] = "Rune of Teleportation"
