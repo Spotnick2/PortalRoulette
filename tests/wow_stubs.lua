@@ -6,8 +6,8 @@
 -- under stock Lua 5.1 with no game client.
 --
 -- The important rule: READING AN UNSTUBBED GLOBAL IS AN ERROR. This file is
--- the list of APIs verified present on build 1.60.1.70205
--- (C:\Projects\References\forever-api-1.60.1.70205.md). Stub a global only
+-- the list of APIs verified present on build 1.60.1.70338
+-- (C:\Projects\WoW\References\forever-api-1.60.1.70338.md). Stub a global only
 -- after confirming it there, with the client's signature. Names the client
 -- does NOT have go in KNOWN_ABSENT, so the addon has to cope without them.
 -- A forgiving stub quietly certifies calls the client will reject.
