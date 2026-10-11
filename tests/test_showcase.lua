@@ -1,5 +1,5 @@
 -- The wheel with the real LibShowcase (from $LIBSHOWCASE or ../LibShowcase;
--- .pkgmeta pins r3 and tests/run.ps1 checks the checkout matches that tag):
+-- .pkgmeta pins r4 and tests/run.ps1 checks the checkout matches that tag):
 -- open hides the game UI and lifts the root; combat entry restores at once.
 
 dofile("tests/wow_stubs.lua")

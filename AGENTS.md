@@ -5,11 +5,11 @@ Retail (Mainline) API, client 1.60.1, `## Interface: 16001`. The TBC Anniversary
 at tag `v0.1.1-tbc` and no longer supported.
 
 Read before changing code:
-- `C:\Projects\References\PORTING-TBC-TO-FOREVER.md`: what changed from TBC, measured.
-- `C:\Projects\References\forever-api-1.60.1.70205.md`: the client's API (grep it; it is huge).
-- `C:\Projects\References\EMBEDDED-LIBRARIES.md`: rules for the embedded libraries.
-- `C:\Projects\LibGlass\docs\GLASS-MATERIAL.md`: the glass material.
-- `C:\Projects\wow-ui-source`: FrameXML (build 70170).
+- `C:\Projects\WoW\References\PORTING-TBC-TO-FOREVER.md`: what changed from TBC, measured.
+- `C:\Projects\WoW\References\forever-api-1.60.1.70338.md`: the client's API (grep it; it is huge).
+- `C:\Projects\WoW\References\EMBEDDED-LIBRARIES.md`: rules for the embedded libraries.
+- `C:\Projects\WoW\LibGlass\docs\GLASS-MATERIAL.md`: the glass material.
+- `C:\Projects\WoW\wow-ui-source`: FrameXML (build 70338).
 - `docs/FOREVER-PROBE.md`: what has been measured in game for this addon.
 
 The rule is **measured beats reasoned**. Anything spell-, item- or combat-dependent is confirmed with

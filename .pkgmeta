@@ -11,10 +11,10 @@ manual-changelog:
 externals:
   Libs/LibGlass-1.0:
     url: https://github.com/Spotnick2/LibGlass
-    tag: r2
+    tag: r5
   Libs/LibShowcase-1.0:
     url: https://github.com/Spotnick2/LibShowcase
-    tag: r3
+    tag: r4
 
 # YAML list. Each pattern matches the whole path from the package root.
 # The libraries' own ignore lists are not honoured by CurseForge's packager,
