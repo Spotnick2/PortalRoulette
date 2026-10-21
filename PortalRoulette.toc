@@ -5,6 +5,7 @@
 ## Author: Spotnick
 ## Version: @project-version@
 ## SavedVariables: PortalRouletteDB
+## OptionalDeps: GlassUI, GlassActionBars
 ## X-Curse-Project-ID: 1540067
 
 Libs\LibStub\LibStub.lua
@@ -18,6 +19,7 @@ Core\Constants.lua
 Core\Compat.lua
 Core\DB.lua
 Core\Events.lua
+Core\GlassUI.lua
 Core\Sound.lua
 Core\SecureAction.lua
 Data\Destinations.lua
@@ -34,6 +36,7 @@ UI\Wheel\Disc.lua
 UI\Wheel\Presentation.lua
 UI\Wheel\Roulette.lua
 UI\LauncherButton.lua
+UI\UtilityButton.lua
 UI\Minimap.lua
 Options\Options.lua
 Core\Init.lua

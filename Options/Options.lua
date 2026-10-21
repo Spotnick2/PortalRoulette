@@ -171,6 +171,27 @@ local function build()
     a = toggle(panel, h, "broadcastPortals", "Announce portals")
     a = toggle(panel, a, "broadcastTeleports", "Announce teleports")
 
+    -- Only with Glass UI loaded: the suite look and the Utility bar button.
+    if ns.GlassUI:Present() then
+        h = heading(panel, "Glass UI", a, 0, -18)
+        local status = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+        status:SetPoint("TOPLEFT", h, "BOTTOMLEFT", 0, -6)
+        status:SetWidth(300)
+        status:SetJustifyH("LEFT")
+        controls[#controls + 1] = function()
+            local lines = { ns.GlassUI:StatusText() }
+            lines[#lines + 1] = ns.UtilityButton:StatusText()
+            status:SetText(table.concat(lines, "\n"))
+        end
+        a = status
+        if ns.GlassUI:CanOpen() then
+            local open = button(panel, "Open Glass UI", 150)
+            open:SetPoint("TOPLEFT", a, "BOTTOMLEFT", 0, -8)
+            open:SetScript("OnClick", function() ns.GlassUI:Open() end)
+            a = open
+        end
+    end
+
     local reset = button(panel, "Reset positions", 150)
     reset:SetPoint("TOPLEFT", a, "BOTTOMLEFT", 0, -18)
     reset:SetScript("OnClick", function()

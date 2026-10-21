@@ -1,4 +1,4 @@
--- The wheel built with the real LibGlass r5 (from $LIBGLASS or ../LibGlass)
+-- The wheel built with the real LibGlass (r11, as pinned) (from $LIBGLASS or ../LibGlass)
 -- instead of the plain fallback.
 
 dofile("tests/wow_stubs.lua")

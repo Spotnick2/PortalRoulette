@@ -3,6 +3,10 @@
 -- the disc material (MINOR >= 2), else a plain fallback that keeps the
 -- addon usable (round tinted shapes with a rim). Every surface of the wheel
 -- is made here, so the rest of the UI never talks to LibGlass directly.
+--
+-- With Glass UI loaded and following (Core/GlassUI.lua), the instance is
+-- LibGlass's Pearl preset and our own look (the disc's tuning, its rim art,
+-- the panels' grain and wash) is suspended: OwnLook() is false.
 -- ============================================================
 
 local _, ns = ...
@@ -27,10 +31,32 @@ function Skin:Glass()
         lib, minor = stub:GetLibrary("LibGlass-1.0", true)
     end
     if lib and minor and minor >= NEEDS_MINOR and lib.ready == minor then
-        local ok, instance = pcall(lib.New, lib, { font = "arial" })
-        if ok and instance then
-            self.glass = instance
+        local GlassUI = ns.GlassUI
+        local wanted = GlassUI and GlassUI:Preset()
+        local reason
+        if wanted == "pearl" then
+            if minor < GlassUI.PEARL_MINOR then
+                reason = "library-too-old"
+            else
+                local ok, instance = pcall(lib.New, lib, { preset = "pearl", font = "arial" })
+                if ok and instance then
+                    self.glass, self.preset = instance, "pearl"
+                else
+                    reason = "build-failed"
+                end
+            end
         end
+        if not self.glass then
+            local ok, instance = pcall(lib.New, lib, { font = "arial" })
+            if ok and instance then
+                self.glass = instance
+            end
+        end
+        if wanted and GlassUI then
+            GlassUI:Built(self.preset, reason, minor)
+        end
+    elseif ns.GlassUI and ns.GlassUI:Preset() then
+        ns.GlassUI:Built(nil, "library-too-old", minor)
     end
     if not self.glass and not self.warned then
         self.warned = true
@@ -39,6 +65,14 @@ function Skin:Glass()
         end
     end
     return self.glass or nil
+end
+
+-- False while following Glass UI's Pearl: the per-surface tuning and rim
+-- art below are Portal Roulette's own look, suspended then (SUITE.md,
+-- "Each addon", step 3). Rim colours that show state stay.
+function Skin:OwnLook()
+    self:Glass()
+    return self.preset == nil
 end
 
 local function circleMask(frame, region)
@@ -68,7 +102,7 @@ function Skin:Disc(host, size)
         local ok, g = pcall(glass.Disc, host, size)
         if ok and g then
             g.mask = g.mask or circleMask(host)
-            if size == "disc" then
+            if size == "disc" and self:OwnLook() then
                 -- Tune this wheel surface only. LibGlass r2 puts body layers
                 -- below our BORDER energy and rims on g.top, above it.
                 -- Each layer guarded: a later LibGlass layout must not

@@ -6,10 +6,10 @@ at tag `v0.1.1-tbc` and no longer supported.
 
 Read before changing code:
 - `C:\Projects\WoW\References\Docs\PORTING-TBC-TO-FOREVER.md`: what changed from TBC, measured.
-- `C:\Projects\WoW\References\Forever\api\forever-api-1.60.1.70338.md`: the client's API (grep it; it is huge).
+- `C:\Projects\WoW\References\Forever\api\forever-api-1.60.1.70450.md`: the client's API (grep it; it is huge).
 - `C:\Projects\WoW\References\Docs\EMBEDDED-LIBRARIES.md`: rules for the embedded libraries.
 - `C:\Projects\WoW\LibGlass\docs\GLASS-MATERIAL.md`: the glass material.
-- `C:\Projects\WoW\wow-ui-source`: FrameXML (build 70338).
+- `C:\Projects\WoW\wow-ui-source`: FrameXML (build 70450).
 - `docs/FOREVER-PROBE.md`: what has been measured in game for this addon.
 
 The rule is **measured beats reasoned**. Anything spell-, item- or combat-dependent is confirmed with
@@ -51,6 +51,15 @@ the dev probe (`Tools/PortalRouletteProbe`, `/prprobe`) before code relies on it
   the game UI is hidden, all restored on exit, combat, logout and after a crash.
 - Minimap button (LibDBIcon) and Addon Compartment entry, both hideable.
 - `/pr preview` renders the whole wheel on a low-level character with no castable actions.
+- **Glass suite integration, only when Glass UI is loaded** (`Core/GlassUI.lua`, `UI/UtilityButton.lua`).
+  Without Glass UI nothing is asked, reported or registered, and the addon looks and behaves as on its own.
+  - Glass UI's suite (`GlassUI/docs/SUITE.md`, dynamic roster member GlassUI#107): one `Theme` answer
+    at `PLAYER_LOGIN`, every class, before any glass is built. Following means LibGlass's Pearl preset
+    (r11+), with our own disc tuning, rim art and panel tuning suspended (`Skin:OwnLook()`). Not live:
+    a change applies after `/reload`.
+  - Glass Action Bars' Utility bar (GAB#52, its `docs/PUBLIC-API.md` version 2): with Glass UI and GAB,
+    a mage registers the launcher as a provider button (off until ticked in GAB's options). While it is
+    shown there (`OnHosted(true)`), the floating launcher and its macro prompt stay hidden.
 
 ## Technical guardrails
 - Secure casting (see the plan and `Core/SecureAction.lua`):

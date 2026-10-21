@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- **Glass suite**, only when the Glass UI addon is installed (without it, nothing changes):
+  - the wheel joins Glass UI's suite and follows its Pearl look when Glass UI says so (after a
+    `/reload`); its own look comes back when it stops following;
+  - with Glass Action Bars as well, the launcher can be a button on its Utility bar (off until you
+    tick it there). While it's on the bar, the floating launcher and its placement prompt hide.
+- LibGlass-1.0 updated to r11.
+
 ## v1.0.0
 
 Portal Roulette moves to **WoW: Forever**. The TBC Anniversary version is no longer supported (last
