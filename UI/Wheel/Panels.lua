@@ -54,7 +54,7 @@ function Panels.CreateHeader(root)
     if Skin:OwnLook() then
         if g.tint then g.tint:SetColorTexture(0.10, 0.13, 0.22, 0.12) end
         if g.grain then g.grain:SetAlpha(0.025) end
-        if g.wash then g.wash:SetAlpha(0.2) end
+        Skin:SetWash(g, 0.2)
         if g.shadow then g.shadow:SetAlpha(0.35) end
         if g.rim then g.rim:SetAlpha(0.3) end
         if g.dark then g.dark:SetAlpha(0.4) end

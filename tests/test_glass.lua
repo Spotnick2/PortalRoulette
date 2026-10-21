@@ -22,6 +22,18 @@ H.check(ns.Roulette.disc.glass.top ~= nil, "the disc is glass")
 local g = ns.Roulette.disc.glass
 H.eq(g.rim:GetTexture(), ns.Media.DISC_RIM, "only the wheel uses its thin rim asset")
 H.eq(g.grain:GetAlpha(), 0.06, "wheel grain is restrained")
+
+-- #6: the wash is a gradient, which ignores SetAlpha on Forever; its
+-- strength goes through the gradient's top colour.
+local function washTop(surface) return surface.wash._gradient.max.a end
+local builtWash = glass.STYLE.wash
+local function near(a, b) return math.abs(a - b) < 1e-6 end
+H.check(near(washTop(g), builtWash * 0.22), "disc wash at 0.22 of the built strength")
+H.check(near(washTop(ns.Roulette.header.glass), builtWash * 0.2), "header wash at 0.2")
+ns.LauncherButton:CreatePrompt()
+H.check(near(washTop(ns.LauncherButton.prompt.glass), builtWash * 0.3), "prompt wash at 0.3")
+g.wash:SetAlpha(0)
+H.eq(g.wash:GetAlpha(), 1, "the stub, like the client, ignores SetAlpha on a gradient")
 local other = CreateFrame("Frame", nil, UIParent)
 other:SetSize(440, 440)
 local untouched = glass.Disc(other, "disc")

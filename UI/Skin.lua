@@ -109,7 +109,7 @@ function Skin:Disc(host, size)
                 -- break wheel creation.
                 if g.tint then g.tint:SetColorTexture(0.10, 0.15, 0.23, 0.14) end
                 if g.grain then g.grain:SetAlpha(0.06) end
-                if g.wash then g.wash:SetAlpha(0.22) end
+                self:SetWash(g, 0.22)
                 if g.shadow then g.shadow:SetAlpha(0.45) end
                 if g.rim then
                     g.rim:SetTexture(ns.Media.DISC_RIM)
@@ -147,6 +147,25 @@ function Skin:Disc(host, size)
     top:SetFrameLevel(host:GetFrameLevel() + 10)
     g.top, g.mask, g.rim, g.fill = top, circleMask(host), rim, fill
     return g
+end
+
+-- A surface's wash (its top-down white sheen) at `factor` times the
+-- instance's built strength. Not SetAlpha: on Forever a gradient texture
+-- ignores it (porting guide §3, #6), so the strength goes through the
+-- gradient, as LibGlass r7+'s SetWash paints it.
+function Skin:SetWash(g, factor)
+    local glass = self:Glass()
+    if not (glass and g and g.wash) then
+        return
+    end
+    local built = glass.STYLE and glass.STYLE.wash or 0
+    local top = math.max(0, math.min(1, built * factor))
+    if glass.SetWash then
+        pcall(glass.SetWash, g, top)
+    else
+        g.wash:SetGradient("VERTICAL", CreateColor(1, 1, 1, 0), CreateColor(1, 1, 1, top))
+        g.wash:SetShown(top > 0)
+    end
 end
 
 -- A rounded-rect glass pill (header, plates, reagent strip).

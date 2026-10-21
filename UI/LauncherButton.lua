@@ -256,7 +256,7 @@ function LauncherButton:CreatePrompt()
     prompt.glass = Skin:Pill(prompt)
     if Skin:OwnLook() then
         if prompt.glass.grain then prompt.glass.grain:SetAlpha(0.04) end
-        if prompt.glass.wash then prompt.glass.wash:SetAlpha(0.3) end
+        Skin:SetWash(prompt.glass, 0.3)
     end
     local top = prompt.glass.top or prompt
 
