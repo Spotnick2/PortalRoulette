@@ -158,7 +158,12 @@ WoW.blockedCall = blockedCall
 
 function Frame:EnableMouse(v) self._mouse = v and true or false end
 function Frame:IsMouseEnabled() return self._mouse == true end
-function Frame:SetAlpha(a) self._alpha = a end
+-- Measured on 70374 (porting guide §3): a texture given a gradient ignores
+-- a later SetAlpha, and GetAlpha keeps reading what it was.
+function Frame:SetAlpha(a) if not self._gradient then self._alpha = a end end
+function Frame:SetGradient(orientation, minColor, maxColor)
+    self._gradient = { orientation = orientation, min = minColor, max = maxColor }
+end
 function Frame:GetAlpha() return self._alpha or 1 end
 function Frame:SetParent(p)
     if blockedCall(self, "SetParent") then return end
