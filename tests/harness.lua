@@ -80,9 +80,13 @@ function H.loadAddon(opts)
         end
     end
     for _, lib in ipairs(opts.libs or {}) do
-        local chunk, err = loadfile(lib)
-        if not chunk then error(err) end
-        chunk()
+        if type(lib) == "function" then
+            lib() -- a fake library built in the test
+        else
+            local chunk, err = loadfile(lib)
+            if not chunk then error(err) end
+            chunk()
+        end
     end
     if opts.savedDB then rawset(_G, "PortalRouletteDB", opts.savedDB) end
     WoW.fire("ADDON_LOADED", "PortalRoulette")

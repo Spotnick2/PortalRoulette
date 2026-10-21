@@ -50,12 +50,15 @@ function Panels.CreateHeader(root)
     header.glass = Skin:Pill(header)
     local g = header.glass
     -- Retain liquid glass, with a much clearer reading surface and thin lip.
-    if g.tint then g.tint:SetColorTexture(0.10, 0.13, 0.22, 0.12) end
-    if g.grain then g.grain:SetAlpha(0.025) end
-    if g.wash then g.wash:SetAlpha(0.2) end
-    if g.shadow then g.shadow:SetAlpha(0.35) end
-    if g.rim then g.rim:SetAlpha(0.3) end
-    if g.dark then g.dark:SetAlpha(0.4) end
+    -- Our own look: suspended while following Glass UI's Pearl.
+    if Skin:OwnLook() then
+        if g.tint then g.tint:SetColorTexture(0.10, 0.13, 0.22, 0.12) end
+        if g.grain then g.grain:SetAlpha(0.025) end
+        if g.wash then g.wash:SetAlpha(0.2) end
+        if g.shadow then g.shadow:SetAlpha(0.35) end
+        if g.rim then g.rim:SetAlpha(0.3) end
+        if g.dark then g.dark:SetAlpha(0.4) end
+    end
     local top = g.top or header
     local title = Skin:Font(top, 20, "CENTER")
     title:SetFont("Fonts\\FRIZQT__.TTF", 20, "")

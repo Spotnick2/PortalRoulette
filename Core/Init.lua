@@ -179,6 +179,7 @@ local function initializeForMage()
     ns.SecureAction.Initialize()
     ns.Roulette:Initialize()
     ns.LauncherButton:Initialize()
+    ns.UtilityButton:Initialize()
     ns.Minimap:Initialize()
     ns.CastTracker:Initialize()
     ns.Options:Register()
@@ -191,6 +192,8 @@ ns.Events:Register("PLAYER_LOGIN", function()
 
     local _, classToken = UnitClass("player")
     ns.isMage = classToken == ns.Constants.CLASS_MAGE
+    -- Before any glass is built, every class: Glass UI's one answer.
+    ns.GlassUI:Decide()
     if not ns.isMage then
         return
     end

@@ -86,7 +86,22 @@ function LauncherButton:IsLauncherMacroOnActionBar()
 end
 
 function LauncherButton:ShouldShowLauncher()
+    -- Hosted: Glass Action Bars' Utility bar shows our button instead
+    -- (UI/UtilityButton.lua). A flag, not a one-time Hide: the events
+    -- below refresh visibility again and must keep it hidden.
+    if self.hosted then
+        return false
+    end
     return not self:IsLauncherMacroOnActionBar()
+end
+
+function LauncherButton:SetHosted(hosted)
+    hosted = hosted == true
+    if self.hosted == hosted then
+        return
+    end
+    self.hosted = hosted
+    self:RefreshVisibility()
 end
 
 function LauncherButton:RefreshVisibility()
@@ -239,8 +254,10 @@ function LauncherButton:CreatePrompt()
     prompt:SetFrameStrata(self.button:GetFrameStrata())
     prompt:SetFrameLevel(self.button:GetFrameLevel() + 5)
     prompt.glass = Skin:Pill(prompt)
-    if prompt.glass.grain then prompt.glass.grain:SetAlpha(0.04) end
-    if prompt.glass.wash then prompt.glass.wash:SetAlpha(0.3) end
+    if Skin:OwnLook() then
+        if prompt.glass.grain then prompt.glass.grain:SetAlpha(0.04) end
+        if prompt.glass.wash then prompt.glass.wash:SetAlpha(0.3) end
+    end
     local top = prompt.glass.top or prompt
 
     local pointer = prompt:CreateTexture(nil, "BACKGROUND")
