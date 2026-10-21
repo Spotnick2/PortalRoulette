@@ -81,15 +81,17 @@ function GlassUI:Report(built, reason, minor)
     if ns.isMage and ns.Options and ns.Options.Open then
         state.options = function() ns.Options:Open() end
     end
-    self.reported = { built = built, reason = reason }
+    self.reported = { built = built, reason = reason, minor = minor }
     pcall(suite.Report, ADDON, state)
 end
 
--- Called by Skin after its one build attempt.
+-- Called by Skin after its one build attempt. The first report (from
+-- Decide) has no MINOR yet, so a successful build still reports once more:
+-- the suite records the winning LibGlass revision at the build attempt.
 function GlassUI:Built(built, reason, minor)
     if not self.preset then return end
     local last = self.reported
-    if last and last.built == built and last.reason == reason then return end
+    if last and last.built == built and last.reason == reason and last.minor == minor then return end
     self:Report(built, reason, minor)
 end
 

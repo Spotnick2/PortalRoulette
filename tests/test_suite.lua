@@ -151,7 +151,11 @@ if haveLib then
     H.check(ns.Roulette.disc.glass.rim:GetTexture() ~= ns.Media.DISC_RIM, "Pearl's disc rim, not our art")
     H.check(ns.Roulette.header.glass.grain == nil
         or ns.Roulette.header.glass.grain:GetAlpha() ~= 0.025, "header tuning suspended")
-    H.eq(#rec.reports, 1, "a build matching the report doesn't report again")
+    H.eq(#rec.reports, 2, "the build reports once more, with its MINOR")
+    H.eq(lastReport(rec).built, "pearl", "still Pearl")
+    H.eq(lastReport(rec).minor, LibStub("LibGlass-1.0").ready, "the winning LibGlass MINOR")
+    ns.GlassUI:Built("pearl", nil, lastReport(rec).minor)
+    H.eq(#rec.reports, 2, "the same build again doesn't report again")
     H.check(ns.GlassUI:StatusText():find("following Glass UI", 1, true), "status: following")
     ns.GlassUI:Decide()
     H.eq(#rec.theme, 1, "deciding again keeps the session's answer")
