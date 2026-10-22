@@ -1,7 +1,9 @@
 # Changelog
 
-## Unreleased
+## v1.0.1
 
+- Fixed: the glass sheen on the wheel, its title bar and the launcher's placement prompt was drawn
+  at full strength instead of the intended softer one.
 - **Glass suite**, only when the Glass UI addon is installed (without it, nothing changes):
   - the wheel joins Glass UI's suite and follows its Pearl look when Glass UI says so (after a
     `/reload`); its own look comes back when it stops following;
