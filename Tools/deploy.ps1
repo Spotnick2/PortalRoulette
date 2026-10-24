@@ -18,11 +18,11 @@
         pwsh Tools/deploy.ps1                 # addon only
         pwsh Tools/deploy.ps1 -Probe          # addon + PortalRouletteProbe
         pwsh Tools/deploy.ps1 -ProbeOnly      # just PortalRouletteProbe
-        pwsh Tools/deploy.ps1 -AddOnsPath "D:\...\_classic_beta_\Interface\AddOns"
+        pwsh Tools/deploy.ps1 -AddOnsPath "D:\...\_forever_\Interface\AddOns"
 #>
 
 param(
-    [string]$AddOnsPath = "C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\AddOns",
+    [string]$AddOnsPath = "C:\Program Files (x86)\World of Warcraft\_forever_\Interface\AddOns",
     [switch]$Probe,
     [switch]$ProbeOnly,
     [string]$LibGlass = "",
