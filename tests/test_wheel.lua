@@ -144,4 +144,47 @@ R:Close()
 R:FinishClose()
 check(not R.root:IsShown(), "closed")
 
+-- Casting from the wheel (#17). By default it stays open while the cast runs
+-- and closes when a teleport or portal succeeds.
+local function openWheel()
+    if R.open then R:Close() end
+    R:FinishClose()
+    H.slash("PORTALROULETTE", "")
+    check(R.open, "open before the cast")
+end
+local guid = 0
+local function cast(spellID, outcome)
+    guid = guid + 1
+    local g = "cast-" .. guid
+    WoW.fire("UNIT_SPELLCAST_SENT", "player", "", g, spellID)
+    if outcome then WoW.fire(outcome, "player", g, spellID) end
+end
+eq(ns.db.closeOnCastStart, false, "closing at cast start is off by default")
+openWheel()
+cast(10059)
+check(R.open, "off: the wheel stays open while the portal casts")
+WoW.fire("UNIT_SPELLCAST_SUCCEEDED", "player", "cast-" .. guid, 10059)
+check(not R.open, "off: it closes when the portal succeeds")
+openWheel()
+cast(3561, "UNIT_SPELLCAST_FAILED")
+check(R.open, "off: a failed teleport leaves it open")
+
+ns.db.closeOnCastStart = true
+openWheel()
+cast(3561)
+check(not R.open, "on: a teleport closes it as the cast starts")
+WoW.fire("UNIT_SPELLCAST_INTERRUPTED", "player", "cast-" .. guid, 3561)
+check(not R.open, "on: an interrupted cast leaves it closed")
+openWheel()
+cast(10059)
+check(not R.open, "on: a portal closes it as the cast starts")
+openWheel()
+cast(ns.Constants.SPELL_HEARTHSTONE)
+check(R.open, "on: the hearth never closes it")
+cast(99999)
+check(R.open, "on: an unrelated spell does not close it")
+ns.db.closeOnCastStart = false
+R:Close()
+R:FinishClose()
+
 done("test_wheel")
