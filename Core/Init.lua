@@ -91,7 +91,7 @@ local function handleDebugCommand(parts)
             if value == "on" then ns.db.trace = {} end
         end
         printMessage("Close trace " .. (ns.db.debugTrace and "on" or "off")
-            .. " (PortalRouletteDB.trace, read after /reload). /pr debug trace on|off")
+            .. " (PortalRouletteDB.trace, read after /reload). /pr debug trace on||off")
         return
     end
     if target == "faction" then
@@ -102,7 +102,7 @@ local function handleDebugCommand(parts)
         elseif value == "auto" then
             ns.db.debugFaction = "auto"
         else
-            printMessage("Usage: /pr debug faction horde|alliance|auto")
+            printMessage("Usage: /pr debug faction horde||alliance||auto")
             return
         end
         printMessage("Faction override: " .. tostring(ns.db.debugFaction))
@@ -153,7 +153,7 @@ local function registerSlashCommands()
         elseif cmd == "" then
             ns.Roulette:Toggle()
         else
-            printMessage("/pr | options | preview | reset | debug | debug faction horde|alliance|auto")
+            printMessage("/pr || options || preview || reset || debug || debug faction horde||alliance||auto")
         end
     end
 end

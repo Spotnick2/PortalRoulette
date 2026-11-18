@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fixed: the `/pr` help and debug lines printed a bare `|`, which chat reads as the start of a
+  colour or link code.
 - LibGlass-1.0 updated to r13.
 
 ## v1.0.1
