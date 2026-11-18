@@ -193,12 +193,6 @@ release to 0.6 s after, so quick clicks on neighbouring buttons share them:
 - `keyup`: the CVar set to 0 (PASS), the clicks recorded by themselves, the combat check PASS, the
   CVar put back to 1 (PASS). Its cast counts were inconclusive (clicks too close together); run 4
   settled them.
-
-## Run 4 (build 70959, 2026-11-18)
-
-`/fp steps pr keyup` again, each button clicked alone, 2 to 5 s apart. All six steps done, three
-checks PASS (CVar to 0, combat tests, CVar back to 1). Every button gave 2 edges and 1 cast, the
-toy and `item1="16"` 0 casts (the ActionButtonUseKeyDown = 0 row).
 - `gfx`: every call returned, with no error. The owner answered **no** to "does it look right?",
   meaning they couldn't tell what the panel should look like (the addon itself looks right in game).
   Screenshot read: the masks clip to rounded squares, not circles (the masks row).
@@ -214,3 +208,10 @@ toy and `item1="16"` 0 casts (the ActionButtonUseKeyDown = 0 row).
 - `talent`: the owner named **Reagent Economy**, not learned. None of the eight Reagent Economy
   IDs is known; the Mage trait tree (53 nodes) has no reagent talent. Which ID is the mage's stays
   OPEN until the perk is taken.
+
+## Run 4 (build 70959, 2026-11-18)
+
+`/fp steps pr keyup` again, each button clicked alone, 2 to 5 s apart. All six steps done, three
+checks PASS (CVar to 0, combat tests, CVar back to 1). The seven casting cases gave 2 edges and 1
+cast each (the ActionButtonUseKeyDown = 0 row); the `type2` button's left-click, the toy and
+`item1="16"` gave 0 casts.
