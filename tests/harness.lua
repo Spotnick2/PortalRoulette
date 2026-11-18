@@ -1,48 +1,25 @@
 ------------------------------------------------------------
--- harness.lua: assertions and addon loading for the tests
--- (adapted from Apotheca's tests/harness.lua).
+-- harness.lua: addon loading for the tests (adapted from Apotheca's
+-- tests/harness.lua). The assertions are WowTestKit's globals (check, eq,
+-- done), loaded by tests/wow_stubs.lua.
 --
 --     dofile("tests/wow_stubs.lua")
 --     local H = dofile("tests/harness.lua")
 --     H.loadProbe()
---     H.check(cond, "message")
---     H.done("test_name")
+--     check(cond, "message")
+--     done("test_name")
 ------------------------------------------------------------
 
 local H = {}
-local passed, failed = 0, 0
 
-function H.check(cond, msg)
-    if cond then
-        passed = passed + 1
-    else
-        failed = failed + 1
-        io.stderr:write("FAIL: " .. tostring(msg) .. "\n")
-    end
-end
-
-function H.eq(actual, expected, msg)
-    H.check(actual == expected, (msg or "") .. " (expected " .. tostring(expected)
-            .. ", got " .. tostring(actual) .. ")")
-end
-
-function H.done(name)
-    if failed > 0 then
-        io.stderr:write(name .. ": " .. failed .. " failed, " .. passed .. " passed\n")
-        os.exit(1)
-    end
-    io.write(name .. ": " .. passed .. " tests passed\n")
-end
-
--- The files a TOC lists, in load order, with forward slashes.
+-- The files a TOC lists (every line, .xml too), in load order, with forward
+-- slashes, under the TOC's folder: Kit.tocLines as paths.
 function H.tocFiles(toc)
     local files = {}
     local dir = toc:match("^(.*)/[^/]+$")
-    for line in io.lines(toc) do
-        line = line:gsub("\r", ""):gsub("\\", "/")
-        if line ~= "" and not line:match("^#") then
-            files[#files + 1] = dir and (dir .. "/" .. line) or line
-        end
+    for _, line in ipairs(Kit.tocLines(toc)) do
+        line = line:gsub("\\", "/")
+        files[#files + 1] = dir and (dir .. "/" .. line) or line
     end
     return files
 end
@@ -92,7 +69,7 @@ function H.loadAddon(opts)
     WoW.fire("ADDON_LOADED", "PortalRoulette")
     WoW.fire("PLAYER_LOGIN")
     WoW.fire("PLAYER_ENTERING_WORLD")
-    WoW.runTimers(0)
+    WoW.advance(0)
     return ns
 end
 
@@ -112,9 +89,10 @@ function H.framesWithTemplate(template)
     return out
 end
 
+-- Printed lines (the chat frame's included) matching a pattern.
 function H.messagesMatching(pattern)
     local n = 0
-    for _, m in ipairs(WoW.messages) do if m:find(pattern) then n = n + 1 end end
+    for _, m in ipairs(WoW.chat) do if m:find(pattern) then n = n + 1 end end
     return n
 end
 

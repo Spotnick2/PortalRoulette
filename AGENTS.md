@@ -17,8 +17,16 @@ the dev probe (`Tools/PortalRouletteProbe`, `/prprobe`) before code relies on it
 
 ## Build, test, deploy
 - Tests: `pwsh tests/run.ps1` (Lua 5.1 at `C:\Program Files (x86)\Lua\5.1\`): `luac -p` over every
-  Lua file, then `tests/test_*.lua` against `tests/wow_stubs.lua`. Reading an unstubbed global is
-  an error. Stub a global only after confirming it in the API dump.
+  Lua file and the LibGlass/LibShowcase checkouts against their `.pkgmeta` tags, then
+  `tests/test_*.lua`. Reading an unstubbed global is an error. Stub a global only after confirming
+  it in the API dump.
+  - The test scaffolding is WowTestKit (`C:\Projects\WoW\WowTestKit`; its README is the reference)
+    at the commit and client build `tests\kit.pin` names. `tests\run.ps1` puts that commit in
+    `%LOCALAPPDATA%\WowTestKit\<sha>` and hands off to the kit's runner; CI fetches it with
+    `tests\fetch_kit.sh`. `tests\kit.lua`, `kit.ps1` and `fetch_kit.sh` are the kit's bootstrap
+    copies: never edit them here. A kit need is an issue on the kit, worked around in
+    `tests\wow_stubs.lua` with a `-- WowTestKit #N:` comment meanwhile. `tests\run.ps1 -KitDev`
+    runs against the `..\WowTestKit` working copy instead of the pin.
 - Deploy: `pwsh Tools/deploy.ps1` (`-Probe` adds the dev probe, `-ProbeOnly` deploys just the probe).
   - It deploys to `C:\Program Files (x86)\World of Warcraft\_forever_\Interface\AddOns`.
   - It copies git-tracked files only, never untracked scratch folders.
