@@ -137,20 +137,5 @@ local recorded = Kit.checkMethods()
 local floor = #libs == 2 and 140 or 120
 check(recorded >= floor, "the exercise reached the windows (" .. recorded .. " recorded)")
 
--- FINDING: three of /pr's own lines print a bare "|" (Core/Init.lua), which
--- the client reads as the start of an escape: the help line, the debug
--- faction usage and the debug trace line. Exactly these are accepted until
--- the addon doubles them ("||"); any other stray still fails done().
-local ACCEPTED = {
-    ["|cff8e7dffPortal Roulette|r: /pr | options | preview | reset | debug | debug faction horde|alliance|auto"] = true,
-    ["|cff8e7dffPortal Roulette|r: Usage: /pr debug faction horde|alliance|auto"] = true,
-    ["|cff8e7dffPortal Roulette|r: Close trace on (PortalRouletteDB.trace, read after /reload). /pr debug trace on|off"] = true,
-    ["|cff8e7dffPortal Roulette|r: Close trace off (PortalRouletteDB.trace, read after /reload). /pr debug trace on|off"] = true,
-}
-local strays = {}
-for _, line in ipairs(WoW.strays) do
-    if not ACCEPTED[line] then strays[#strays + 1] = line end
-end
-WoW.strays = strays
 
 done("test_methods")
