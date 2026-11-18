@@ -1,9 +1,10 @@
 # Changelog
 
-## Unreleased
+## v1.1.0
 
 - New option (Wheel, off by default): close the wheel as soon as a teleport or portal starts
   casting, instead of when it ends.
+- Releases are now also on GitHub (with WowUp support) and Wago Addons.
 - Fixed: the `/pr` help and debug lines printed a bare `|`, which chat reads as the start of a
   colour or link code.
 - LibGlass-1.0 updated to r13.
