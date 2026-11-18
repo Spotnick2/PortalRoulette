@@ -6,10 +6,10 @@ at tag `v0.1.1-tbc` and no longer supported.
 
 Read before changing code:
 - `C:\Projects\WoW\References\Docs\PORTING-TBC-TO-FOREVER.md`: what changed from TBC, measured.
-- `C:\Projects\WoW\References\Forever\api\forever-api-1.60.1.70450.md`: the client's API (grep it; it is huge).
+- `C:\Projects\WoW\References\Forever\api\forever-api-1.60.1.70959.md`: the client's API (grep it; it is huge).
 - `C:\Projects\WoW\References\Docs\EMBEDDED-LIBRARIES.md`: rules for the embedded libraries.
 - `C:\Projects\WoW\LibGlass\docs\GLASS-MATERIAL.md`: the glass material.
-- `C:\Projects\WoW\wow-ui-source`: FrameXML (build 70450).
+- `C:\Projects\WoW\wow-ui-source`: FrameXML (build 70959).
 - `docs/FOREVER-PROBE.md`: what has been measured in game for this addon.
 
 The rule is **measured beats reasoned**. Anything spell-, item- or combat-dependent is confirmed with
