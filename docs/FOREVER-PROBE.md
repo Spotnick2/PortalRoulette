@@ -1,28 +1,45 @@
 # Forever probe results
 
-What `Tools/PortalRouletteProbe` (`/prprobe`) measured on the WoW: Forever client. The rule is
-**measured beats reasoned**: code relies on a row here only once it says MEASURED.
+What `Tools/PortalRouletteProbe` (`/fp pr`, a ForeverProbe module; `/prprobe` before #13) measured
+on the WoW: Forever client. The rule is **measured beats reasoned**: code relies on a row here only
+once it says MEASURED.
 
 ## How to run it
 
-1. Deploy it with `pwsh Tools/deploy.ps1 -ProbeOnly`. It is a separate dev addon; `/reload` loads it.
-2. Log in on the mage, then run `/console scriptErrors 1`.
-3. Run each command below, then `/reload` (or log out) so the client writes
-   `WTF\Account\<ACCOUNT>\SavedVariables\PortalRouletteProbe.lua`.
-4. Send that file, plus screenshots where asked.
+The probe is a module of ForeverProbe, the shared probe host (`..\ForeverProbe`, its
+`docs/GUIDE.md`). Its lines go to the `/fp` console and to its saved log, never to chat.
 
-| Step | Command | What to do |
+1. Deploy it with `pwsh Tools/deploy.ps1 -ProbeOnly` (or `-Probe`, with the addon). Either one
+   deploys ForeverProbe first, then the probe. `/reload` loads them, a brand-new folder included.
+2. Log in on the mage, then run `/console scriptErrors 1`.
+3. Run the commands and procedures below. A procedure (`/fp steps pr <name>`) is a small panel of
+   buttons, one step at a time: it saves every outcome, and the owner types what they see in its
+   Note box. `/fp` shows the console.
+4. `/reload` (or log out), so the client writes the results. A session then reads them from
+   `WTF\Account\<ACCOUNT>\SavedVariables\`, so nothing needs sending:
+   - `PortalRouletteProbe.lua`: `log` (every line, the `STEP` lines included) and each run's own
+     lines, in the format the results below were read from (`core`, `tips`, `traits`, `secure`,
+     `combat`, `gfx`, `popup`, `persist`, `reagentbag`, `reagenteconomy`, `scan`, `logins`, ...);
+   - `ForeverProbe.lua`: `steps.records` (each procedure's results and notes), the screenshots,
+     and the blocked actions in the host's `log`.
+
+| Step | Command | What it does |
 |---|---|---|
-| 1 | `/prprobe` | Core run: spell and item IDs, hearth, toys, talents, spellbook, CVars. Instant. |
-| 2 | `/prprobe tips` | Spell tooltips for every teleport and portal (about 5 s, async). |
-| 3 | `/prprobe scan` | Finds every "Teleport:"/"Portal:" spell ID, including the Dalaran ID. It takes a few minutes; progress is printed, and running it again cancels. |
-| 4 | `/prprobe secure` | A panel of secure test buttons appears on the left. Left-click each once; right-click the "R" one. Then, **with the panel shown**, pull a training dummy or a mob: the combat tests run on combat entry. |
-| 5 | Repeat step 4 after `/console ActionButtonUseKeyDown 0` | Checks the cast-on-release path. Afterwards, `/console ActionButtonUseKeyDown 1` restores the default. |
-| 6 | `/prprobe gfx` | A graphics panel appears. **Take a screenshot.** Run `/prprobe gfx` again to hide it. |
-| 7 | `/prprobe popup` | Note whether a "experimental CVar" confirmation popup appears. Then `/reload`, play a minute, and note any taint errors. |
-| 8 | `/prprobe cvarmark`, then **exit the game fully**, start it again, log in, then `/prprobe cvarrestore` | Checks whether camera CVars persist across a restart. |
-| 9 | Put one Rune of Teleportation in the **reagent bag**, then `/prprobe item 17031` | Checks whether the count includes the reagent bag. |
-| 10 | Open the talent UI, find the talent that removes reagent costs, and tell us its name | We then look its spell ID up in the core run's `talent.*` lines. |
+| 1 | `/fp pr core` | Core run: spell and item IDs, hearth, toys, talents, spellbook, CVars. Instant. |
+| 2 | `/fp pr tips` | Spell tooltips for every teleport and portal (about 5 s, async). |
+| 3 | `/fp pr scan` | Finds every "Teleport:"/"Portal:" spell ID, including the Dalaran ID. It takes a few minutes; progress is logged, and running it again cancels. `/fp pr find <text>` also matches names containing the text. |
+| 4 | `/fp steps pr secure` | Shows the secure test buttons, waits until each was left-clicked once and the "R" one right-clicked too, then waits for a fight (a training dummy or a mob) with the panel shown: the combat tests run once lockdown starts. Then it waits for the end of combat. |
+| 5 | `/fp steps pr keyup` | Step 4 with `ActionButtonUseKeyDown` set to 0 (the cast-on-release path), then puts the CVar back. |
+| 6 | `/fp steps pr gfx` | Shows the graphics panel, asks whether it looks right and takes a screenshot, then hides it. |
+| 7 | `/fp steps pr popup` | Runs the popup test, asks whether an "experimental CVar" confirmation popup appeared, then a `/reload` and a minute of play: checks no action was blocked, and asks about taint errors. |
+| 8 | `/fp steps pr persist` | Writes the camera CVar markers, asks for a **full exit** and relaunch, reads them back at login (PASS = they persisted), then restores them. |
+| 9 | `/fp steps pr reagentbag` | Asks for one Rune of Teleportation in the **reagent bag**, then reads the count and every bag. PASS = `GetItemCount` includes the reagent bag. |
+| 10 | `/fp steps pr talent` | Asks for the talent or perk that removes reagent costs (its name in the Note box) and whether it is learned, then records the talent tree and which Reagent Economy spell ID is known. |
+
+The one-off commands are also there: `/fp pr secure` and `/fp pr gfx` (show or hide the panels),
+`/fp pr spell <id>`, `/fp pr item <id>`, `/fp pr traits`, `/fp pr popup`, `/fp pr cvarmark` /
+`cvarrestore`, and `/fp pr clear` (empties the saved results and the log). `/fp pr` lists them.
+The results below name the old commands (`/prprobe ...`) they were measured with.
 
 ## Results
 

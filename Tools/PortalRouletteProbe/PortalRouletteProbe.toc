@@ -1,8 +1,10 @@
 ## Interface: 16001
-## Title: Portal Roulette Probe (dev)
-## Notes: Development-only measurement tool for the Forever port of Portal Roulette. /prprobe help. Not shipped to players.
+## Title: PortalRouletteProbe
+## Notes: Throwaway probe for Portal Roulette: spells, items, hearth, secure casting, combat, graphics, CVars. A ForeverProbe module: /fp pr
 ## Author: Spotnick
 ## Version: dev
+## Dependencies: ForeverProbe
+## OptionalDeps: PortalRoulette
 ## SavedVariables: PortalRouletteProbeDB
 
 PortalRouletteProbe.lua

@@ -2,7 +2,8 @@
 -- Compat: the one place the addon touches WoW: Forever's client API.
 --
 -- Adapted from Apotheca's ApothecaCompat.lua (measured on 70009) plus what
--- Tools/PortalRouletteProbe measured on 70205 (docs/FOREVER-PROBE.md).
+-- Tools/PortalRouletteProbe measured on 70205 (docs/FOREVER-PROBE.md; it was
+-- /prprobe then, and is now a ForeverProbe module, /fp pr).
 --
 -- Secret values: cooldowns and counts may be secret in combat. A secret may
 -- be held and passed back to the client (a Cooldown widget, a FontString),

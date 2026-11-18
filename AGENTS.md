@@ -13,7 +13,13 @@ Read before changing code:
 - `docs/FOREVER-PROBE.md`: what has been measured in game for this addon.
 
 The rule is **measured beats reasoned**. Anything spell-, item- or combat-dependent is confirmed with
-the dev probe (`Tools/PortalRouletteProbe`, `/prprobe`) before code relies on it.
+the dev probe (`Tools/PortalRouletteProbe`, `/fp pr`) before code relies on it.
+- The probe is a ForeverProbe module (`C:\Projects\WoW\ForeverProbe`, its `docs/GUIDE.md`; read
+  `C:\Projects\WoW\References\Docs\PROBES.md` first). Its lines go to the `/fp` console and
+  `PortalRouletteProbeDB.log`, never chat. What needs the owner in game is a procedure
+  (`Probe:Steps`, `/fp steps pr <name>`), and its results are read from the SavedVariables after
+  their `/reload`. Never edit ForeverProbe from here: a need is an issue on Spotnick2/ForeverProbe,
+  worked around in the module with the issue number meanwhile (today ForeverProbe#19).
 
 ## Build, test, deploy
 - Tests: `pwsh tests/run.ps1` (Lua 5.1 at `C:\Program Files (x86)\Lua\5.1\`): `luac -p` over every
@@ -27,13 +33,18 @@ the dev probe (`Tools/PortalRouletteProbe`, `/prprobe`) before code relies on it
     copies: never edit them here. A kit need is an issue on the kit, worked around in
     `tests\wow_stubs.lua` with a `-- WowTestKit #N:` comment meanwhile. `tests\run.ps1 -KitDev`
     runs against the `..\WowTestKit` working copy instead of the pin.
+  - The probe's tests (`tests/test_probe.lua`) load ForeverProbe from its checkout
+    (`$env:FOREVERPROBE`, else `..\ForeverProbe`); locally a missing checkout is an error. It is
+    private, so CI sets `FOREVERPROBE_OPTIONAL=1` and that file skips. Run the tests locally before
+    every PR that touches the probe.
 - Deploy: `pwsh Tools/deploy.ps1` (`-Probe` adds the dev probe, `-ProbeOnly` deploys just the probe).
   - It deploys to `C:\Program Files (x86)\World of Warcraft\_forever_\Interface\AddOns`.
   - It copies git-tracked files only, never untracked scratch folders.
   - It deploys embedded libraries from sibling checkouts (`..\LibGlass`, `..\LibShowcase`).
+  - `-Probe` and `-ProbeOnly` deploy ForeverProbe first (`$env:FOREVERPROBE`, else `..\ForeverProbe`).
 - In game, `/reload` loads everything a deploy brings, a new addon folder, textures and TOC changes
-  included (porting guide §5). A full client exit is only for a persistence test. Enable
-  `/console scriptErrors 1`.
+  included (porting guide §5). A full client exit is only for a persistence test (ForeverProbe
+  guide, section 7). Enable `/console scriptErrors 1`.
 - When the default shell runner is unreliable, use the approved PowerShell executable:
   `C:\Users\nicol\AppData\Local\Microsoft\WindowsApps\pwsh.exe -Command '...'`. Prefer single-quoted
   payloads when the command uses PowerShell variables.
