@@ -288,6 +288,16 @@ jobs:
           if [ -n "$asset" ]; then
             echo "keeping the zip an earlier run uploaded"
           else
+            # An upload that failed can leave an empty asset in "starter"
+            # state. It still holds its name, and gh refuses to upload over a
+            # name that exists, so a retry deletes every unfinished asset first
+            # (release.json is uploaded again below). A finished zip is kept.
+            gh release view "$TAG" "${repo[@]}" --json assets \
+              --jq '.assets[] | select(.state != "uploaded") | .apiUrl' |
+              while read -r url; do
+                echo "deleting an unfinished asset: $url"
+                gh api -X DELETE "${url#https://api.github.com/}"
+              done
             gh release upload "$TAG" "$ZIP" "${repo[@]}"
             asset=$(stored_zip || true)
           fi
