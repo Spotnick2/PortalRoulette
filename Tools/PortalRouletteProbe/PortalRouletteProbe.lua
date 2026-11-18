@@ -545,6 +545,25 @@ end
 -- no mouse-enabled frame overlaps its secure buttons. Measured in game
 -- 2026-11-18: at the default strata the secure panel was hidden behind other
 -- addons and couldn't be moved.
+--
+-- A panel that parents secure buttons is protected: under lockdown the client
+-- refuses to stop a drag on it, and the drag would follow the cursor until
+-- combat ends (porting guide, "The ordinary lockdown rules"). So a drag still
+-- going when combat starts ends in PLAYER_REGEN_DISABLED, which runs before
+-- lockdown (run 2). A release under lockdown never calls the stop: it is left
+-- pending, and combat's end does it.
+local dragging = {}  -- [panel] = "moving" or "stop" (released under lockdown)
+local function stopDrag(panel)
+    panel:StopMovingOrSizing()
+    dragging[panel] = nil
+end
+local dragFrame = CreateFrame("Frame")
+Probe:RegisterEvents(dragFrame, { "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED" })
+dragFrame:SetScript("OnEvent", function(_, event)
+    for panel in pairs(dragging) do
+        if event == "PLAYER_REGEN_ENABLED" or not InCombatLockdown() then stopDrag(panel) end
+    end
+end)
 local function liftAndDrag(panel, handle)
     panel:SetFrameStrata("DIALOG")
     panel:SetClampedToScreen(true)
@@ -553,9 +572,15 @@ local function liftAndDrag(panel, handle)
     handle:EnableMouse(true)
     handle:RegisterForDrag("LeftButton")
     handle:SetScript("OnDragStart", function()
-        if not InCombatLockdown() then panel:StartMoving() end
+        if InCombatLockdown() then return end
+        panel:StartMoving()
+        dragging[panel] = "moving"
     end)
-    handle:SetScript("OnDragStop", function() panel:StopMovingOrSizing() end)
+    handle:SetScript("OnDragStop", function()
+        if not dragging[panel] then return end -- already ended at combat entry
+        if InCombatLockdown() then dragging[panel] = "stop" return end
+        stopDrag(panel)
+    end)
 end
 
 ------------------------------------------------------------

@@ -76,6 +76,27 @@ local handle = panel.dragHandle
 check(handle and handle:IsMouseEnabled() and handle:GetScript("OnDragStart"), "its title strip drags it")
 check(not panel:IsMouseEnabled(), "the panel itself takes no mouse behind its buttons")
 for _, b in ipairs(buttons) do check(b:GetParent() ~= handle, "no secure button sits on the drag strip") end
+-- A drag combat interrupts: the client refuses to stop a drag on this
+-- protected panel under lockdown, so the drag ends at combat entry (still
+-- unlocked), and the release in combat calls nothing protected. The panel is
+-- hidden here so that the combat tests (they run while it is shown) stay out.
+panel:Hide()
+local function drag(script) handle:GetScript(script)(handle, "LeftButton") end
+WoW.blocked = {}
+drag("OnDragStart")
+check(panel._moving, "drag: it starts out of combat")
+WoW.enterCombat()
+check(not panel._moving, "drag: combat entry ends it, before lockdown")
+drag("OnDragStop")
+drag("OnDragStart")
+check(not panel._moving, "drag: none starts in combat")
+drag("OnDragStop")
+WoW.leaveCombat()
+eq(#WoW.blocked, 0, "drag: nothing blocked: " .. table.concat(WoW.blocked, ", "))
+drag("OnDragStart")
+drag("OnDragStop")
+check(not panel._moving, "drag: out of combat, the release ends it")
+panel:Show()
 for _, b in ipairs(buttons) do
     check(b._clicks and b._clicks[1] == "AnyUp" and b._clicks[2] == "AnyDown", "both click edges are registered")
     for k in pairs(b._attrs or {}) do
