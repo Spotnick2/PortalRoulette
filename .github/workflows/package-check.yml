@@ -80,6 +80,10 @@ jobs:
           echo "WOWTESTKIT=$RUNNER_TEMP/WowTestKit" >> "$GITHUB_ENV"
 
       - name: Unit tests
+        env:
+          # ForeverProbe is private and local only: the probe's tests run in
+          # tests/run.ps1, and skip here (ForeverProbe GUIDE section 8).
+          FOREVERPROBE_OPTIONAL: "1"
         run: |
           for f in tests/test_*.lua; do
             echo "-- $f"
