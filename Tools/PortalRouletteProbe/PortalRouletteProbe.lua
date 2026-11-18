@@ -828,7 +828,7 @@ local gfxPanel
 local function buildGfx()
     startLog("gfx")
     gfxPanel = CreateFrame("Frame", "PRProbeGfx", UIParent)
-    gfxPanel:SetSize(620, 380)
+    gfxPanel:SetSize(620, 520) -- the 320 px icon (top) clears the bottom row
     gfxPanel:SetPoint("CENTER")
     liftAndDrag(gfxPanel)
     local bg = gfxPanel:CreateTexture(nil, "BACKGROUND")
@@ -1152,8 +1152,11 @@ Probe:Steps("gfx", {
     title = "Masks, rotation, radial fill, cooldown and lines",
     { text = "Press Show panel: a graphics test panel opens in the middle of the screen.",
       button = "Show panel", run = function() return setGfxShown(true) end },
-    { text = "Does the panel show 3 round icons, a spinning round gradient, a 70% radial fill, a hearth cooldown"
-        .. " swipe and a purple line? Type anything that looks wrong in the Note box.",
+    { text = "What it should show: across the top, the hearthstone icon at 3 sizes (small, medium, very large),"
+        .. " each cut to a clean circle. Along the bottom: a round blue-to-pink disc turning slowly, a blue"
+        .. " disc with a slice missing (70% filled), the hearthstone icon (a dark sweep over it only if your"
+        .. " hearthstone is on cooldown), and a purple line. Does it match? Answer Not sure if you can't tell,"
+        .. " and type what differs in the Note box.",
       ask = true, screenshot = "gfx panel" },
     { text = "Press Hide panel.", button = "Hide panel", run = function() return setGfxShown(false) end },
 })
