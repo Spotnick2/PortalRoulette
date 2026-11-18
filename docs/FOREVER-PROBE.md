@@ -88,7 +88,7 @@ Run 1: build 70205, 2026-10-04. Level-10 High Order Skyborne mage (Alliance), bo
 ### Graphics
 | Item | Status | Result |
 |---|---|---|
-| Unsliced circle masks at 40, 64 and 320 px (TempPortraitAlphaMask) | OPEN on 70959 | 70205: no errors, round clipping. 70959 (run 3, `gfx`): no errors, but the owner answered **no** to "does it look right?". In the screenshot all three clip to a **rounded square with flat sides**, not a circle, with the icon's grey border showing along the flat edges. `Skin.lua` masks icons the same way. |
+| Unsliced circle masks at 40, 64 and 320 px (TempPortraitAlphaMask) | PARTIAL 70959 | 70205: no errors, round clipping. 70959 (run 3, `gfx`): no errors. The owner's "no" meant they couldn't tell what the test panel should look like; the addon's own round icons (`Skin.lua`, the same mask) look right in game. In the screenshot the probe's three icons clip to a rounded square with flat sides rather than a circle, with the icon's grey border along the flat edges: not investigated, since the addon looks right. The step now says what to expect. |
 | Rotation stays clipped under a static mask | MEASURED 70205 | A round gradient disc, clipped. |
 | `SetRadialProgressBarPercent` on a masked texture | MEASURED 70205 | Draws a partial disc. |
 | `C_Spell.GetSpellCooldownDuration` + `SetCooldownFromDurationObject` | MEASURED 70205 | Returns a LuaDurationObject and accepts it; no swipe, since the hearth was not on cooldown. |
@@ -193,11 +193,13 @@ release to 0.6 s after, so quick clicks on neighbouring buttons share them:
 - `keyup`: the CVar set to 0 (PASS), the clicks recorded by themselves, the combat check PASS, the
   CVar put back to 1 (PASS). Its cast counts are inconclusive (the ActionButtonUseKeyDown = 0 row).
 - `gfx`: every call returned, with no error. The owner answered **no** to "does it look right?",
-  without a note. Screenshot read: the masks clip to rounded squares, not circles (the masks row).
+  meaning they couldn't tell what the panel should look like (the addon itself looks right in game).
+  Screenshot read: the masks clip to rounded squares, not circles (the masks row).
   The gradient disc is round, the radial progress bar draws a partial disc, `CreateLine` draws.
   `SetCooldownFromDurationObject` took the duration object, and no swipe shows (the hearth wasn't on
-  cooldown). The panel's own layout overlaps: the 320 px icon covers the radial bar and the
-  cooldown.
+  cooldown). The panel's own layout overlapped: the 320 px icon covered the radial bar and the
+  cooldown. The panel is now 520 px tall, and the step's question describes what each item should
+  look like and offers Not sure.
 - `popup`: no popup, nothing blocked, no taint seen (the `UnregisterInternalEvent` row).
 - `persist`: the full-exit result in the CVar persistence row.
 - `reagentbag`: the rune can't go in the reagent bag (the owner's note), so the check's FAIL
