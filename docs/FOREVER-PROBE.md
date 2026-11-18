@@ -72,7 +72,7 @@ Run 1: build 70205, 2026-10-04. Level-10 High Order Skyborne mage (Alliance), bo
 | Hearthstone item spell | MEASURED 70205 | `GetItemSpell(6948)` = "Hearthstone", 8690. |
 | Toys | MEASURED 70205 | `C_ToyBox.GetNumToys()` = 20, none owned. |
 | Secure `type1=item` hearth casts once per click | MEASURED 70959 | Yes: 2 edges, 1 cast, clicked on its own (run 3, second pass). The first pass's 2 casts shared a quick click on the next button. |
-| Secure `type1=toy` | OPEN | Run 3: 0 casts, no error, with toy 289439 on both passes, possibly on cooldown. |
+| Secure `type1=toy` | OPEN | Runs 3 and 4: 0 casts, no error, with toy 289439, three times (CVar 1 and 0). Its cooldown wasn't read, so "on cooldown" and "type1=toy doesn't cast" can't be told apart. |
 
 ### Secure casting (ActionButtonUseKeyDown = 1)
 | Item | Status | Result |
@@ -81,7 +81,7 @@ Run 1: build 70205, 2026-10-04. Level-10 High Order Skyborne mage (Alliance), bo
 | `spell1=<name>` casts | MEASURED 70205 | Yes, 1 cast. |
 | `type2/spell2` on right-click | MEASURED 70205 | Yes, 1 cast. Left-click on a type2-only button casts nothing (no fallthrough). |
 | `useOnKeyDown` true/false attribute | MEASURED 70205 | Both give 1 cast per click with the CVar at 1. |
-| ActionButtonUseKeyDown = 0 | INCONCLUSIVE | Run 3 (`keyup`) counted **2 casts** for one click on `spell1` numeric, `spell1` by name, `useOnKeyDown=false` and the `type1=item` hearth, and 1 for `useOnKeyDown=true`, the right-click and the hearth macro. But the clicks were 0.5 to 0.6 s apart, inside each other's counting window, so a doubled cast can't be told from a neighbour's. Click each alone, 2 s apart, before relying on it. The CVar was put back (1). |
+| ActionButtonUseKeyDown = 0 | MEASURED 70959 | **1 cast per click on every button**, 2 edges each: `spell1` numeric and by name, the right-click, `useOnKeyDown` true and false, the `type1=item` hearth and the hearth macro (run 4, clicks 2 to 5 s apart). So the wheel's `AnyUp`+`AnyDown` buttons cast once whatever the CVar. Run 3's 2-cast counts came from clicks 0.5 s apart sharing a counting window. The CVar was put back (1) both times. |
 | `itemN="16"` main-hand slot | INCONCLUSIVE | 0 casts and no error, because the weapon has no Use effect. |
 | In combat: EnableMouse/SetAlpha/SetParent/SetUIVisibility | MEASURED 70959 | Under lockdown, on a secure button and its panel: **blocked** (ADDON_ACTION_BLOCKED, no effect): EnableMouse, SetAttribute, the panel's SetParent, SetUIVisibility(false) and (true). **Allowed**: SetAlpha on the button and the panel, UIParent:SetAlpha. Run 3 has the lines. |
 
@@ -191,7 +191,8 @@ release to 0.6 s after, so quick clicks on neighbouring buttons share them:
 
 **The other six procedures** (the same session, a level-29 mage; all finished):
 - `keyup`: the CVar set to 0 (PASS), the clicks recorded by themselves, the combat check PASS, the
-  CVar put back to 1 (PASS). Its cast counts are inconclusive (the ActionButtonUseKeyDown = 0 row).
+  CVar put back to 1 (PASS). Its cast counts were inconclusive (clicks too close together); run 4
+  settled them.
 - `gfx`: every call returned, with no error. The owner answered **no** to "does it look right?",
   meaning they couldn't tell what the panel should look like (the addon itself looks right in game).
   Screenshot read: the masks clip to rounded squares, not circles (the masks row).
@@ -207,3 +208,10 @@ release to 0.6 s after, so quick clicks on neighbouring buttons share them:
 - `talent`: the owner named **Reagent Economy**, not learned. None of the eight Reagent Economy
   IDs is known; the Mage trait tree (53 nodes) has no reagent talent. Which ID is the mage's stays
   OPEN until the perk is taken.
+
+## Run 4 (build 70959, 2026-11-18)
+
+`/fp steps pr keyup` again, each button clicked alone, 2 to 5 s apart. All six steps done, three
+checks PASS (CVar to 0, combat tests, CVar back to 1). The seven casting cases gave 2 edges and 1
+cast each (the ActionButtonUseKeyDown = 0 row); the `type2` button's left-click, the toy and
+`item1="16"` gave 0 casts.
