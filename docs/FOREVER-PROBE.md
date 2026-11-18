@@ -71,8 +71,8 @@ Run 1: build 70205, 2026-10-04. Level-10 High Order Skyborne mage (Alliance), bo
 | `C_Container.PlayerHasHearthstone()` | MEASURED 70205 | **Returns nil even with Hearthstone 6948 in the backpack.** Fall back to `C_Item.GetItemCount(6948)`. |
 | Hearthstone item spell | MEASURED 70205 | `GetItemSpell(6948)` = "Hearthstone", 8690. |
 | Toys | MEASURED 70205 | `C_ToyBox.GetNumToys()` = 20, none owned. |
-| Secure `type1=item` hearth casts once per click | OPEN | Run 3 counted 2 casts for one click, but a quick click on the next button may share that count: click it alone, a second apart. |
-| Secure `type1=toy` | OPEN | Run 3: 0 casts with toy 289439, possibly on cooldown. |
+| Secure `type1=item` hearth casts once per click | MEASURED 70959 | Yes: 2 edges, 1 cast, clicked on its own (run 3, second pass). The first pass's 2 casts shared a quick click on the next button. |
+| Secure `type1=toy` | OPEN | Run 3: 0 casts, no error, with toy 289439 on both passes, possibly on cooldown. |
 
 ### Secure casting (ActionButtonUseKeyDown = 1)
 | Item | Status | Result |
@@ -143,9 +143,11 @@ Run 1: build 70205, 2026-10-04. Level-10 High Order Skyborne mage (Alliance), bo
 
 ## Run 3 (build 70959, 2026-11-18)
 
-The first run on ForeverProbe: `/fp steps pr secure`, read from the SavedVariables (`ForeverProbe.lua`
-`steps.records`, `PortalRouletteProbe.lua` `secure` and `combat`). The procedure finished, its combat
-check PASS. Its clicks step was completed by hand: no right-click on the "R" button was recorded.
+The first runs on ForeverProbe: `/fp steps pr secure` twice, read from the SavedVariables
+(`ForeverProbe.lua` `steps.records`, `PortalRouletteProbe.lua` `secure` and `combat`). Both finished
+with the combat check PASS. On the first pass the clicks step was completed by hand (the "R" button
+was not right-clicked). On the second it completed itself ("10 clicks recorded"). The combat lines
+were the same both times.
 
 **Combat, under lockdown** (`InCombatLockdown() = true`; the panel `IsProtected() = true, false`, i.e.
 protected through its secure buttons):
@@ -158,7 +160,7 @@ protected through its secure buttons):
 | `panel:SetParent(nil)` | Blocked; the parent stays UIParent. |
 | `SetUIVisibility(false)`, `SetUIVisibility(true)` | Blocked both times; UIParent stays shown. |
 | `UIParent:SetAlpha(1)` | Allowed. |
-| `C_Item.GetItemCooldown(6948)` | Plain values: `0, 0, true`. |
+| `C_Item.GetItemCooldown(6948)` | Plain values: `0, 0, true`, and on the global cooldown `122929.45, 1.5, true`. |
 | `C_Spell.GetSpellCooldown(168)` | `startTime`, `duration` and `modRate` secret; `isEnabled` and `isActive` plain. |
 | `C_Item.GetItemCount(17031)` | **Plain** (4), not secret, in combat. One reading: keep `ns.API.Readable` on counts. |
 
@@ -171,10 +173,11 @@ So the guardrails hold: the wheel must hide, reparent and give back the UI befor
 **Clicks** (ActionButtonUseKeyDown 1). Each line counts the edges and casts from 0.65 s before the
 release to 0.6 s after, so quick clicks on neighbouring buttons share them:
 - `spell1` numeric, `spell1` by name, `useOnKeyDown` true and false: 2 edges, 1 cast each, as on 70205.
-- `type2` button, left-click: 0 casts (no fallthrough), as on 70205.
-- `hearth item:ID` (`type1=item`): 2 edges, **2 casts** for one click. INCONCLUSIVE: the "hearth macro"
-  button was clicked right after (its two lines show 4 and 3 edges, a quick double click), so its cast
-  may be counted here. The addon's hearth orb uses the macro form, which gives 1 cast per click.
-- `toy 289439` (`type1=toy`): 0 casts, no error, clicked twice. INCONCLUSIVE: the toy may have been on
-  cooldown.
+- `type2` button: left-click 0 casts (no fallthrough), right-click 2 edges, 1 cast, as on 70205.
+- `hearth item:ID` (`type1=item`): 2 edges, 1 cast on the second pass. The first pass counted 2 casts
+  because the "hearth macro" button was clicked right after (its lines show 4 and 3 edges) and its
+  cast fell in the same window.
+- `hearth macro`: 1 cast per click.
+- `toy 289439` (`type1=toy`): 0 casts, no error, on both passes. INCONCLUSIVE: the toy may have been
+  on cooldown.
 - `item1="16"`: 0 casts, as on 70205 (no Use effect).
