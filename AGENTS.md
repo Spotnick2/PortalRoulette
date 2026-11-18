@@ -38,6 +38,20 @@ the dev probe (`Tools/PortalRouletteProbe`, `/prprobe`) before code relies on it
   `C:\Users\nicol\AppData\Local\Microsoft\WindowsApps\pwsh.exe -Command '...'`. Prefer single-quoted
   payloads when the command uses PowerShell variables.
 
+## Releasing
+- The guide is `C:\Projects\WoW\References\Docs\RELEASING.md`. A `vX.Y.Z` tag (or `-alphaN`/`-betaN`) publishes
+  three times:
+  - **CurseForge** (project 1540067, https://www.curseforge.com/wow/addons/portal-roulette) builds
+    its own file from the tag through its webhook. No CurseForge key lives in the repo.
+  - **GitHub:** `.github/workflows/package-check.yml`'s `release` job publishes the zip `check`
+    built and checked, with `release.json` (WowUp) and the tag's `CHANGELOG.md` section as notes.
+  - **Wago Addons** (project `nKWwbZKE`, https://addons.wago.io/addons/nKWwbZKE): the `wago` job
+    uploads the same zip (`WAGO_API_TOKEN` secret).
+- `check` runs on every PR and push: syntax, unit tests, a `-d` package, the zip allowlist, and
+  `tests/release_files.sh` (a copy of the guide's template: never edit it here).
+- To publish a tag again where a target failed: Actions > Package check > Run workflow from `main`,
+  with the tag and `github`/`wago`/`both`.
+
 ## Product
 - Mage-only. Non-mages get no UI at all.
 - The launcher button opens the wheel. On any destination node, **left-click casts the teleport** and

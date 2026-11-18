@@ -106,3 +106,8 @@ LibStub, CallbackHandler-1.0, LibDataBroker-1.1, LibDBIcon-1.0.
   `Tools/make_launcher_art.py`.
 - What has been measured in game is in `docs/FOREVER-PROBE.md`. Agent instructions are in
   `AGENTS.md`.
+
+## Licence
+
+MIT ([LICENSE](https://github.com/Spotnick2/PortalRoulette/blob/main/LICENSE)). The embedded libraries keep their own
+terms, listed in the same file.
