@@ -101,7 +101,8 @@ LibStub, CallbackHandler-1.0, LibDataBroker-1.1, LibDBIcon-1.0.
 - Tests: `pwsh tests/run.ps1` (Lua 5.1). It also checks that the sibling LibGlass and LibShowcase
   checkouts match the tags pinned in `.pkgmeta`.
 - Deploy to the game: `pwsh Tools/deploy.ps1` (`-Probe` also installs the measurement probe). LibGlass
-  and LibShowcase come from sibling checkouts (`..\LibGlass`, `..\LibShowcase`).
+  and LibShowcase come from sibling checkouts (`..\LibGlass`, `..\LibShowcase`), and so does
+  ForeverProbe (`..\ForeverProbe`), the probe's host.
 - Generated art: `python Tools/make_art.py` (effects), `Tools/make_city_art.py` and
   `Tools/make_launcher_art.py`.
 - What has been measured in game is in `docs/FOREVER-PROBE.md`. Agent instructions are in

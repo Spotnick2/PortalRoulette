@@ -28,6 +28,10 @@ local Secret = WoW.Secret
 -- combat), so the tests asserting WoW.blocked stays empty still cover them.
 WoW.PROTECTED.SetParent = true
 WoW.PROTECTED.SetScale = true
+-- Starting or stopping a drag on one (porting guide, "The ordinary lockdown
+-- rules", measured on 69913: a drag combat interrupts can't be stopped).
+WoW.PROTECTED.StartMoving = true
+WoW.PROTECTED.StopMovingOrSizing = true
 
 ------------------------------------------------------------
 -- Templates
@@ -62,6 +66,12 @@ function Methods.GetScale(w) return w._scale or 1 end
 function Methods.GetSize(w) return w._width, w._height end
 function Methods.GetNumPoints(w) return #w._points end
 function Methods.GetTexture(t) return t._file end
+-- Movable frames (the dev probe's panels): IsMovable answers SetMovable.
+function Methods.SetMovable(w, v) w._movable = v and true or false end
+function Methods.IsMovable(w) return w._movable == true end
+-- A drag in progress (tests read w._moving).
+function Methods.StartMoving(w) w._moving = true end
+function Methods.StopMovingOrSizing(w) w._moving = false end
 -- The secure buttons' click edges (tests check both are registered).
 function Methods.RegisterForClicks(b, ...) b._clicks = { ... } end
 -- Frame:CreateLine (SimpleFrameAPI): a Line region of the frame.

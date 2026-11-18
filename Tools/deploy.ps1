@@ -14,10 +14,14 @@
       - LibGlass-1.0     ($env:LIBGLASS or -LibGlass, else ..\LibGlass)
       - LibShowcase-1.0  ($env:LIBSHOWCASE or -LibShowcase, else ..\LibShowcase)
 
+    PortalRouletteProbe is a ForeverProbe module, so -Probe and -ProbeOnly
+    deploy the ForeverProbe checkout first ($env:FOREVERPROBE, else
+    ..\ForeverProbe) through its own Tools\deploy.ps1, and stop if it refuses.
+
     Usage:
         pwsh Tools/deploy.ps1                 # addon only
-        pwsh Tools/deploy.ps1 -Probe          # addon + PortalRouletteProbe
-        pwsh Tools/deploy.ps1 -ProbeOnly      # just PortalRouletteProbe
+        pwsh Tools/deploy.ps1 -Probe          # addon + ForeverProbe + PortalRouletteProbe
+        pwsh Tools/deploy.ps1 -ProbeOnly      # just ForeverProbe + PortalRouletteProbe
         pwsh Tools/deploy.ps1 -AddOnsPath "D:\...\_forever_\Interface\AddOns"
 #>
 
@@ -35,6 +39,7 @@ $RepoRoot = Split-Path -Parent $PSScriptRoot
 $AddonName = "PortalRoulette"
 $DevOnly = @("tests/", "Tools/", "docs/", ".github/", ".claude/")
 $DevFiles = @(".gitignore", ".gitattributes", ".pkgmeta", "AGENTS.md", "CLAUDE.md", "README.md", "CHANGELOG.md")
+$ForeverProbe = if ($env:FOREVERPROBE) { $env:FOREVERPROBE } else { Join-Path (Split-Path -Parent $RepoRoot) "ForeverProbe" }
 
 if (-not (Test-Path $AddOnsPath)) {
     Write-Error "AddOns path not found: $AddOnsPath"
@@ -112,11 +117,20 @@ function Deploy-Addon {
 }
 
 function Deploy-Probe {
+    # The host first: the probe has ## Dependencies: ForeverProbe, so without
+    # it the client loads no PortalRouletteProbe at all.
+    if (-not (Test-Path -LiteralPath (Join-Path $ForeverProbe "Tools\deploy.ps1"))) {
+        Write-Error "ForeverProbe checkout not found at $ForeverProbe (clone github.com/Spotnick2/ForeverProbe there, or set `$env:FOREVERPROBE)"
+        exit 1
+    }
+    & pwsh -NoProfile -File (Join-Path $ForeverProbe "Tools\deploy.ps1") -AddOnsPath $AddOnsPath
+    if ($LASTEXITCODE -ne 0) { Write-Error "ForeverProbe deploy refused; PortalRouletteProbe was not touched"; exit 1 }
     $src = Join-Path $RepoRoot "Tools\PortalRouletteProbe"
     $dest = Join-Path $AddOnsPath "PortalRouletteProbe"
     Write-Host "Deploying PortalRouletteProbe -> $dest" -ForegroundColor Cyan
     New-Item -ItemType Directory -Force $dest | Out-Null
-    Get-ChildItem -LiteralPath $src -File | ForEach-Object {
+    # The TOC and Lua only.
+    Get-ChildItem -LiteralPath $src -File | Where-Object { $_.Extension -in ".toc", ".lua" } | ForEach-Object {
         Copy-Item -LiteralPath $_.FullName -Destination (Join-Path $dest $_.Name) -Force
         Write-Host "  $($_.Name)"
     }
@@ -127,4 +141,5 @@ if ($Probe -or $ProbeOnly) { Deploy-Probe }
 
 Write-Host ""
 Write-Host "Done. In game:  /console scriptErrors 1  then  /reload" -ForegroundColor Green
+if ($Probe -or $ProbeOnly) { Write-Host "Probe: /fp pr lists its commands, /fp steps its procedures; its lines are in /fp" -ForegroundColor Green }
 Write-Host "Check the AddOn list: enabled AND not flagged out of date." -ForegroundColor Green

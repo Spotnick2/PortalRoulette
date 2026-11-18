@@ -1,28 +1,45 @@
 # Forever probe results
 
-What `Tools/PortalRouletteProbe` (`/prprobe`) measured on the WoW: Forever client. The rule is
-**measured beats reasoned**: code relies on a row here only once it says MEASURED.
+What `Tools/PortalRouletteProbe` (`/fp pr`, a ForeverProbe module; `/prprobe` before #13) measured
+on the WoW: Forever client. The rule is **measured beats reasoned**: code relies on a row here only
+once it says MEASURED.
 
 ## How to run it
 
-1. Deploy it with `pwsh Tools/deploy.ps1 -ProbeOnly`. It is a separate dev addon; `/reload` loads it.
-2. Log in on the mage, then run `/console scriptErrors 1`.
-3. Run each command below, then `/reload` (or log out) so the client writes
-   `WTF\Account\<ACCOUNT>\SavedVariables\PortalRouletteProbe.lua`.
-4. Send that file, plus screenshots where asked.
+The probe is a module of ForeverProbe, the shared probe host (`..\ForeverProbe`, its
+`docs/GUIDE.md`). Its lines go to the `/fp` console and to its saved log, never to chat.
 
-| Step | Command | What to do |
+1. Deploy it with `pwsh Tools/deploy.ps1 -ProbeOnly` (or `-Probe`, with the addon). Either one
+   deploys ForeverProbe first, then the probe. `/reload` loads them, a brand-new folder included.
+2. Log in on the mage, then run `/console scriptErrors 1`.
+3. Run the commands and procedures below. A procedure (`/fp steps pr <name>`) is a small panel of
+   buttons, one step at a time: it saves every outcome, and the owner types what they see in its
+   Note box. `/fp` shows the console.
+4. `/reload` (or log out), so the client writes the results. A session then reads them from
+   `WTF\Account\<ACCOUNT>\SavedVariables\`, so nothing needs sending:
+   - `PortalRouletteProbe.lua`: `log` (every line, the `STEP` lines included) and each run's own
+     lines, in the format the results below were read from (`core`, `tips`, `traits`, `secure`,
+     `combat`, `gfx`, `popup`, `persist`, `reagentbag`, `reagenteconomy`, `scan`, `logins`, ...);
+   - `ForeverProbe.lua`: `steps.records` (each procedure's results and notes), the screenshots,
+     and the blocked actions in the host's `log`.
+
+| Step | Command | What it does |
 |---|---|---|
-| 1 | `/prprobe` | Core run: spell and item IDs, hearth, toys, talents, spellbook, CVars. Instant. |
-| 2 | `/prprobe tips` | Spell tooltips for every teleport and portal (about 5 s, async). |
-| 3 | `/prprobe scan` | Finds every "Teleport:"/"Portal:" spell ID, including the Dalaran ID. It takes a few minutes; progress is printed, and running it again cancels. |
-| 4 | `/prprobe secure` | A panel of secure test buttons appears on the left. Left-click each once; right-click the "R" one. Then, **with the panel shown**, pull a training dummy or a mob: the combat tests run on combat entry. |
-| 5 | Repeat step 4 after `/console ActionButtonUseKeyDown 0` | Checks the cast-on-release path. Afterwards, `/console ActionButtonUseKeyDown 1` restores the default. |
-| 6 | `/prprobe gfx` | A graphics panel appears. **Take a screenshot.** Run `/prprobe gfx` again to hide it. |
-| 7 | `/prprobe popup` | Note whether a "experimental CVar" confirmation popup appears. Then `/reload`, play a minute, and note any taint errors. |
-| 8 | `/prprobe cvarmark`, then **exit the game fully**, start it again, log in, then `/prprobe cvarrestore` | Checks whether camera CVars persist across a restart. |
-| 9 | Put one Rune of Teleportation in the **reagent bag**, then `/prprobe item 17031` | Checks whether the count includes the reagent bag. |
-| 10 | Open the talent UI, find the talent that removes reagent costs, and tell us its name | We then look its spell ID up in the core run's `talent.*` lines. |
+| 1 | `/fp pr core` | Core run: spell and item IDs, hearth, toys, talents, spellbook, CVars. Instant. |
+| 2 | `/fp pr tips` | Spell tooltips for every teleport and portal (about 5 s, async). |
+| 3 | `/fp pr scan` | Finds every "Teleport:"/"Portal:" spell ID, including the Dalaran ID. It takes a few minutes; progress is logged, and running it again cancels. `/fp pr find <text>` also matches names containing the text. |
+| 4 | `/fp steps pr secure` | Shows the secure test buttons, waits until each was left-clicked once and the "R" one right-clicked too, then waits for a fight (a training dummy or a mob) with the panel shown: the combat tests run once lockdown starts. Then it waits for the end of combat. |
+| 5 | `/fp steps pr keyup` | Step 4 with `ActionButtonUseKeyDown` set to 0 (the cast-on-release path), then puts the CVar back. |
+| 6 | `/fp steps pr gfx` | Shows the graphics panel, asks whether it looks right and takes a screenshot, then hides it. |
+| 7 | `/fp steps pr popup` | Runs the popup test, asks whether an "experimental CVar" confirmation popup appeared, then a `/reload` and a minute of play: checks no action was blocked, and asks about taint errors. |
+| 8 | `/fp steps pr persist` | Writes the camera CVar markers, asks for a **full exit** and relaunch, reads them back at login (PASS = they persisted), then restores them. |
+| 9 | `/fp steps pr reagentbag` | Asks for one Rune of Teleportation in the **reagent bag**, then reads the count and every bag. PASS = `GetItemCount` includes the reagent bag. |
+| 10 | `/fp steps pr talent` | Asks for the talent or perk that removes reagent costs (its name in the Note box) and whether it is learned, then records the talent tree and which Reagent Economy spell ID is known. |
+
+The one-off commands are also there: `/fp pr secure` and `/fp pr gfx` (show or hide the panels),
+`/fp pr spell <id>`, `/fp pr item <id>`, `/fp pr traits`, `/fp pr popup`, `/fp pr cvarmark` /
+`cvarrestore`, and `/fp pr clear` (empties the saved results and the log). `/fp pr` lists them.
+The results below name the old commands (`/prprobe ...`) they were measured with.
 
 ## Results
 
@@ -42,9 +59,9 @@ Run 1: build 70205, 2026-10-04. Level-10 High Order Skyborne mage (Alliance), bo
 | Item | Status | Result |
 |---|---|---|
 | Rune of Teleportation 17031 / Rune of Portals 17032 exist | MEASURED 70205 | Both exist, class 15/1 "Reagent". 17032 was uncached at first (GetItemInfo returned nothing; GetItemInfoInstant and GetItemIconByID work). |
-| Counts include the reagent bag (bag 5) | OPEN | No reagent bag equipped yet (bag5.slots = 0). |
+| Counts include the reagent bag (bag 5) | MEASURED 70959 | Moot: **a Rune of Teleportation can't be put in the reagent bag** (the client says so; run 3, `reagentbag`). With a 10-slot reagent bag equipped, the runes sit in the normal bags and `GetItemCount` counts them (4 = 3 + 1 in bag 3). |
 | Reagent line format in spell tooltips | MEASURED 70205 | Line text is `"Reagents: \|n\|cffff2020Rune of Teleportation\|r"`, red when missing. The data loaded on the first try. |
-| Reagent-free talent: name and spell ID | PARTIAL | It is the **Perk "Reagent Economy"** (1 rank, Resourcefulness tab): "Your class abilities no longer require reagents purchasable from vendors". It is not a class talent. Its spell ID comes from `/prprobe scan` (probe v2); detect it with `IsPlayerSpell(id)`. |
+| Reagent-free talent: name and spell ID | PARTIAL (70959: not learned) | It is the **Perk "Reagent Economy"** (1 rank, Resourcefulness tab): "Your class abilities no longer require reagents purchasable from vendors". It is not a class talent. Its spell ID comes from `/prprobe scan` (probe v2); detect it with `IsPlayerSpell(id)`. |
 | Atiesh 22589 exists | MEASURED 70205 | It exists (2H staff); GetItemSpell was uncached. Portal: Karazhan 28148 exists as a spell. |
 | Crumbling Hearthstone 282006 | MEASURED 70205 | It exists (consumable); not carried. |
 
@@ -54,8 +71,8 @@ Run 1: build 70205, 2026-10-04. Level-10 High Order Skyborne mage (Alliance), bo
 | `C_Container.PlayerHasHearthstone()` | MEASURED 70205 | **Returns nil even with Hearthstone 6948 in the backpack.** Fall back to `C_Item.GetItemCount(6948)`. |
 | Hearthstone item spell | MEASURED 70205 | `GetItemSpell(6948)` = "Hearthstone", 8690. |
 | Toys | MEASURED 70205 | `C_ToyBox.GetNumToys()` = 20, none owned. |
-| Secure `type1=item` hearth casts once per click | OPEN | Probe v2 adds "hearth item:ID" and "hearth macro" buttons. |
-| Secure `type1=toy` | OPEN | Needs an owned toy. |
+| Secure `type1=item` hearth casts once per click | MEASURED 70959 | Yes: 2 edges, 1 cast, clicked on its own (run 3, second pass). The first pass's 2 casts shared a quick click on the next button. |
+| Secure `type1=toy` | OPEN | Run 3: 0 casts, no error, with toy 289439 on both passes, possibly on cooldown. |
 
 ### Secure casting (ActionButtonUseKeyDown = 1)
 | Item | Status | Result |
@@ -64,14 +81,14 @@ Run 1: build 70205, 2026-10-04. Level-10 High Order Skyborne mage (Alliance), bo
 | `spell1=<name>` casts | MEASURED 70205 | Yes, 1 cast. |
 | `type2/spell2` on right-click | MEASURED 70205 | Yes, 1 cast. Left-click on a type2-only button casts nothing (no fallthrough). |
 | `useOnKeyDown` true/false attribute | MEASURED 70205 | Both give 1 cast per click with the CVar at 1. |
-| ActionButtonUseKeyDown = 0 | OPEN | |
+| ActionButtonUseKeyDown = 0 | INCONCLUSIVE | Run 3 (`keyup`) counted **2 casts** for one click on `spell1` numeric, `spell1` by name, `useOnKeyDown=false` and the `type1=item` hearth, and 1 for `useOnKeyDown=true`, the right-click and the hearth macro. But the clicks were 0.5 to 0.6 s apart, inside each other's counting window, so a doubled cast can't be told from a neighbour's. Click each alone, 2 s apart, before relying on it. The CVar was put back (1). |
 | `itemN="16"` main-hand slot | INCONCLUSIVE | 0 casts and no error, because the weapon has no Use effect. |
-| In combat: EnableMouse/SetAlpha/SetParent/SetUIVisibility | OPEN | The combat run did not save. Probe v2 saves incrementally and runs whenever the panel is shown. |
+| In combat: EnableMouse/SetAlpha/SetParent/SetUIVisibility | MEASURED 70959 | Under lockdown, on a secure button and its panel: **blocked** (ADDON_ACTION_BLOCKED, no effect): EnableMouse, SetAttribute, the panel's SetParent, SetUIVisibility(false) and (true). **Allowed**: SetAlpha on the button and the panel, UIParent:SetAlpha. Run 3 has the lines. |
 
 ### Graphics
 | Item | Status | Result |
 |---|---|---|
-| Unsliced circle masks at 40, 64 and 320 px (TempPortraitAlphaMask) | MEASURED 70205 | No errors. The screenshot shows round clipping. The icon's own black corners make the 320 px edge hard to judge. |
+| Unsliced circle masks at 40, 64 and 320 px (TempPortraitAlphaMask) | OPEN on 70959 | 70205: no errors, round clipping. 70959 (run 3, `gfx`): no errors, but the owner answered **no** to "does it look right?". In the screenshot all three clip to a **rounded square with flat sides**, not a circle, with the icon's grey border showing along the flat edges. `Skin.lua` masks icons the same way. |
 | Rotation stays clipped under a static mask | MEASURED 70205 | A round gradient disc, clipped. |
 | `SetRadialProgressBarPercent` on a masked texture | MEASURED 70205 | Draws a partial disc. |
 | `C_Spell.GetSpellCooldownDuration` + `SetCooldownFromDurationObject` | MEASURED 70205 | Returns a LuaDurationObject and accepts it; no swipe, since the hearth was not on cooldown. |
@@ -84,8 +101,8 @@ Run 1: build 70205, 2026-10-04. Level-10 High Order Skyborne mage (Alliance), bo
 | Specialization | MEASURED 70205 | `GetSpecializationInfo(1)` = 1482 "Mage" with pointsSpent 0; specs 2 and 3 are empty. There are **no talent tabs**, so the launcher theme cannot come from points per tab: use C_Traits, or drop it. |
 | Spellbook lines | MEASURED 70205 | General / Frost / Fire / Arcane. |
 | Camera CVar defaults | MEASURED 70205 | test_cameraOverShoulder 0, CameraKeepCharacterCentered **1**, CameraReduceUnexpectedMovement 0, cameraDistanceMaxZoomFactor 1, cameraViewBlendStyle 1, ActionButtonUseKeyDown 1, ActionButtonUseKeyHeldSpell 0. |
-| CVar persistence | PARTIAL | Across a `/reload`, CameraKeepCharacterCentered kept the marker (0) and test_cameraOverShoulder did not (it reverted to 0). A full restart is still OPEN. |
-| `GameEvent.UnregisterInternalEvent` | MEASURED 70205 | Callable; no ADDON_ACTION_BLOCKED. Popup visibility and taint are still OPEN. |
+| CVar persistence | MEASURED 70959 | Across a full exit and relaunch (run 3, `persist`): **test_cameraOverShoulder did not persist** (marker 0.37, back to 0.000000), **CameraKeepCharacterCentered did** (marker 0 kept). CameraReduceUnexpectedMovement's marker equals its default (0), so it shows nothing. Same as across a `/reload` on 70205. The originals were put back. |
+| `GameEvent.UnregisterInternalEvent` | MEASURED 70959 | Callable; no ADDON_ACTION_BLOCKED (70205 and 70959). On 70959 (run 3, `popup`): no "experimental CVar" popup after writing test_cameraOverShoulder, nothing blocked after the `/reload`, and no taint errors seen in play. |
 | `PlayerCanTeleport()` | MEASURED 70205 | true. |
 | `GetBindLocation()` | MEASURED 70205 | "Valanaar". |
 
@@ -130,3 +147,61 @@ were in the check asked for, but weren't reported on separately.
 - Secure **`type1=macro`, `macrotext1="/use item:6948"`**: 1 cast per left click; right click does nothing. The `type1=item` hearth button was not recorded (OPEN).
 - The experimental-CVar popup did **not** appear after `GameEvent.UnregisterInternalEvent` + writing `test_cameraOverShoulder` (no ADDON_ACTION_BLOCKED). Taint after `/reload`: none reported.
 - **`InCombatLockdown()` is false inside `PLAYER_REGEN_DISABLED` handlers**: lockdown starts right after. The combat run therefore measured nothing under lockdown. Probe v3 waits for lockdown; the run is still OPEN. This matters for the addon: anything done in a REGEN_DISABLED handler still runs unlocked, which gives a last out-of-combat moment for restoring the UI.
+
+## Run 3 (build 70959, 2026-11-18)
+
+The first runs on ForeverProbe: `/fp steps pr secure` twice, read from the SavedVariables
+(`ForeverProbe.lua` `steps.records`, `PortalRouletteProbe.lua` `secure` and `combat`). Both finished
+with the combat check PASS. On the first pass the clicks step was completed by hand (the "R" button
+was not right-clicked). On the second it completed itself ("10 clicks recorded"). The combat lines
+were the same both times.
+
+**Combat, under lockdown** (`InCombatLockdown() = true`; the panel `IsProtected() = true, false`, i.e.
+protected through its secure buttons):
+
+| Call | Result |
+|---|---|
+| `button:EnableMouse(false)`, then `(true)` | Blocked both times; `IsMouseEnabled()` stays true. |
+| `button:SetAlpha(0.5)`, `panel:SetAlpha(0.5)` | Allowed (`GetAlpha()` = 0.502). |
+| `button:SetAttribute("probeAttr", 1)` | Blocked; the attribute stays nil. |
+| `panel:SetParent(nil)` | Blocked; the parent stays UIParent. |
+| `SetUIVisibility(false)`, `SetUIVisibility(true)` | Blocked both times; UIParent stays shown. |
+| `UIParent:SetAlpha(1)` | Allowed. |
+| `C_Item.GetItemCooldown(6948)` | Plain values: `0, 0, true`, and on the global cooldown `122929.45, 1.5, true`. |
+| `C_Spell.GetSpellCooldown(168)` | `startTime`, `duration` and `modRate` secret; `isEnabled` and `isActive` plain. |
+| `C_Item.GetItemCount(17031)` | **Plain** (4), not secret, in combat. One reading: keep `ns.API.Readable` on counts. |
+
+Each blocked call raises ADDON_ACTION_BLOCKED, which an error catcher (Bugsy) reports against the probe
+as `UNKNOWN()`: expected, since that is what the run measures.
+
+So the guardrails hold: the wheel must hide, reparent and give back the UI before lockdown (inside
+`PLAYER_REGEN_DISABLED`, run 2), and only alpha can change in combat.
+
+**Clicks** (ActionButtonUseKeyDown 1). Each line counts the edges and casts from 0.65 s before the
+release to 0.6 s after, so quick clicks on neighbouring buttons share them:
+- `spell1` numeric, `spell1` by name, `useOnKeyDown` true and false: 2 edges, 1 cast each, as on 70205.
+- `type2` button: left-click 0 casts (no fallthrough), right-click 2 edges, 1 cast, as on 70205.
+- `hearth item:ID` (`type1=item`): 2 edges, 1 cast on the second pass. The first pass counted 2 casts
+  because the "hearth macro" button was clicked right after (its lines show 4 and 3 edges) and its
+  cast fell in the same window.
+- `hearth macro`: 1 cast per click.
+- `toy 289439` (`type1=toy`): 0 casts, no error, on both passes. INCONCLUSIVE: the toy may have been
+  on cooldown.
+- `item1="16"`: 0 casts, as on 70205 (no Use effect).
+
+**The other six procedures** (the same session, a level-29 mage; all finished):
+- `keyup`: the CVar set to 0 (PASS), the clicks recorded by themselves, the combat check PASS, the
+  CVar put back to 1 (PASS). Its cast counts are inconclusive (the ActionButtonUseKeyDown = 0 row).
+- `gfx`: every call returned, with no error. The owner answered **no** to "does it look right?",
+  without a note. Screenshot read: the masks clip to rounded squares, not circles (the masks row).
+  The gradient disc is round, the radial progress bar draws a partial disc, `CreateLine` draws.
+  `SetCooldownFromDurationObject` took the duration object, and no swipe shows (the hearth wasn't on
+  cooldown). The panel's own layout overlaps: the 320 px icon covers the radial bar and the
+  cooldown.
+- `popup`: no popup, nothing blocked, no taint seen (the `UnregisterInternalEvent` row).
+- `persist`: the full-exit result in the CVar persistence row.
+- `reagentbag`: the rune can't go in the reagent bag (the owner's note), so the check's FAIL
+  (`reagentBag=0`) is that, not a counting problem.
+- `talent`: the owner named **Reagent Economy**, not learned. None of the eight Reagent Economy
+  IDs is known; the Mage trait tree (53 nodes) has no reagent talent. Which ID is the mage's stays
+  OPEN until the perk is taken.
