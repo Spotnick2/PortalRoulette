@@ -131,6 +131,7 @@ local function build()
         { "auto", "Auto" }, { "show", "Always show" }, { "hide", "Hide" } })
     a = toggle(panel, a, "showUnavailableKarazhan", "Show Karazhan without Atiesh")
     a = toggle(panel, a, "confirmGroupedTeleport", "Confirm teleports while grouped")
+    a = toggle(panel, a, "closeOnCastStart", "Close the wheel when a cast starts")
     a = stepper(panel, a, "uiScale", "Wheel scale", 0.6, 1.6, 0.05, "%.2f")
 
     h = heading(panel, "Animation", a, 0, -18)

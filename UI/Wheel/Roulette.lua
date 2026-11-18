@@ -679,8 +679,16 @@ end
 -- Casting
 ------------------------------------------------------------
 
+-- With closeOnCastStart, a teleport or portal closes the wheel as soon as
+-- it starts casting (#17); otherwise it stays open until the cast ends. The
+-- hearth never closes it. These casts never start in combat, and Close()
+-- does nothing under lockdown anyway.
 function Roulette:OnCastStart(info)
     if not self.open then
+        return
+    end
+    if ns.db and ns.db.closeOnCastStart and info.mode ~= "utility" then
+        self:Close()
         return
     end
     Disc.SetIntent(self.disc, info.mode == ns.Mode.PORTAL and ns.Mode.PORTAL or ns.Mode.TELEPORT)
