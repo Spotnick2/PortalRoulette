@@ -1,17 +1,21 @@
 <#
-    run.ps1 - Syntax-check every tracked Lua file and run every unit test.
+    run.ps1 - Syntax-check every tracked Lua file, check the library
+    checkouts, and run every tests\test_*.lua under Lua 5.1, through
+    WowTestKit at the commit tests\kit.pin names (its scripts\run.ps1).
 
     The tests are plain Lua 5.1 scripts that load the addon against
-    tests/wow_stubs.lua. WoW uses Lua 5.1, so the tests do too, not whatever
-    newer Lua may be first on PATH.
+    tests/wow_stubs.lua (on the kit). WoW uses Lua 5.1, so the tests do too,
+    not whatever newer Lua may be first on PATH.
 
     Usage:
         pwsh tests/run.ps1
         pwsh tests/run.ps1 -Lua "C:\path\to\lua5.1.exe"
+        pwsh tests/run.ps1 -KitDev      # the ..\WowTestKit working copy, not the pin
 #>
 
 param(
-    [string]$Lua = "C:\Program Files (x86)\Lua\5.1\lua.exe"
+    [string]$Lua = "C:\Program Files (x86)\Lua\5.1\lua.exe",
+    [switch]$KitDev
 )
 
 $ErrorActionPreference = "Stop"
@@ -26,7 +30,9 @@ $RepoRoot = Split-Path -Parent $PSScriptRoot
 Push-Location $RepoRoot
 try {
     # Every Lua file git knows about (tracked or staged/new, minus ignored),
-    # so a file missing from the TOC is still syntax-checked.
+    # so a file missing from the TOC (the probe, the tests) is still
+    # syntax-checked. The kit's runner checks only a TOC's files, so it is
+    # not given one: this is the wider check.
     $luaFiles = @(git ls-files --cached --others --exclude-standard -- "*.lua" |
         Where-Object { -not $_.StartsWith("Libs/") -and (Test-Path $_) })
     & $Luac -p @luaFiles
@@ -56,14 +62,11 @@ try {
             Write-Host "$($lib.Name): checkout matches pinned tag $tag"
         }
     }
-
-    $failed = 0
-    foreach ($t in Get-ChildItem "tests\test_*.lua" | Sort-Object Name) {
-        & $Lua $t.FullName
-        if ($LASTEXITCODE -ne 0) { $failed++ }
-    }
-    if ($failed -gt 0) { Write-Error "$failed test file(s) failed"; exit 1 }
-    Write-Host "All tests passed" -ForegroundColor Green
 } finally {
     Pop-Location
 }
+
+. (Join-Path $PSScriptRoot "kit.ps1")
+$kit = Get-WowTestKit -RepoRoot $RepoRoot -KitDev:$KitDev
+& (Join-Path $kit "scripts\run.ps1") -RepoRoot $RepoRoot -Lua $Lua
+exit $LASTEXITCODE
