@@ -6,7 +6,7 @@ Warcraft: Forever**.
 Open the wheel, then left-click a destination to teleport or right-click it to open a portal. Your
 hearthstone sits in the middle.
 
-![Portal Roulette on a Horde mage](docs/screenshots/hero.jpg)
+![Portal Roulette on a Horde mage](https://raw.githubusercontent.com/Spotnick2/PortalRoulette/main/docs/screenshots/hero.jpg)
 
 ## Features
 
@@ -20,7 +20,7 @@ hearthstone sits in the middle.
   you learn them at.
 - **Your hearthstone in the centre**, with its cooldown and your bind location. A Crumbling
   Hearthstone is used only when you have no Hearthstone.
-- **Reagent counts** for Rune of Teleportation and Rune of Portals (reagent bag included), with a
+- **Reagent counts** for Rune of Teleportation and Rune of Portals, with a
   warning on a destination you can't afford. They hide themselves once you have the Reagent Economy
   perk.
 - **Arcane glass look.** Slowly circulating energy, small lights orbiting the rim, glowing links with
@@ -45,16 +45,16 @@ hearthstone sits in the middle.
 
 **One wheel per faction**, Horde and Alliance:
 
-![The Horde and Alliance wheels](docs/screenshots/wheels.jpg)
+![The Horde and Alliance wheels](https://raw.githubusercontent.com/Spotnick2/PortalRoulette/main/docs/screenshots/wheels.jpg)
 
 **Before and after learning**: unlearned destinations are greyed out. Hovering a destination shows
 both spells and what they need:
 
-![An unlearned wheel and the hover tooltip](docs/screenshots/states.jpg)
+![An unlearned wheel and the hover tooltip](https://raw.githubusercontent.com/Spotnick2/PortalRoulette/main/docs/screenshots/states.jpg)
 
 **The launcher** glows until you drag it onto an action bar:
 
-![The launcher with its placement prompt](docs/screenshots/launcher.jpg)
+![The launcher with its placement prompt](https://raw.githubusercontent.com/Spotnick2/PortalRoulette/main/docs/screenshots/launcher.jpg)
 
 ## Launcher
 
@@ -87,6 +87,21 @@ Options → AddOns → Portal Roulette:
 | `/pr reset` | Reset the wheel and launcher positions |
 | `/pr debug` | Print the wheel's state (for bug reports) |
 | `/pr debug trace on\|off` | Record why the wheel closes, to SavedVariables (for bug reports) |
+
+## Good to know
+
+- The wheel can't open in combat, and entering combat closes it: the game doesn't let addons change
+  secure buttons during a fight.
+- In a group, a teleport asks for confirmation first (unless you turn that off), then gives you 8
+  seconds to click the destination again. Portals cast straight away.
+- With *close the wheel as soon as a cast starts*, the wheel closes when the cast bar appears. A cast
+  that fails before that (no runes left, for instance) leaves it open.
+- Runes of Teleportation and Portals can't go in the reagent bag; keep them in your bags.
+
+## Bug reports
+
+Open an issue on [GitHub](https://github.com/Spotnick2/PortalRoulette/issues). The output of
+`/pr debug` helps, and for a wheel that closes when it shouldn't, `/pr debug trace on` records why.
 
 ## Requirements
 
