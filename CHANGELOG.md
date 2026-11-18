@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- LibGlass-1.0 updated to r13.
+
 ## v1.0.1
 
 - Fixed: the glass sheen on the wheel, its title bar and the launcher's placement prompt was drawn
