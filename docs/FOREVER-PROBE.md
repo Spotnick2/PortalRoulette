@@ -5,8 +5,7 @@ What `Tools/PortalRouletteProbe` (`/prprobe`) measured on the WoW: Forever clien
 
 ## How to run it
 
-1. Deploy it with `pwsh Tools/deploy.ps1 -ProbeOnly`. It is a separate dev addon, and a new addon
-   folder needs a **client restart**.
+1. Deploy it with `pwsh Tools/deploy.ps1 -ProbeOnly`. It is a separate dev addon; `/reload` loads it.
 2. Log in on the mage, then run `/console scriptErrors 1`.
 3. Run each command below, then `/reload` (or log out) so the client writes
    `WTF\Account\<ACCOUNT>\SavedVariables\PortalRouletteProbe.lua`.
