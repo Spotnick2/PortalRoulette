@@ -705,11 +705,26 @@ end
 
 -- The procedures' "show the panel": shown (built the first time), and a new
 -- round of clicks and combat tests to wait for. A throw keeps the step.
+local roundArmed -- true once showSecure ran in this Lua session
 local function showSecure()
     if InCombatLockdown() then error("leave combat first, then Retry", 0) end
     if securePanel then securePanel:Show() else buildSecure() end
     clicked, combatResult, restoredAfterCombat = {}, nil, nil
+    roundArmed = true
     return #secureLabels .. " buttons"
+end
+
+-- ForeverProbe resumes a procedure at its saved step after a /reload, but
+-- this file's state starts again: no panel, no clicks, no combat result. A
+-- wait that finds the round not armed in this session shows the panel again
+-- and starts the round over, instead of waiting forever. In combat it can't
+-- build secure buttons, so it says to leave combat first.
+local function rearm()
+    if roundArmed then return true end
+    if InCombatLockdown() then return false, "reloaded since Show panel: leave combat, the panel comes back" end
+    showSecure()
+    say("reloaded since Show panel: the panel is back, the round starts again")
+    return true
 end
 
 -- The clicks still to make: every button left, and the R one right too.
@@ -1010,13 +1025,19 @@ local function clickAndCombatSteps(list)
     list[#list + 1] = { text = "Left-click each button on the panel once, and right-click the \"spell2 numeric R\""
         .. " one too. This step goes on by itself once every click is recorded.",
         wait = function()
+            local armed, why = rearm()
+            if not armed then return false, why end
             local missing = missingClicks()
             if #missing == 0 then return true, #secureLabels + 1 .. " clicks recorded" end
             return false, "missing: " .. table.concat(missing, ", ")
         end }
     list[#list + 1] = { text = "Keep the panel shown and pull a training dummy or a mob: the combat tests run"
         .. " once combat lockdown starts.",
-        wait = function() return combatResult ~= nil, combatResult or "waiting for combat" end,
+        wait = function()
+            local armed, why = rearm()
+            if not armed then return false, why end
+            return combatResult ~= nil, combatResult or "waiting for combat"
+        end,
         check = function()
             local lines = table.concat(DB().combat or {}, "\n")
             return combatResult == "ok" and lines:find("InCombatLockdown = true", 1, true) ~= nil,
@@ -1025,12 +1046,15 @@ local function clickAndCombatSteps(list)
     list[#list + 1] = { text = "Leave combat (finish the fight or run away). The panel is put back after it.",
         wait = function()
             if InCombatLockdown() then return false, "still in combat" end
+            -- After a /reload there is no panel left to put back.
+            if not roundArmed then return true, "reloaded since the combat tests: nothing to put back" end
             return restoredAfterCombat == true, "waiting for PLAYER_REGEN_ENABLED"
         end }
     return list
 end
 
 Probe:Steps("secure", clickAndCombatSteps({
+    rev = 2, -- 2: the waits rebuild the panel after a /reload
     title = "Secure casting and the combat tests",
 }))
 
@@ -1056,7 +1080,8 @@ local function restoreKeyDown()
 end
 
 do
-    local keyup = { title = "Secure casting on key release (ActionButtonUseKeyDown 0)" }
+    local keyup = { rev = 2, -- 2: the waits rebuild the panel after a /reload
+                    title = "Secure casting on key release (ActionButtonUseKeyDown 0)" }
     keyup[1] = { text = "Out of combat: press Set to 0. It switches ActionButtonUseKeyDown to 0 (cast on release)."
         .. " If its check fails, type /console ActionButtonUseKeyDown 0 before the clicks.",
         button = "Set to 0", run = setKeyDown,
