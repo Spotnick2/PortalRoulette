@@ -59,9 +59,9 @@ Run 1: build 70205, 2026-10-04. Level-10 High Order Skyborne mage (Alliance), bo
 | Item | Status | Result |
 |---|---|---|
 | Rune of Teleportation 17031 / Rune of Portals 17032 exist | MEASURED 70205 | Both exist, class 15/1 "Reagent". 17032 was uncached at first (GetItemInfo returned nothing; GetItemInfoInstant and GetItemIconByID work). |
-| Counts include the reagent bag (bag 5) | OPEN | No reagent bag equipped yet (bag5.slots = 0). |
+| Counts include the reagent bag (bag 5) | MEASURED 70959 | Moot: **a Rune of Teleportation can't be put in the reagent bag** (the client says so; run 3, `reagentbag`). With a 10-slot reagent bag equipped, the runes sit in the normal bags and `GetItemCount` counts them (4 = 3 + 1 in bag 3). |
 | Reagent line format in spell tooltips | MEASURED 70205 | Line text is `"Reagents: \|n\|cffff2020Rune of Teleportation\|r"`, red when missing. The data loaded on the first try. |
-| Reagent-free talent: name and spell ID | PARTIAL | It is the **Perk "Reagent Economy"** (1 rank, Resourcefulness tab): "Your class abilities no longer require reagents purchasable from vendors". It is not a class talent. Its spell ID comes from `/prprobe scan` (probe v2); detect it with `IsPlayerSpell(id)`. |
+| Reagent-free talent: name and spell ID | PARTIAL (70959: not learned) | It is the **Perk "Reagent Economy"** (1 rank, Resourcefulness tab): "Your class abilities no longer require reagents purchasable from vendors". It is not a class talent. Its spell ID comes from `/prprobe scan` (probe v2); detect it with `IsPlayerSpell(id)`. |
 | Atiesh 22589 exists | MEASURED 70205 | It exists (2H staff); GetItemSpell was uncached. Portal: Karazhan 28148 exists as a spell. |
 | Crumbling Hearthstone 282006 | MEASURED 70205 | It exists (consumable); not carried. |
 
@@ -81,14 +81,14 @@ Run 1: build 70205, 2026-10-04. Level-10 High Order Skyborne mage (Alliance), bo
 | `spell1=<name>` casts | MEASURED 70205 | Yes, 1 cast. |
 | `type2/spell2` on right-click | MEASURED 70205 | Yes, 1 cast. Left-click on a type2-only button casts nothing (no fallthrough). |
 | `useOnKeyDown` true/false attribute | MEASURED 70205 | Both give 1 cast per click with the CVar at 1. |
-| ActionButtonUseKeyDown = 0 | OPEN | |
+| ActionButtonUseKeyDown = 0 | INCONCLUSIVE | Run 3 (`keyup`) counted **2 casts** for one click on `spell1` numeric, `spell1` by name, `useOnKeyDown=false` and the `type1=item` hearth, and 1 for `useOnKeyDown=true`, the right-click and the hearth macro. But the clicks were 0.5 to 0.6 s apart, inside each other's counting window, so a doubled cast can't be told from a neighbour's. Click each alone, 2 s apart, before relying on it. The CVar was put back (1). |
 | `itemN="16"` main-hand slot | INCONCLUSIVE | 0 casts and no error, because the weapon has no Use effect. |
 | In combat: EnableMouse/SetAlpha/SetParent/SetUIVisibility | MEASURED 70959 | Under lockdown, on a secure button and its panel: **blocked** (ADDON_ACTION_BLOCKED, no effect): EnableMouse, SetAttribute, the panel's SetParent, SetUIVisibility(false) and (true). **Allowed**: SetAlpha on the button and the panel, UIParent:SetAlpha. Run 3 has the lines. |
 
 ### Graphics
 | Item | Status | Result |
 |---|---|---|
-| Unsliced circle masks at 40, 64 and 320 px (TempPortraitAlphaMask) | MEASURED 70205 | No errors. The screenshot shows round clipping. The icon's own black corners make the 320 px edge hard to judge. |
+| Unsliced circle masks at 40, 64 and 320 px (TempPortraitAlphaMask) | OPEN on 70959 | 70205: no errors, round clipping. 70959 (run 3, `gfx`): no errors, but the owner answered **no** to "does it look right?". In the screenshot all three clip to a **rounded square with flat sides**, not a circle, with the icon's grey border showing along the flat edges. `Skin.lua` masks icons the same way. |
 | Rotation stays clipped under a static mask | MEASURED 70205 | A round gradient disc, clipped. |
 | `SetRadialProgressBarPercent` on a masked texture | MEASURED 70205 | Draws a partial disc. |
 | `C_Spell.GetSpellCooldownDuration` + `SetCooldownFromDurationObject` | MEASURED 70205 | Returns a LuaDurationObject and accepts it; no swipe, since the hearth was not on cooldown. |
@@ -101,8 +101,8 @@ Run 1: build 70205, 2026-10-04. Level-10 High Order Skyborne mage (Alliance), bo
 | Specialization | MEASURED 70205 | `GetSpecializationInfo(1)` = 1482 "Mage" with pointsSpent 0; specs 2 and 3 are empty. There are **no talent tabs**, so the launcher theme cannot come from points per tab: use C_Traits, or drop it. |
 | Spellbook lines | MEASURED 70205 | General / Frost / Fire / Arcane. |
 | Camera CVar defaults | MEASURED 70205 | test_cameraOverShoulder 0, CameraKeepCharacterCentered **1**, CameraReduceUnexpectedMovement 0, cameraDistanceMaxZoomFactor 1, cameraViewBlendStyle 1, ActionButtonUseKeyDown 1, ActionButtonUseKeyHeldSpell 0. |
-| CVar persistence | PARTIAL | Across a `/reload`, CameraKeepCharacterCentered kept the marker (0) and test_cameraOverShoulder did not (it reverted to 0). A full restart is still OPEN. |
-| `GameEvent.UnregisterInternalEvent` | MEASURED 70205 | Callable; no ADDON_ACTION_BLOCKED. Popup visibility and taint are still OPEN. |
+| CVar persistence | MEASURED 70959 | Across a full exit and relaunch (run 3, `persist`): **test_cameraOverShoulder did not persist** (marker 0.37, back to 0.000000), **CameraKeepCharacterCentered did** (marker 0 kept). CameraReduceUnexpectedMovement's marker equals its default (0), so it shows nothing. Same as across a `/reload` on 70205. The originals were put back. |
+| `GameEvent.UnregisterInternalEvent` | MEASURED 70959 | Callable; no ADDON_ACTION_BLOCKED (70205 and 70959). On 70959 (run 3, `popup`): no "experimental CVar" popup after writing test_cameraOverShoulder, nothing blocked after the `/reload`, and no taint errors seen in play. |
 | `PlayerCanTeleport()` | MEASURED 70205 | true. |
 | `GetBindLocation()` | MEASURED 70205 | "Valanaar". |
 
@@ -181,3 +181,20 @@ release to 0.6 s after, so quick clicks on neighbouring buttons share them:
 - `toy 289439` (`type1=toy`): 0 casts, no error, on both passes. INCONCLUSIVE: the toy may have been
   on cooldown.
 - `item1="16"`: 0 casts, as on 70205 (no Use effect).
+
+**The other six procedures** (the same session, a level-29 mage; all finished):
+- `keyup`: the CVar set to 0 (PASS), the clicks recorded by themselves, the combat check PASS, the
+  CVar put back to 1 (PASS). Its cast counts are inconclusive (the ActionButtonUseKeyDown = 0 row).
+- `gfx`: every call returned, with no error. The owner answered **no** to "does it look right?",
+  without a note. Screenshot read: the masks clip to rounded squares, not circles (the masks row).
+  The gradient disc is round, the radial progress bar draws a partial disc, `CreateLine` draws.
+  `SetCooldownFromDurationObject` took the duration object, and no swipe shows (the hearth wasn't on
+  cooldown). The panel's own layout overlaps: the 320 px icon covers the radial bar and the
+  cooldown.
+- `popup`: no popup, nothing blocked, no taint seen (the `UnregisterInternalEvent` row).
+- `persist`: the full-exit result in the CVar persistence row.
+- `reagentbag`: the rune can't go in the reagent bag (the owner's note), so the check's FAIL
+  (`reagentBag=0`) is that, not a counting problem.
+- `talent`: the owner named **Reagent Economy**, not learned. None of the eight Reagent Economy
+  IDs is known; the Mage trait tree (53 nodes) has no reagent talent. Which ID is the mage's stays
+  OPEN until the perk is taken.
