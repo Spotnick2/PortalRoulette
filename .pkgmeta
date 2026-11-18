@@ -26,6 +26,7 @@ ignore:
   - AGENTS.md
   - CLAUDE.md
   - README.md
+  - README.curseforge.md
   - CHANGELOG.md
   - docs
   - screenshots

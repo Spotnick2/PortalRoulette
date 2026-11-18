@@ -4,3 +4,5 @@
 # The other libraries under Libs/ are vendored and committed.
 Libs/LibGlass-1.0/
 Libs/LibShowcase-1.0/
+# The packager's output (a local dry run).
+.release/

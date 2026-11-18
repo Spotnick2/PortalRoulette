@@ -8,11 +8,12 @@ local H = dofile("tests/harness.lua")
 -- gitignored libraries; the existence loop below handles them.
 Kit.checkToc("PortalRoulette.toc")
 
-local toc =assert(io.open("PortalRoulette.toc")):read("*a"):gsub("\r", "")
+local toc = assert(io.open("PortalRoulette.toc")):read("*a"):gsub("\r", "")
 check(toc:find("## Interface: 16001\n"), "Interface is 16001")
 check(toc:find("## Version: @project%-version@\n"), "Version stays the packager token")
 check(toc:find("## SavedVariables: PortalRouletteDB\n"), "PortalRouletteDB is the saved table")
 check(toc:find("## X%-Curse%-Project%-ID: 1540067\n"), "CurseForge project ID is 1540067")
+check(toc:find("## X%-Wago%-ID: nKWwbZKE\n"), "Wago project ID is nKWwbZKE")
 
 local files = H.tocFiles("PortalRoulette.toc")
 for _, f in ipairs(files) do
