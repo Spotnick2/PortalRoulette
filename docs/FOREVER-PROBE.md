@@ -95,6 +95,13 @@ Run 1: build 70205, 2026-10-04. Level-10 High Order Skyborne mage (Alliance), bo
 - The reagent-free talent on/off tooltip comparison, which gates the tooltip signal in Auto mode.
 - Karazhan through an equipped Atiesh.
 
+## Close the wheel when a cast starts (#17; build 70959, 2026-11-18)
+
+The owner's in-game check of #23, with the option ticked: teleports and portals cast from the wheel
+"worked fine", with nothing to report. The wheel now closes on `UNIT_SPELLCAST_START` (the cast bar),
+not on the request (`UNIT_SPELLCAST_SENT`). The cinematic camera's restore and a cast on mouse release
+were in the check asked for, but weren't reported on separately.
+
 ## Launcher pickup investigation (2026-10-05)
 
 - Owner observation: normal left-drag reaches the launcher handler, but after

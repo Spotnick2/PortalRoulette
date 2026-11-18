@@ -85,19 +85,29 @@ function CastTracker:MaybeBroadcast(info, timing)
     SendChatMessage(message, channel)
 end
 
-function CastTracker:StartCast(castGUID, spellID)
+-- SENT is the request (it can still fail before anything casts); START means
+-- the cast bar runs. A cast is announced once, at whichever comes first, and
+-- confirmed once, at START (#17: the wheel may close then).
+function CastTracker:StartCast(castGUID, spellID, confirmed)
     local info = self:GetInfo(spellID)
     if not info then
         return
     end
-    if self.activeCast and self.activeCast.castGUID == castGUID then
-        return -- SENT then START for the same cast
+    local active = self.activeCast
+    if not (active and active.castGUID == castGUID) then
+        active = { castGUID = castGUID, info = info }
+        self.activeCast = active
+        if ns.Roulette and ns.Roulette.OnCastStart then
+            ns.Roulette:OnCastStart(info)
+        end
+        self:MaybeBroadcast(info, "start")
     end
-    self.activeCast = { castGUID = castGUID, info = info }
-    if ns.Roulette and ns.Roulette.OnCastStart then
-        ns.Roulette:OnCastStart(info)
+    if confirmed and not active.confirmed then
+        active.confirmed = true
+        if ns.Roulette and ns.Roulette.OnCastConfirmed then
+            ns.Roulette:OnCastConfirmed(info)
+        end
     end
-    self:MaybeBroadcast(info, "start")
 end
 
 function CastTracker:FinishCast(castGUID, succeeded)
@@ -138,7 +148,7 @@ function CastTracker:Initialize()
     end)
     Events:Register("UNIT_SPELLCAST_START", function(_, unit, castGUID, spellID)
         if unit == "player" then
-            CastTracker:StartCast(guid(castGUID), spellID)
+            CastTracker:StartCast(guid(castGUID), spellID, true)
         end
     end)
     Events:Register("UNIT_SPELLCAST_SUCCEEDED", function(_, unit, castGUID)

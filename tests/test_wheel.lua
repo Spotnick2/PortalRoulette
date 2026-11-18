@@ -144,4 +144,65 @@ R:Close()
 R:FinishClose()
 check(not R.root:IsShown(), "closed")
 
+-- Casting from the wheel (#17). By default it stays open while the cast runs
+-- and closes when a teleport or portal succeeds.
+local function openWheel()
+    if R.open then R:Close() end
+    R:FinishClose()
+    H.slash("PORTALROULETTE", "")
+    check(R.open, "open before the cast")
+end
+-- The client's order: SENT (the request), then START (the cast bar) unless
+-- the request fails first, then SUCCEEDED, FAILED or INTERRUPTED.
+local guid = 0
+local function send(spellID)
+    guid = guid + 1
+    WoW.fire("UNIT_SPELLCAST_SENT", "player", "", "cast-" .. guid, spellID)
+end
+local function start(spellID)
+    WoW.fire("UNIT_SPELLCAST_START", "player", "cast-" .. guid, spellID)
+end
+local function finish(event, spellID)
+    WoW.fire(event, "player", "cast-" .. guid, spellID)
+end
+eq(ns.db.closeOnCastStart, false, "closing at cast start is off by default")
+openWheel()
+send(10059)
+start(10059)
+check(R.open, "off: the wheel stays open while the portal casts")
+finish("UNIT_SPELLCAST_SUCCEEDED", 10059)
+check(not R.open, "off: it closes when the portal succeeds")
+openWheel()
+send(3561)
+start(3561)
+finish("UNIT_SPELLCAST_FAILED", 3561)
+check(R.open, "off: a failed teleport leaves it open")
+
+ns.db.closeOnCastStart = true
+openWheel()
+send(3561)
+check(R.open, "on: the request alone does not close it")
+start(3561)
+check(not R.open, "on: a teleport closes it when its cast bar starts")
+finish("UNIT_SPELLCAST_INTERRUPTED", 3561)
+check(not R.open, "on: an interrupted cast leaves it closed")
+openWheel()
+send(10059)
+finish("UNIT_SPELLCAST_FAILED", 10059)
+check(R.open, "on: a request that fails before casting leaves it open")
+send(10059)
+start(10059)
+check(not R.open, "on: a portal closes it when its cast bar starts")
+openWheel()
+send(ns.Constants.SPELL_HEARTHSTONE)
+start(ns.Constants.SPELL_HEARTHSTONE)
+check(R.open, "on: the hearth never closes it")
+finish("UNIT_SPELLCAST_SUCCEEDED", ns.Constants.SPELL_HEARTHSTONE)
+send(99999)
+start(99999)
+check(R.open, "on: an unrelated spell does not close it")
+ns.db.closeOnCastStart = false
+R:Close()
+R:FinishClose()
+
 done("test_wheel")
