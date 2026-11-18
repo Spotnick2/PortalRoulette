@@ -20,10 +20,12 @@ the dev probe (`Tools/PortalRouletteProbe`, `/prprobe`) before code relies on it
   Lua file, then `tests/test_*.lua` against `tests/wow_stubs.lua`. Reading an unstubbed global is
   an error. Stub a global only after confirming it in the API dump.
 - Deploy: `pwsh Tools/deploy.ps1` (`-Probe` adds the dev probe, `-ProbeOnly` deploys just the probe).
-  - It deploys to `C:\Program Files (x86)\World of Warcraft\_classic_beta_\Interface\AddOns`.
+  - It deploys to `C:\Program Files (x86)\World of Warcraft\_forever_\Interface\AddOns`.
   - It copies git-tracked files only, never untracked scratch folders.
   - It deploys embedded libraries from sibling checkouts (`..\LibGlass`, `..\LibShowcase`).
-- A brand-new addon folder needs a client restart; otherwise `/reload`. Enable `/console scriptErrors 1`.
+- In game, `/reload` loads everything a deploy brings, a new addon folder, textures and TOC changes
+  included (porting guide §5). A full client exit is only for a persistence test. Enable
+  `/console scriptErrors 1`.
 - When the default shell runner is unreliable, use the approved PowerShell executable:
   `C:\Users\nicol\AppData\Local\Microsoft\WindowsApps\pwsh.exe -Command '...'`. Prefer single-quoted
   payloads when the command uses PowerShell variables.

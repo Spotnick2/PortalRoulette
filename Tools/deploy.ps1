@@ -126,5 +126,5 @@ if (-not $ProbeOnly) { Deploy-Addon }
 if ($Probe -or $ProbeOnly) { Deploy-Probe }
 
 Write-Host ""
-Write-Host "Done. In game:  /console scriptErrors 1  then  /reload (a new addon folder needs a client restart)" -ForegroundColor Green
+Write-Host "Done. In game:  /console scriptErrors 1  then  /reload" -ForegroundColor Green
 Write-Host "Check the AddOn list: enabled AND not flagged out of date." -ForegroundColor Green
