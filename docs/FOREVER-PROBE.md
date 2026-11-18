@@ -71,8 +71,8 @@ Run 1: build 70205, 2026-10-04. Level-10 High Order Skyborne mage (Alliance), bo
 | `C_Container.PlayerHasHearthstone()` | MEASURED 70205 | **Returns nil even with Hearthstone 6948 in the backpack.** Fall back to `C_Item.GetItemCount(6948)`. |
 | Hearthstone item spell | MEASURED 70205 | `GetItemSpell(6948)` = "Hearthstone", 8690. |
 | Toys | MEASURED 70205 | `C_ToyBox.GetNumToys()` = 20, none owned. |
-| Secure `type1=item` hearth casts once per click | OPEN | Probe v2 adds "hearth item:ID" and "hearth macro" buttons. |
-| Secure `type1=toy` | OPEN | Needs an owned toy. |
+| Secure `type1=item` hearth casts once per click | OPEN | Run 3 counted 2 casts for one click, but a quick click on the next button may share that count: click it alone, a second apart. |
+| Secure `type1=toy` | OPEN | Run 3: 0 casts with toy 289439, possibly on cooldown. |
 
 ### Secure casting (ActionButtonUseKeyDown = 1)
 | Item | Status | Result |
@@ -83,7 +83,7 @@ Run 1: build 70205, 2026-10-04. Level-10 High Order Skyborne mage (Alliance), bo
 | `useOnKeyDown` true/false attribute | MEASURED 70205 | Both give 1 cast per click with the CVar at 1. |
 | ActionButtonUseKeyDown = 0 | OPEN | |
 | `itemN="16"` main-hand slot | INCONCLUSIVE | 0 casts and no error, because the weapon has no Use effect. |
-| In combat: EnableMouse/SetAlpha/SetParent/SetUIVisibility | OPEN | The combat run did not save. Probe v2 saves incrementally and runs whenever the panel is shown. |
+| In combat: EnableMouse/SetAlpha/SetParent/SetUIVisibility | MEASURED 70959 | Under lockdown, on a secure button and its panel: **blocked** (ADDON_ACTION_BLOCKED, no effect): EnableMouse, SetAttribute, the panel's SetParent, SetUIVisibility(false) and (true). **Allowed**: SetAlpha on the button and the panel, UIParent:SetAlpha. Run 3 has the lines. |
 
 ### Graphics
 | Item | Status | Result |
@@ -140,3 +140,41 @@ Run 1: build 70205, 2026-10-04. Level-10 High Order Skyborne mage (Alliance), bo
 - Secure **`type1=macro`, `macrotext1="/use item:6948"`**: 1 cast per left click; right click does nothing. The `type1=item` hearth button was not recorded (OPEN).
 - The experimental-CVar popup did **not** appear after `GameEvent.UnregisterInternalEvent` + writing `test_cameraOverShoulder` (no ADDON_ACTION_BLOCKED). Taint after `/reload`: none reported.
 - **`InCombatLockdown()` is false inside `PLAYER_REGEN_DISABLED` handlers**: lockdown starts right after. The combat run therefore measured nothing under lockdown. Probe v3 waits for lockdown; the run is still OPEN. This matters for the addon: anything done in a REGEN_DISABLED handler still runs unlocked, which gives a last out-of-combat moment for restoring the UI.
+
+## Run 3 (build 70959, 2026-11-18)
+
+The first run on ForeverProbe: `/fp steps pr secure`, read from the SavedVariables (`ForeverProbe.lua`
+`steps.records`, `PortalRouletteProbe.lua` `secure` and `combat`). The procedure finished, its combat
+check PASS. Its clicks step was completed by hand: no right-click on the "R" button was recorded.
+
+**Combat, under lockdown** (`InCombatLockdown() = true`; the panel `IsProtected() = true, false`, i.e.
+protected through its secure buttons):
+
+| Call | Result |
+|---|---|
+| `button:EnableMouse(false)`, then `(true)` | Blocked both times; `IsMouseEnabled()` stays true. |
+| `button:SetAlpha(0.5)`, `panel:SetAlpha(0.5)` | Allowed (`GetAlpha()` = 0.502). |
+| `button:SetAttribute("probeAttr", 1)` | Blocked; the attribute stays nil. |
+| `panel:SetParent(nil)` | Blocked; the parent stays UIParent. |
+| `SetUIVisibility(false)`, `SetUIVisibility(true)` | Blocked both times; UIParent stays shown. |
+| `UIParent:SetAlpha(1)` | Allowed. |
+| `C_Item.GetItemCooldown(6948)` | Plain values: `0, 0, true`. |
+| `C_Spell.GetSpellCooldown(168)` | `startTime`, `duration` and `modRate` secret; `isEnabled` and `isActive` plain. |
+| `C_Item.GetItemCount(17031)` | **Plain** (4), not secret, in combat. One reading: keep `ns.API.Readable` on counts. |
+
+Each blocked call raises ADDON_ACTION_BLOCKED, which an error catcher (Bugsy) reports against the probe
+as `UNKNOWN()`: expected, since that is what the run measures.
+
+So the guardrails hold: the wheel must hide, reparent and give back the UI before lockdown (inside
+`PLAYER_REGEN_DISABLED`, run 2), and only alpha can change in combat.
+
+**Clicks** (ActionButtonUseKeyDown 1). Each line counts the edges and casts from 0.65 s before the
+release to 0.6 s after, so quick clicks on neighbouring buttons share them:
+- `spell1` numeric, `spell1` by name, `useOnKeyDown` true and false: 2 edges, 1 cast each, as on 70205.
+- `type2` button, left-click: 0 casts (no fallthrough), as on 70205.
+- `hearth item:ID` (`type1=item`): 2 edges, **2 casts** for one click. INCONCLUSIVE: the "hearth macro"
+  button was clicked right after (its two lines show 4 and 3 edges, a quick double click), so its cast
+  may be counted here. The addon's hearth orb uses the macro form, which gives 1 cast per click.
+- `toy 289439` (`type1=toy`): 0 casts, no error, clicked twice. INCONCLUSIVE: the toy may have been on
+  cooldown.
+- `item1="16"`: 0 casts, as on 70205 (no Use effect).
