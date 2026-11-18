@@ -62,6 +62,9 @@ function Methods.GetScale(w) return w._scale or 1 end
 function Methods.GetSize(w) return w._width, w._height end
 function Methods.GetNumPoints(w) return #w._points end
 function Methods.GetTexture(t) return t._file end
+-- Movable frames (the dev probe's panels): IsMovable answers SetMovable.
+function Methods.SetMovable(w, v) w._movable = v and true or false end
+function Methods.IsMovable(w) return w._movable == true end
 -- The secure buttons' click edges (tests check both are registered).
 function Methods.RegisterForClicks(b, ...) b._clicks = { ... } end
 -- Frame:CreateLine (SimpleFrameAPI): a Line region of the frame.

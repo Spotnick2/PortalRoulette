@@ -539,6 +539,25 @@ local function runScan(maxID, findText)
     end)
 end
 
+-- The probe's panels go above other addons' windows (DIALOG; ForeverProbe's
+-- own panel is higher still) and drag out of combat: by `handle` when given,
+-- else by the panel itself. The secure panel drags by its title strip, so
+-- no mouse-enabled frame overlaps its secure buttons. Measured in game
+-- 2026-11-18: at the default strata the secure panel was hidden behind other
+-- addons and couldn't be moved.
+local function liftAndDrag(panel, handle)
+    panel:SetFrameStrata("DIALOG")
+    panel:SetClampedToScreen(true)
+    panel:SetMovable(true)
+    handle = handle or panel
+    handle:EnableMouse(true)
+    handle:RegisterForDrag("LeftButton")
+    handle:SetScript("OnDragStart", function()
+        if not InCombatLockdown() then panel:StartMoving() end
+    end)
+    handle:SetScript("OnDragStop", function() panel:StopMovingOrSizing() end)
+end
+
 ------------------------------------------------------------
 -- secure: secure test buttons and combat tests
 ------------------------------------------------------------
@@ -657,12 +676,18 @@ local function buildSecure()
     securePanel = CreateFrame("Frame", "PRProbeSecurePanel", UIParent)
     securePanel:SetSize(176, 300)
     securePanel:SetPoint("LEFT", 40, 0)
+    local handle = CreateFrame("Frame", nil, securePanel)
+    handle:SetPoint("TOPLEFT")
+    handle:SetPoint("TOPRIGHT")
+    handle:SetHeight(32) -- the buttons start 36 below the top
+    liftAndDrag(securePanel, handle)
+    securePanel.dragHandle = handle
     local bg = securePanel:CreateTexture(nil, "BACKGROUND")
     bg:SetAllPoints()
     bg:SetColorTexture(0, 0, 0, 0.6)
     local title = securePanel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     title:SetPoint("TOP", 0, -10)
-    title:SetText("PR probe: click each")
+    title:SetText("PR probe: click each (drag here)")
 
     local frostName = C_Spell.GetSpellName(FROST_ARMOR)
     local okH, hearth = pcall(C_Container.PlayerHasHearthstone)
@@ -780,6 +805,7 @@ local function buildGfx()
     gfxPanel = CreateFrame("Frame", "PRProbeGfx", UIParent)
     gfxPanel:SetSize(620, 380)
     gfxPanel:SetPoint("CENTER")
+    liftAndDrag(gfxPanel)
     local bg = gfxPanel:CreateTexture(nil, "BACKGROUND")
     bg:SetAllPoints()
     bg:SetColorTexture(0.05, 0.05, 0.1, 0.85)
@@ -1020,7 +1046,8 @@ end, "wipe the saved results and the log")
 
 -- The clicks and the combat tests, shared by secure and keyup.
 local function clickAndCombatSteps(list)
-    list[#list + 1] = { text = "Out of combat: press Show panel. A panel of secure test buttons opens on the left.",
+    list[#list + 1] = { text = "Out of combat: press Show panel. A panel of secure test buttons opens on the left;"
+        .. " drag it by its title to move it.",
         button = "Show panel", run = showSecure }
     list[#list + 1] = { text = "Left-click each button on the panel once, and right-click the \"spell2 numeric R\""
         .. " one too. This step goes on by itself once every click is recorded.",

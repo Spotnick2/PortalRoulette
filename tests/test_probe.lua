@@ -67,6 +67,15 @@ check(db.tips ~= nil, "the tooltip run finishes and saves")
 H.fp("pr secure")
 local buttons = H.framesWithTemplate("SecureActionButtonTemplate")
 check(#buttons >= 6, "the secure panel has its test buttons")
+-- Above other addons' windows, and dragged by its title strip, never over a
+-- button (measured in game: at the default strata it was hidden, unmovable).
+local panel = buttons[1]:GetParent()
+eq(panel:GetFrameStrata(), "DIALOG", "the secure panel sits above other addons' windows")
+check(panel:IsMovable(), "the secure panel can be moved")
+local handle = panel.dragHandle
+check(handle and handle:IsMouseEnabled() and handle:GetScript("OnDragStart"), "its title strip drags it")
+check(not panel:IsMouseEnabled(), "the panel itself takes no mouse behind its buttons")
+for _, b in ipairs(buttons) do check(b:GetParent() ~= handle, "no secure button sits on the drag strip") end
 for _, b in ipairs(buttons) do
     check(b._clicks and b._clicks[1] == "AnyUp" and b._clicks[2] == "AnyDown", "both click edges are registered")
     for k in pairs(b._attrs or {}) do
