@@ -124,7 +124,9 @@ function LauncherButton:RefreshVisibility()
     if self.prompt then
         self.prompt:Hide()
     end
-    if GameTooltip and GameTooltip.Hide then
+    -- Only our own tooltip: this runs on every action-bar change, and the
+    -- tooltip may belong to another frame (Codex, #32).
+    if GameTooltip and GameTooltip:IsOwned(self.button) then
         GameTooltip:Hide()
     end
 end
