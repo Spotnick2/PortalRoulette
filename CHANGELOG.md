@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- New option (Launcher, on by default): show the launcher button. Turned off, the launcher and its
+  "drag onto an action bar" prompt stay hidden; the minimap button, the Addon Compartment, the key
+  binding and `/pr` still open the wheel.
+- LibShowcase-1.0 updated to r10: a pull countdown or a battleground/arena start timer brings the
+  game UI back like a ready check; the camera orbit keeps the same speed whatever your camera turn
+  speed; female characters get their own shoulder framing; with a gamepad, the presentation no
+  longer changes the camera-centring settings.
+
 ## v1.1.0
 
 - New option (Wheel, off by default): close the wheel as soon as a teleport or portal starts

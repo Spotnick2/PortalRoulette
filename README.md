@@ -36,7 +36,8 @@ hearthstone sits in the middle.
 - **Group friendly.** It can announce your portals, and asks before you teleport away from your
   group.
 - **Launcher button** you can drag onto an action bar. It glows until you place it, and hides itself
-  once it's on a bar. Also: a minimap button, an Addon Compartment entry and a key binding.
+  once it's on a bar, or you can turn it off in the options. Also: a minimap button, an Addon
+  Compartment entry and a key binding.
 - **Glass suite** (only when the Glass UI addon is installed): the wheel can follow Glass UI's Pearl
   look, set on Glass UI's page. With Glass Action Bars too, the launcher can be a button on its
   Utility bar (tick Portal Roulette in its Utility options), and the floating launcher steps aside.
@@ -74,7 +75,7 @@ Options → AddOns → Portal Roulette:
 - **Animation:** all animations, idle motion, hover effects.
 - **Sound:** sounds, hover sounds, sound set (Portal Roulette or game UI sounds), volume channel.
 - **Presentation:** hide the game UI, cinematic camera, camera orbit, cast framing.
-- **Launcher:** lock, minimap button, glow (blue pulse, spell alert or off), scale.
+- **Launcher:** show or hide it, lock, minimap button, glow (blue pulse, spell alert or off), scale.
 - **Group broadcast:** announce portals or teleports.
 
 ## Commands

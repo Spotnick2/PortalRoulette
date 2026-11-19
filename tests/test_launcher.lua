@@ -52,6 +52,16 @@ check(not button:IsShown() and not L.prompt:IsShown(), "placing the macro hides 
 placed = false
 L:RefreshVisibility()
 check(button:IsShown(), "removing macro from bars restores launcher")
+-- The "Show the launcher button" option (CurseForge request, #30).
+eq(ns.db.showLauncher, true, "the launcher is shown by default")
+ns.db.showLauncher = false
+ns.Options.OnChanged("showLauncher")
+check(not button:IsShown() and not L.prompt:IsShown(), "turning the launcher off hides it and its prompt")
+L:RefreshVisibility()
+check(not button:IsShown(), "the macro checks keep an unwanted launcher hidden")
+ns.db.showLauncher = true
+ns.Options.OnChanged("showLauncher")
+check(button:IsShown(), "turning the launcher back on shows it")
 macro = nil
 L:PickupLauncherMacro()
 eq(macro.icon, nativeIcon, "new macro uses a resolved native icon")

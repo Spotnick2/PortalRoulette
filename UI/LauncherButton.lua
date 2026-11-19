@@ -86,6 +86,11 @@ function LauncherButton:IsLauncherMacroOnActionBar()
 end
 
 function LauncherButton:ShouldShowLauncher()
+    -- Turned off in the options: the minimap button, the Addon Compartment
+    -- and /pr still open the wheel.
+    if ns.db and ns.db.showLauncher == false then
+        return false
+    end
     -- Hosted: Glass Action Bars' Utility bar shows our button instead
     -- (UI/UtilityButton.lua). A flag, not a one-time Hide: the events
     -- below refresh visibility again and must keep it hidden.

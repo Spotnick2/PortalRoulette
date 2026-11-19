@@ -167,8 +167,15 @@ local function onOptionChanged(key)
         ns.LauncherButton:ApplySettings()
     elseif key == "launcherScale" or key == "lockLauncher" or key == "launcherGlow" then
         ns.LauncherButton:ApplySettings()
+    elseif key == "showLauncher" then
+        ns.LauncherButton:RefreshVisibility()
     elseif key == "showMinimapButton" then
         ns.Minimap:RefreshVisibility()
+    end
+    -- Both entry points off: say where the wheel still opens from.
+    if (key == "showLauncher" or key == "showMinimapButton")
+        and ns.db.showLauncher == false and ns.db.showMinimapButton == false then
+        printMessage("Launcher and minimap button hidden: open the wheel with /pr, the Addon Compartment or a key binding.")
     end
     if R.root then
         R:Refresh()
