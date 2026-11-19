@@ -82,9 +82,10 @@ the dev probe (`Tools/PortalRouletteProbe`, `/fp pr`) before code relies on it.
     included) and the click hint. It hides its counts when the legacy reagent-free talent applies
     (states: required / free / unknown; unknown keeps the counts).
   - **Header pill:** title, gear (options), close.
-- Optional cinematic camera (default OFF) through LibShowcase-1.0: the character faces the camera and
-  the game UI is hidden, all restored on exit, combat, logout and after a crash.
-- Minimap button (LibDBIcon) and Addon Compartment entry, both hideable.
+- Cinematic camera (default ON since schema 5) through LibShowcase-1.0: the character faces the
+  camera and the game UI is hidden, all restored on exit, combat, logout and after a crash.
+- Floating launcher (hides once its `/pr` macro is on a bar, or with the `showLauncher` option),
+  minimap button (LibDBIcon) and Addon Compartment entry, all hideable.
 - `/pr preview` renders the whole wheel on a low-level character with no castable actions.
 - **Glass suite integration, only when Glass UI is loaded** (`Core/GlassUI.lua`, `UI/UtilityButton.lua`).
   Without Glass UI nothing is asked, reported or registered, and the addon looks and behaves as on its own.

@@ -162,7 +162,8 @@ local function build()
     a = toggle(panel, a, "cameraCastAware", "Frame the character while casting")
 
     h = heading(panel, "Launcher", a, 0, -18)
-    a = toggle(panel, h, "lockLauncher", "Lock the launcher")
+    a = toggle(panel, h, "showLauncher", "Show the launcher button")
+    a = toggle(panel, a, "lockLauncher", "Lock the launcher")
     a = toggle(panel, a, "showMinimapButton", "Minimap button")
     a = cycle(panel, a, "launcherGlow", "Launcher glow", {
         { "blue", "Blue pulse" }, { "alert", "Spell alert (yellow)" }, { "off", "Off" } })

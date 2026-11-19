@@ -33,6 +33,7 @@ ns.Constants = {
         hideGameUI = true,
         cameraOrbit = true,
         cameraCastAware = true,
+        showLauncher = true,
         lockLauncher = false,
         launcherScale = 1.35,
         launcherGlow = "blue",
