@@ -227,6 +227,9 @@ jobs:
       (github.event_name == 'push' && github.ref_type == 'tag') ||
       (github.event_name == 'workflow_dispatch' && inputs.publish != 'wago')
     runs-on: ubuntu-latest
+    concurrency:
+      group: release-${{ inputs.tag || github.ref_name }}
+      cancel-in-progress: false
     permissions:
       contents: write
     env:
@@ -284,20 +287,20 @@ jobs:
             gh release view "$TAG" "${repo[@]}" --json assets \
               --jq '.assets[] | select(.state == "uploaded") | .name' | grep -- '-forever\.zip$' | head -1
           }
+          # An upload that failed can leave an empty asset in "starter" state.
+          # It still holds its name, and gh refuses to upload over a name that
+          # exists, so a retry deletes every unfinished asset first, the zip's
+          # or release.json's. Finished assets are kept.
+          gh release view "$TAG" "${repo[@]}" --json assets \
+            --jq '.assets[] | select(.state != "uploaded") | .apiUrl' |
+            while read -r url; do
+              echo "deleting an unfinished asset: $url"
+              gh api -X DELETE "${url#https://api.github.com/}"
+            done
           asset=$(stored_zip || true)
           if [ -n "$asset" ]; then
             echo "keeping the zip an earlier run uploaded"
           else
-            # An upload that failed can leave an empty asset in "starter"
-            # state. It still holds its name, and gh refuses to upload over a
-            # name that exists, so a retry deletes every unfinished asset first
-            # (release.json is uploaded again below). A finished zip is kept.
-            gh release view "$TAG" "${repo[@]}" --json assets \
-              --jq '.assets[] | select(.state != "uploaded") | .apiUrl' |
-              while read -r url; do
-                echo "deleting an unfinished asset: $url"
-                gh api -X DELETE "${url#https://api.github.com/}"
-              done
             gh release upload "$TAG" "$ZIP" "${repo[@]}"
             asset=$(stored_zip || true)
           fi
@@ -306,7 +309,24 @@ jobs:
           mkdir -p gh
           jq -c --arg f "$asset" '.releases[0].filename = $f' out/release.json > gh/release.json
           cat gh/release.json
-          gh release upload "$TAG" gh/release.json "${repo[@]}" --clobber
+          if gh release view "$TAG" "${repo[@]}" --json assets \
+               --jq '.assets[] | select(.state == "uploaded") | .name' | grep -qx 'release\.json'; then
+            gh release download "$TAG" "${repo[@]}" -p release.json -O gh/stored.json --clobber
+            if jq -e --slurpfile want gh/release.json '. == $want[0]' gh/stored.json > /dev/null; then
+              echo "keeping the release.json an earlier run uploaded: it is this one"
+            elif [ "$(gh release view "$TAG" "${repo[@]}" --json isDraft --jq .isDraft)" = true ]; then
+              echo "replacing the draft's release.json"
+              gh release upload "$TAG" gh/release.json "${repo[@]}" --clobber
+            else
+              echo "$TAG is published with another release.json:"
+              cat gh/stored.json
+              echo "Not replaced: a failed upload would leave the release without one."
+              echo "Repair by hand (delete the asset, upload gh/release.json), or delete the release and run again."
+              exit 1
+            fi
+          else
+            gh release upload "$TAG" gh/release.json "${repo[@]}"
+          fi
           gh release edit "$TAG" "${repo[@]}" --draft=false
 
   # The same zip on Wago Addons, through its upload API - the request the
