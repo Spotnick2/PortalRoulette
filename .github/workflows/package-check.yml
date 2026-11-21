@@ -267,7 +267,13 @@ jobs:
       # any of them can fail after the others succeeded. The release stays a
       # draft until both assets are there, and a run again (workflow_dispatch)
       # completes whatever an earlier run left: it reuses the release, keeps a
-      # zip already uploaded, replaces release.json, then publishes.
+      # zip already uploaded, uploads release.json if it's missing, then
+      # publishes. A published release.json is never taken away: gh's
+      # --clobber deletes the old asset before uploading the new one, so a
+      # retry (a manual run defaults to `both`) that failed there would leave a
+      # live release without the file WowUp reads (Codex, GlassUI #211). One
+      # that matches is kept; one that differs stops the run for a repair by
+      # hand. Only a draft's is replaced.
       - name: Create the GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
