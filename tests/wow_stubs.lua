@@ -10,7 +10,7 @@
 -- WoW.advance), fire / fireAllRegistered / tick, check / eq / done.
 --
 -- This file adds Portal Roulette's own client APIs, each verified in the API
--- dump (C:\Projects\WoW\References\Forever\api\forever-api-1.60.1.70959.md)
+-- dump (C:\Projects\WoW\References\Forever\api\forever-api-1.60.1.71037.md)
 -- or in Blizzard's FrameXML (C:\Projects\WoW\wow-ui-source). Stub a global
 -- only after confirming it there, with the client's signature. A name the
 -- client does NOT have goes in the Kit.strict list at the bottom, so the
@@ -109,16 +109,6 @@ table.insert(WoW.onReset, function()
     WoW.sent         = {}        -- SendChatMessage: { msg, channel }
 end)
 
--- WowTestKit #76: WoW.advance(0) fires a 0-second ticker only once (it is
--- re-armed at now + 1e-9, never due at the same now). A 0-second ticker
--- fires every frame on the client, and the probe's scan runs on one, so a
--- 0-second advance moves the clock by that nanosecond meanwhile.
-local kitAdvance = WoW.advance
-function WoW.advance(dt)
-    if dt == 0 then dt = 1e-9 end
-    return kitAdvance(dt)
-end
-
 -- Measured on 70205: InCombatLockdown() is still false while
 -- PLAYER_REGEN_DISABLED handlers run; lockdown starts right after.
 function WoW.enterCombat()
@@ -142,7 +132,7 @@ GameFontNormal, GameFontHighlight = {}, {}
 WorldFrame = newWidget("Frame", nil, "WorldFrame")
 
 ------------------------------------------------------------
--- Globals present on this client (forever-api-1.60.1.70959.md)
+-- Globals present on this client (forever-api-1.60.1.71037.md)
 ------------------------------------------------------------
 
 function time() return math.floor(WoW.now) end

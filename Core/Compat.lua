@@ -17,9 +17,9 @@ local API = {}
 ns.API = API
 
 -- The build the code was last checked against: 70205 measured in game, then the
--- API diffs up to 70959 (no change the addon uses). Per-fact builds are in
+-- API diffs up to 71037 (no change the addon uses). Per-fact builds are in
 -- docs/FOREVER-PROBE.md and the 'measured on' comments.
-API.MEASURED_ON_BUILD = 70959
+API.MEASURED_ON_BUILD = 71037
 
 -- True when `v` can be compared and used in arithmetic.
 function API.Readable(v)
