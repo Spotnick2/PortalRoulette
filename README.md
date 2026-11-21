@@ -31,7 +31,7 @@ hearthstone sits in the middle.
 - **Never in your way.**
   - A ready check, group or guild invite, dungeon proposal, loot roll, pull countdown or
     battleground/arena start timer brings the game UI back, with the wheel still open. The UI hides
-    again once you've answered or the timer ends.
+    again once the prompt or timer has cleared.
   - Pressing Enter to chat brings the game UI back too.
   - Combat closes the wheel instantly.
 - **Group friendly.** It can announce your portals, and asks before you teleport away from your
