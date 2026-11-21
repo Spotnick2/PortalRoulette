@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.2.0
 
 - New option (Launcher, on by default): show the launcher button. Turned off, the launcher and its
   "drag onto an action bar" prompt stay hidden; the minimap button, the Addon Compartment, the key
