@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Fixed: the cinematic camera saved its framing into the game's camera views 4 and 5. A view
+  saved that way no longer follows your character, so switching to view 4 or 5 yourself (a Set
+  View key or a macro) gave a camera that stays put. On a following camera style, no camera view
+  is written any more. A teleport or portal cast while the wheel is open now gives a short camera
+  swing instead of holding the framing. (LibShowcase-1.0 updated to r15.) A view the
+  game already saved this way stays saved: the game offers addons no way to clear it.
+
 ## v1.2.2
 
 - Fixed: closing the wheel with the cinematic camera on left the game camera on saved view 5,
