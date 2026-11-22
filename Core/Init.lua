@@ -183,6 +183,11 @@ local function onOptionChanged(key)
 end
 
 local function initializeForMage()
+    -- The LibShowcase instance now, not at the first open: created after
+    -- login, it heals a camera a crash left changed and moves a player an
+    -- older copy left on saved view 5 back to a view that follows
+    -- (LibShowcase#51, r12). Lazily, that waited for the wheel (Codex, #40).
+    ns.Presentation:Lib()
     ns.SecureAction.Initialize()
     ns.Roulette:Initialize()
     ns.LauncherButton:Initialize()

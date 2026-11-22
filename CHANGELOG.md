@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Fixed: closing the wheel with the cinematic camera on left the game camera on saved view 5,
+  where it no longer follows your character, and the game kept that view at every login. The
+  wheel now closes onto your own view at your zoom (onto the normal view if yours is view 4, which
+  "Frame the character while casting" uses). If you were left on view 5, you're moved back to the
+  normal view once, at your first login with this version. (LibShowcase-1.0 updated to r14.)
+
 ## v1.2.1
 
 - In a group, the teleport confirmation's **Yes** now casts the teleport itself, instead of asking

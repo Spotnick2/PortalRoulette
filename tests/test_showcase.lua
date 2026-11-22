@@ -12,8 +12,14 @@ if not io.open(libFile) then
 end
 
 WoW.spells[3561] = { name = "Teleport: Stormwind", known = true }
+-- LibShowcase#51 (r12): a mage an older copy left on saved view 5 logs in.
+-- The repair runs at login, before the wheel is ever opened (Codex, #40).
+WoW.cvars.cameraView, WoW.cvars.cameraSmoothStyle = "5", "4"
+WoW.camera.view = 5
 local ns = H.loadAddon({ libs = { libFile } })
 local R = ns.Roulette
+eq(WoW.camera.view, 2, "login moves a player left on saved view 5 back to view 2, wheel never opened")
+check(not R.open, "the repair did not need the wheel")
 check(ns.Presentation:Lib() ~= nil, "LibShowcase r3+ is picked up")
 
 H.slash("PORTALROULETTE", "")
