@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.2.1
 
 - In a group, the teleport confirmation's **Yes** now casts the teleport itself, instead of asking
   you to click the destination again within 8 seconds.
