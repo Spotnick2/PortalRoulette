@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.2.3
 
 - Fixed: the cinematic camera saved its framing into the game's camera views 4 and 5. A view
   saved that way no longer follows your character, so switching to view 4 or 5 yourself (a Set
