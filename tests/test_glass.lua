@@ -31,6 +31,13 @@ check(near(washTop(g), builtWash * 0.22), "disc wash at 0.22 of the built streng
 check(near(washTop(ns.Roulette.header.glass), builtWash * 0.2), "header wash at 0.2")
 ns.LauncherButton:CreatePrompt()
 check(near(washTop(ns.LauncherButton.prompt.glass), builtWash * 0.3), "prompt wash at 0.3")
+-- The grouped-teleport pill reads over the world: its own tint colour, near opaque.
+ns.Roulette:ShowConfirm(ns.Roulette.assigned[ns.Roulette.slots[1]])
+local confirmTint = ns.Roulette.confirm.glass.tint._color
+local built = ns.Roulette.confirm.glass.tint.glassColor
+eq(confirmTint[4], 0.9, "the confirm pill's body is near opaque")
+check(built and confirmTint[1] == built[1] and confirmTint[3] == built[3], "and keeps its built tint colour")
+ns.Roulette:HideConfirm()
 g.wash:SetAlpha(0)
 eq(g.wash:GetAlpha(), 1, "the stub, like the client, ignores SetAlpha on a gradient")
 local other = CreateFrame("Frame", nil, UIParent)

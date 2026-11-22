@@ -75,7 +75,8 @@ check(nodeFor("dalaran") ~= nil, "preview shows Dalaran")
 R:SetPreview(false)
 eq(nodeFor("stormwind").button:GetAttribute("spell1"), 3561, "attributes come back after preview")
 
--- Grouped confirm: the teleport is withheld until armed, then expires.
+-- Grouped confirm: the node's teleport is withheld; the pill's Yes is a
+-- secure button that casts it.
 WoW.inGroup = true
 R:Refresh()
 WoW.advance(0)
@@ -85,11 +86,43 @@ eq(sw.button:GetAttribute("spell2"), 10059, "grouped: portal still direct")
 sw.button:GetScript("PostClick")(sw.button, "LeftButton", false)
 check(R.confirm and R.confirm:IsShown(), "our own confirm pill shows")
 eq(#WoW.popups, 0, "no Blizzard StaticPopup is used (it would taint the shared dialogs)")
-R.confirm.yes:GetScript("OnClick")()
-check(not R.confirm:IsShown(), "Yes closes the pill")
-eq(sw.button:GetAttribute("spell1"), 3561, "armed: teleport set")
-WoW.advance(9)
-eq(sw.button:GetAttribute("type1"), nil, "expired: teleport withheld again")
+-- (the fallback look here: these tests load no LibGlass)
+local body = R.confirm.glass.bg
+check(body and body._vertex and body._vertex[4] == 0.9, "the pill's body is near opaque")
+local yes = R.confirm.yes
+eq(yes._template, "SecureActionButtonTemplate", "Yes is a secure button")
+eq(yes:GetParent(), R.root, "on the stationary root, not the animated stage")
+check(yes:IsShown(), "Yes shows with the pill")
+check(yes._clicks and yes._clicks[1] == "AnyUp" and yes._clicks[2] == "AnyDown", "Yes: both click edges")
+eq(yes:GetAttribute("type1"), "spell", "Yes casts a spell")
+eq(yes:GetAttribute("spell1"), 3561, "Yes casts Teleport: Stormwind")
+eq(yes:GetAttribute("type2"), nil, "Yes: no right-click action")
+for k in pairs(yes._attrs or {}) do
+    check(not k:find("^typerelease"), "Yes: never typerelease")
+    check(k ~= "type", "Yes: never unnumbered type")
+end
+check(yes:GetFrameLevel() > R.confirm:GetFrameLevel(), "Yes sits above the pill")
+check(not R.confirm.yesLook:IsMouseEnabled(), "the Yes look takes no mouse")
+eq(sw.button:GetAttribute("type1"), nil, "the node still withholds the teleport")
+WoW.click(yes, "LeftButton", true)
+check(R.confirm:IsShown(), "the down edge leaves the pill up")
+WoW.click(yes, "LeftButton", false)
+check(not R.confirm:IsShown() and not yes:IsShown(), "the click closes the pill")
+WoW.advance(0)
+eq(yes:GetAttribute("type1"), nil, "Yes is emptied once closed")
+-- No: closes without casting.
+sw.button:GetScript("PostClick")(sw.button, "LeftButton", false)
+eq(yes:GetAttribute("spell1"), 3561, "asked again")
+WoW.click(R.confirm.no, "LeftButton", false)
+check(not R.confirm:IsShown() and not yes:IsShown(), "No closes the pill")
+WoW.advance(0)
+eq(yes:GetAttribute("type1"), nil, "No empties Yes")
+-- Preview never leaves a castable Yes.
+sw.button:GetScript("PostClick")(sw.button, "LeftButton", false)
+R:SetPreview(true)
+eq(yes:GetAttribute("type1"), nil, "preview: Yes casts nothing")
+R:SetPreview(false)
+R:HideConfirm()
 WoW.inGroup = false
 R:Refresh()
 WoW.advance(0)

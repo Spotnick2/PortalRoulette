@@ -37,7 +37,6 @@ local BONUS_SLOTS = {
     dalaran = { clock = 9, radius = "NODE_RADIUS" },
     karazhan = { clock = 4, radius = "OUTER_RADIUS", outer = true },
 }
-local CONFIRM_SECONDS = 8
 
 local function printf(msg)
     if ns.Print then ns.Print(msg) end
@@ -219,14 +218,13 @@ function Roulette:Resolve()
     self.hearthSource = ns.Hearth:Current()
 end
 
+-- Grouped, with the option on: a left click asks first, and the pill's Yes
+-- casts the teleport.
 function Roulette:NeedsConfirm()
     if not (ns.db and ns.db.confirmGroupedTeleport) then
         return false
     end
-    if not self:IsGrouped() then
-        return false
-    end
-    return not (self.armed and self.armed.expires > GetTime())
+    return self:IsGrouped()
 end
 
 -- The coalesced secure rebuild (registered with SecureAction).
@@ -242,6 +240,14 @@ function Roulette:SyncSecure()
         node.button:SetShown(resolved ~= nil)
     end
     SA.Apply(self.orb.button, HearthOrb.Actions(self.hearthSource, preview))
+    if self.confirm then
+        local target = self.confirmTarget
+        local actions = {}
+        if target and not preview and target.teleportKnown and target.teleportID then
+            actions[1] = { type = "spell", spell = target.teleportID }
+        end
+        SA.Apply(self.confirm.yes, actions)
+    end
 end
 
 -- Repaint everything non-secure. Safe in combat.
@@ -350,7 +356,7 @@ function Roulette:Close()
     end
     self.open = false
     self.escape:Hide()
-    self:Disarm()
+    self:HideConfirm()
     self:HideInfo()
     if ns.Sound then ns.Sound:Play("Close") end
     if Anim.Enabled() then
@@ -444,7 +450,7 @@ end
 -- unlocked (measured), so the wheel can close synchronously.
 function Roulette:OnCombatStart()
     if self.open then self:Trace("combat start") end
-    self:Disarm()
+    self:HideConfirm()
     if not self.open then
         return
     end
@@ -467,6 +473,9 @@ function Roulette:OnCombatStart()
 end
 
 function Roulette:OnCombatEnd()
+    if self.confirmPendingHide then
+        self:HideConfirm()
+    end
     if self.pendingHide and not self.open then
         self.pendingHide = false
         self.root:Hide()
@@ -478,7 +487,7 @@ end
 function Roulette:OnForcedExit(reason)
     self:Trace("forced exit: " .. tostring(reason))
     ns.Presentation:MarkClosed()
-    self:Disarm()
+    self:HideConfirm()
     self:HideInfo()
     if self.open and not InCombatLockdown() then
         self.open = false
@@ -514,44 +523,52 @@ end
 -- addon code taints the shared dialog frames, and a later Quit / Logout /
 -- invite dialog reusing one then fails its protected call (measured on
 -- 70205: ADDON_ACTION_FORBIDDEN on ForceQuit after a probe's StaticPopup).
+-- Its Yes is a secure button holding the teleport: one click casts it.
+-- Shown and hidden out of combat only (Yes is protected).
 function Roulette:ShowConfirm(resolved)
-    local pill = self.confirm
-    if not pill then
-        pill = Panels.CreateConfirm(self.stage, function() Roulette:Arm() end)
-        self.confirm = pill
-    end
-    pill.text:SetText("You are in a group. Teleport to " .. (resolved.name or "?") .. " yourself?")
-    pill:Show()
-end
-
-function Roulette:HideConfirm()
-    if self.confirm then
-        self.confirm:Hide()
-    end
-end
-
-function Roulette:Arm()
     if InCombatLockdown() then
         return
     end
-    self:HideConfirm()
-    self.armed = { expires = GetTime() + CONFIRM_SECONDS }
-    SA.RunSyncs()
-    printf("Teleport armed: click the destination again within " .. CONFIRM_SECONDS .. " seconds.")
-    local token = self.armed
-    C_Timer.After(CONFIRM_SECONDS, function()
-        if Roulette.armed == token then
-            Roulette:Disarm()
-        end
-    end)
+    local pill = self.confirm
+    if not pill then
+        pill = Panels.CreateConfirm(self.stage, self.root,
+            function() Roulette:OnConfirmCast() end,
+            function() Roulette:HideConfirm() end)
+        self.confirm = pill
+    end
+    self.confirmTarget = resolved
+    SA.RunSyncs() -- Yes holds this destination's teleport before it shows
+    pill.text:SetText("You are in a group. Teleport to " .. (resolved.name or "?") .. " yourself?")
+    pill:Show()
+    pill.yes:Show()
 end
 
-function Roulette:Disarm()
-    self:HideConfirm()
-    if self.armed then
-        self.armed = nil
+-- Clears the destination now; the pill hides now, or at combat end when
+-- lockdown is already on (the stage is faded then).
+function Roulette:HideConfirm()
+    local had = self.confirmTarget ~= nil
+    self.confirmTarget = nil
+    if had then
         SA.MarkDirty()
     end
+    local pill = self.confirm
+    if not pill then
+        return
+    end
+    if InCombatLockdown() then
+        self.confirmPendingHide = true
+        return
+    end
+    self.confirmPendingHide = false
+    pill:Hide()
+    pill.yes:Hide()
+    if pill.yesLook then pill.yesLook.label:SetTextColor(1, 1, 1) end
+end
+
+-- Yes was clicked: the secure cast has run.
+function Roulette:OnConfirmCast()
+    self:HideConfirm()
+    if ns.Sound then ns.Sound:Play("NodeClick") end
 end
 
 ------------------------------------------------------------

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- In a group, the teleport confirmation's **Yes** now casts the teleport itself, instead of asking
+  you to click the destination again within 8 seconds.
+- The confirmation's background is near opaque, so it reads over busy scenery.
+
 ## v1.2.0
 
 - New option (Launcher, on by default): show the launcher button. Turned off, the launcher and its
