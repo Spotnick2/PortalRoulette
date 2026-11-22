@@ -429,6 +429,7 @@ function Roulette:FinishClose()
         Anim.StopSparkle(node.sparkle)
     end
     self:ResetVisuals()
+    self:HideConfirm() -- nothing outlives the opening it was asked in
     if InCombatLockdown() then
         self.pendingHide = true
         return
@@ -508,6 +509,7 @@ function Roulette:SetPreview(on)
     end
     self.preview = on and true or false
     self:Create()
+    self:HideConfirm() -- a pending question never comes back castable after preview
     self:Resolve()
     SA.RunSyncs() -- clears every attribute family while in preview
     self:Paint()
@@ -526,7 +528,9 @@ end
 -- Its Yes is a secure button holding the teleport: one click casts it.
 -- Shown and hidden out of combat only (Yes is protected).
 function Roulette:ShowConfirm(resolved)
-    if InCombatLockdown() then
+    -- Not while closing (the 0.18 s fade leaves the beads clickable) or in
+    -- preview: a question asked then would outlive this opening.
+    if InCombatLockdown() or not self.open or self.preview then
         return
     end
     local pill = self.confirm
