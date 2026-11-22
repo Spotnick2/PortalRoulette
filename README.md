@@ -75,7 +75,8 @@ Options → AddOns → Portal Roulette:
   confirmation, closing the wheel as soon as a cast starts, wheel scale.
 - **Animation:** all animations, idle motion, hover effects.
 - **Sound:** sounds, hover sounds, sound set (Portal Roulette or game UI sounds), volume channel.
-- **Presentation:** hide the game UI, cinematic camera, camera orbit, cast framing.
+- **Presentation:** hide the game UI, cinematic camera, camera orbit, cast framing (when a
+  teleport or portal starts, the camera swings briefly back to frame your character).
 - **Launcher:** show or hide it, lock, minimap button, glow (blue pulse, spell alert or off), scale.
 - **Group broadcast:** announce portals or teleports.
 
