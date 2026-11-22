@@ -188,7 +188,7 @@ function Node.Update(node, resolved, state)
 end
 
 -- The secure actions for the current state; nil entries mean "no action".
---   opts: { preview, confirmTeleport (needs confirmation, not armed) }
+--   opts: { preview, confirmTeleport (grouped: the left click asks first) }
 function Node.Actions(resolved, opts)
     if not resolved or opts.preview then
         return {}

@@ -104,11 +104,13 @@ end
 H.slash("PORTALROULETTE", "")
 eq(WoW.uiVisible, false, "hidden before the forced exit")
 WoW.inGroup = true
-R:Arm()
+R:ShowConfirm(R.assigned[R.slots[1]])
+check(R.confirm:IsShown(), "the grouped-teleport question is up")
 SetUIVisibility(true) -- the engine's Escape path while the UI is hidden
 check(not R.open, "a forced exit closes the wheel")
 eq(ns.Presentation:IsGameUIHidden(), false, "the wrapper forgets the hidden UI")
-eq(R.armed, nil, "a forced exit disarms the grouped-teleport confirmation")
+check(not R.confirm:IsShown() and not R.confirm.yes:IsShown(), "a forced exit closes the grouped-teleport question")
+eq(R.confirmTarget, nil, "and forgets its destination")
 WoW.inGroup = false
 shutAll()
 ns.db.hideGameUI = false

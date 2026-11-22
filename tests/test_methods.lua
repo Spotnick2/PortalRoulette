@@ -81,6 +81,7 @@ WoW.advance(0)
 for _, node in ipairs(R.slots) do click(node.button, "LeftButton") end
 if R.confirm then
     for _, f in ipairs(R.confirm._children) do click(f) end
+    click(R.confirm.yes)
 end
 WoW.inGroup = false
 R:Refresh()

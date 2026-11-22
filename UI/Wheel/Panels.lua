@@ -226,35 +226,81 @@ end
 
 ------------------------------------------------------------
 -- Confirm pill: the grouped-teleport question, on our own glass (never a
--- Blizzard StaticPopup, which addon code would taint).
+-- Blizzard StaticPopup, which addon code would taint). Its body is near
+-- opaque: it is read over the world and the disc.
+--
+-- Yes casts the teleport: it is a secure button on the stationary root
+-- (pill.yes), laid over the Yes look, with the spell written by the wheel's
+-- secure sync. Its look lives on the pill, on the stage, so it fades with
+-- the rest of the wheel. No is a plain button.
 ------------------------------------------------------------
 
-function Panels.CreateConfirm(stage, onYes)
+local CONFIRM_W, CONFIRM_H = 300, 64
+local CHOICE_W, CHOICE_H, CHOICE_X, CHOICE_BOTTOM = 80, 22, 46, 8
+local CONFIRM_BODY_ALPHA = 0.9
+
+local function choiceLook(parent, pill, label, x)
+    local look = CreateFrame("Frame", nil, parent)
+    look:SetSize(CHOICE_W, CHOICE_H)
+    look:SetPoint("BOTTOM", pill, "BOTTOM", x, CHOICE_BOTTOM)
+    look:EnableMouse(false)
+    look.glass = Skin:Pill(look)
+    local fs = Skin:Font(look.glass.top or look, 12, "CENTER")
+    fs:SetPoint("CENTER")
+    fs:SetText(label)
+    look.label = fs
+    return look
+end
+
+local function hoverLabel(fs, on)
+    if on then
+        fs:SetTextColor(0.7, 0.85, 1)
+    else
+        fs:SetTextColor(1, 1, 1)
+    end
+end
+
+--   onCast: after a left click on Yes (the secure cast has run)
+--   onNo:   after a click on No
+function Panels.CreateConfirm(stage, root, onCast, onNo)
     local pill = CreateFrame("Frame", nil, stage)
-    pill:SetSize(300, 64)
+    pill:SetSize(CONFIRM_W, CONFIRM_H)
     pill:SetPoint("CENTER", stage, "CENTER", 0, Layout.DISC_Y)
     pill:SetFrameLevel(stage:GetFrameLevel() + 60)
-    pill:EnableMouse(true)
+    pill:EnableMouse(true) -- a click on the text never reaches the hearth orb below
     pill.glass = Skin:Pill(pill)
+    Skin:SetBodyAlpha(pill.glass, CONFIRM_BODY_ALPHA)
     local top = pill.glass.top or pill
     pill.text = Skin:Font(top, 13, "CENTER")
     pill.text:SetPoint("TOP", 0, -10)
-    pill.text:SetWidth(280)
-    local function choice(label, x, fn)
-        local b = CreateFrame("Button", nil, top)
-        b:SetSize(80, 22)
-        b:SetPoint("BOTTOM", pill, "BOTTOM", x, 8)
-        b.glass = Skin:Pill(b)
-        local fs = Skin:Font(b.glass.top or b, 12, "CENTER")
-        fs:SetPoint("CENTER")
-        fs:SetText(label)
-        b:SetScript("OnClick", fn)
-        b:SetScript("OnEnter", function() fs:SetTextColor(0.7, 0.85, 1) end)
-        b:SetScript("OnLeave", function() fs:SetTextColor(1, 1, 1) end)
-        return b
-    end
-    pill.yes = choice(YES or "Yes", -46, function() pill:Hide() onYes() end)
-    pill.no = choice(NO or "No", 46, function() pill:Hide() end)
+    pill.text:SetWidth(CONFIRM_W - 20)
+
+    local yesLook = choiceLook(top, pill, YES or "Yes", -CHOICE_X)
+    local yes = ns.SecureAction.Create(root)
+    yes:SetSize(CHOICE_W, CHOICE_H)
+    -- Same spot as yesLook, but anchored to the root: secure buttons never
+    -- follow the animated stage.
+    yes:SetPoint("CENTER", root, "CENTER", -CHOICE_X,
+        Layout.DISC_Y - CONFIRM_H / 2 + CHOICE_BOTTOM + CHOICE_H / 2)
+    yes:SetFrameLevel(pill:GetFrameLevel() + 20)
+    yes:SetScript("OnEnter", function() hoverLabel(yesLook.label, true) end)
+    yes:SetScript("OnLeave", function() hoverLabel(yesLook.label, false) end)
+    yes:SetScript("PostClick", function(_, mouseButton, down)
+        if down or mouseButton ~= "LeftButton" then return end
+        onCast()
+    end)
+    yes:Hide()
+    pill.yes, pill.yesLook = yes, yesLook
+
+    local no = CreateFrame("Button", nil, top)
+    no:SetSize(CHOICE_W, CHOICE_H)
+    no:SetPoint("BOTTOM", pill, "BOTTOM", CHOICE_X, CHOICE_BOTTOM)
+    local noLook = choiceLook(no, pill, NO or "No", CHOICE_X)
+    no:SetScript("OnClick", onNo)
+    no:SetScript("OnEnter", function() hoverLabel(noLook.label, true) end)
+    no:SetScript("OnLeave", function() hoverLabel(noLook.label, false) end)
+    pill.no = no
+
     pill:Hide()
     return pill
 end

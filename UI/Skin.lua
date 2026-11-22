@@ -195,6 +195,19 @@ function Skin:Pill(host)
     return g
 end
 
+-- A near-opaque body for a pill that must read over busy scenery (a
+-- dialog): the surface's own tint colour, built by our look or by Pearl's,
+-- at alpha `a`. Readability, not look tuning, so it holds while following
+-- Pearl too (LibGlass's SetSurfaceTint, r3+; its docs name this use).
+function Skin:SetBodyAlpha(g, a)
+    local glass = self:Glass()
+    if glass and glass.SetSurfaceTint and g and g.tint then
+        pcall(glass.SetSurfaceTint, g, nil, nil, nil, a)
+    elseif g and g.bg then
+        g.bg:SetVertexColor(0.08, 0.10, 0.16, a)
+    end
+end
+
 -- A FontString in the glass font, or the game font.
 function Skin:Font(parent, size, justify)
     local glass = self:Glass()
