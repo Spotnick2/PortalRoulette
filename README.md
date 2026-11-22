@@ -94,8 +94,8 @@ Options → AddOns → Portal Roulette:
 
 - The wheel can't open in combat, and entering combat closes it: the game doesn't let addons change
   secure buttons during a fight.
-- In a group, a teleport asks for confirmation first (unless you turn that off), then gives you 8
-  seconds to click the destination again. Portals cast straight away.
+- In a group, a teleport asks for confirmation first (unless you turn that off): **Yes** casts it.
+  Portals cast straight away.
 - With *close the wheel as soon as a cast starts*, the wheel closes when the cast bar appears. A cast
   that fails before that (no runes left, for instance) leaves it open.
 - Runes of Teleportation and Portals can't go in the reagent bag; keep them in your bags.
