@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.2.2
 
 - Fixed: closing the wheel with the cinematic camera on left the game camera on saved view 5,
   where it no longer follows your character, and the game kept that view at every login. The
