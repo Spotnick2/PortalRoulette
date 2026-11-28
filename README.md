@@ -3,8 +3,8 @@
 **Portal Roulette** puts every mage teleport and portal on one frosted-glass wheel, for **World of
 Warcraft: Forever**.
 
-Open the wheel, then left-click a destination to teleport or right-click it to open a portal. Your
-hearthstone sits in the middle.
+Open the wheel, then left-click a destination to teleport or right-click it to open a portal. That's
+the default: *Swap clicks* in the options turns it round. Your hearthstone sits in the middle.
 
 ![Portal Roulette on a Horde mage](https://raw.githubusercontent.com/Spotnick2/PortalRoulette/main/docs/screenshots/hero.jpg)
 
