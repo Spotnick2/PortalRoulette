@@ -167,6 +167,19 @@ R:OnNodeLeave(sw)
 eq(ns.Node.ModeOf("LeftButton"), ns.Mode.PORTAL, "swapped: the left button is the portal")
 eq(ns.Node.ModeOf("RightButton"), ns.Mode.TELEPORT, "swapped: the right button is the teleport")
 eq(ns.Node.ModeOf("MiddleButton"), nil, "another button casts nothing")
+-- Preview: a swapped left click on Dalaran (no portal) names Dalaran, not
+-- its teleport (Codex, #50).
+R:SetPreview(true)
+local dalNode = nodeFor("dalaran")
+local dalName = R.assigned[dalNode].name
+local before = H.messagesMatching("Teleport: Dalaran is not cast")
+dalNode.button:GetScript("PostClick")(dalNode.button, "LeftButton", false)
+eq(H.messagesMatching("Teleport: Dalaran is not cast"), before, "swapped preview: the left click doesn't name the teleport")
+check(H.messagesMatching("Preview: " .. dalName:gsub("%p", "%%%0") .. " is not cast") > 0, "swapped preview: it names the destination")
+dalNode.button:GetScript("PostClick")(dalNode.button, "RightButton", false)
+check(H.messagesMatching("Teleport: Dalaran is not cast") > before, "swapped preview: the right click names the teleport")
+R:SetPreview(false)
+WoW.advance(0)
 -- Karazhan and Dalaran, from Node.Actions directly.
 local kara = { id = "karazhan", state = "ready" }
 local a = ns.Node.Actions(kara, { swapped = true })

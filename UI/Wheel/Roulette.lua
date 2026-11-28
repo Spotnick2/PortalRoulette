@@ -656,7 +656,14 @@ function Roulette:OnNodeClick(node, mouseButton)
         Disc.SetIntent(self.disc, ns.Mode.PORTAL)
     end
     if self.preview then
-        local spellID = mode == ns.Mode.PORTAL and resolved.portalID or resolved.teleportID
+        -- An explicit branch: a click with no spell (Dalaran's portal) names the
+        -- destination, never the other click's spell (Codex, #50).
+        local spellID
+        if mode == ns.Mode.PORTAL then
+            spellID = resolved.portalID
+        elseif mode == ns.Mode.TELEPORT then
+            spellID = resolved.teleportID
+        end
         printf("Preview: " .. ((spellID and API.SpellName(spellID)) or resolved.name) .. " is not cast in preview.")
         return
     end
