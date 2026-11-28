@@ -218,7 +218,7 @@ function Roulette:Resolve()
     self.hearthSource = ns.Hearth:Current()
 end
 
--- Grouped, with the option on: a left click asks first, and the pill's Yes
+-- Grouped, with the option on: the teleport click asks first, and the pill's Yes
 -- casts the teleport.
 function Roulette:NeedsConfirm()
     if not (ns.db and ns.db.confirmGroupedTeleport) then
@@ -232,11 +232,11 @@ function Roulette:SyncSecure()
     if not self.root then
         return
     end
-    local preview = self.preview
-    local confirm = self:NeedsConfirm()
+    local opts = { preview = self.preview, confirmTeleport = self:NeedsConfirm(), swapped = Node.Swapped() }
+    local preview = opts.preview
     for _, node in ipairs(self.slots) do
         local resolved = self.assigned and self.assigned[node]
-        SA.Apply(node.button, Node.Actions(resolved, { preview = preview, confirmTeleport = confirm }))
+        SA.Apply(node.button, Node.Actions(resolved, opts))
         node.button:SetShown(resolved ~= nil)
     end
     SA.Apply(self.orb.button, HearthOrb.Actions(self.hearthSource, preview))
@@ -586,7 +586,7 @@ local function teleportLine(resolved)
     end
     local name = API.SpellName(resolved.teleportID) or resolved.name
     if resolved.teleportKnown then
-        return c .. name .. "|r  ·  Left-click"
+        return c .. name .. "|r  ·  " .. Node.ClickLabel(ns.Mode.TELEPORT)
     end
     return "|cff999999" .. name .. "  ·  Learn at " .. (resolved.entry.tLevel or "?") .. "|r"
 end
@@ -595,7 +595,7 @@ local function portalLine(resolved, reagentState)
     local c = Panels.Hex(ns.Colors.PORTAL)
     if resolved.id == "karazhan" then
         if resolved.state == "ready" then
-            return c .. "Portal: Karazhan|r  ·  Right-click"
+            return c .. "Portal: Karazhan|r  ·  " .. Node.ClickLabel(ns.Mode.PORTAL)
         end
         return "|cff999999Equip Atiesh to open Portal: Karazhan|r"
     end
@@ -606,7 +606,7 @@ local function portalLine(resolved, reagentState)
     if not resolved.portalKnown then
         return "|cff999999" .. name .. "  ·  Learn at " .. (resolved.entry.pLevel or "?") .. "|r"
     end
-    local line = c .. name .. "|r  ·  Right-click"
+    local line = c .. name .. "|r  ·  " .. Node.ClickLabel(ns.Mode.PORTAL)
     if reagentState ~= "free" then
         local raw = API.ItemCountRaw(ns.Constants.ITEM_RUNE_PORTALS)
         if API.Readable(raw) and type(raw) == "number" then
@@ -651,15 +651,23 @@ function Roulette:OnNodeClick(node, mouseButton)
     if not resolved then
         return
     end
-    if mouseButton == "RightButton" then
+    local mode = Node.ModeOf(mouseButton)
+    if mode == ns.Mode.PORTAL then
         Disc.SetIntent(self.disc, ns.Mode.PORTAL)
     end
     if self.preview then
-        local spellID = mouseButton == "RightButton" and resolved.portalID or resolved.teleportID
+        -- An explicit branch: a click with no spell (Dalaran's portal) names the
+        -- destination, never the other click's spell (Codex, #50).
+        local spellID
+        if mode == ns.Mode.PORTAL then
+            spellID = resolved.portalID
+        elseif mode == ns.Mode.TELEPORT then
+            spellID = resolved.teleportID
+        end
         printf("Preview: " .. ((spellID and API.SpellName(spellID)) or resolved.name) .. " is not cast in preview.")
         return
     end
-    if mouseButton == "LeftButton" and resolved.teleportKnown and self:NeedsConfirm() and not InCombatLockdown() then
+    if mode == ns.Mode.TELEPORT and resolved.teleportKnown and self:NeedsConfirm() and not InCombatLockdown() then
         self:ShowConfirm(resolved)
         return
     end

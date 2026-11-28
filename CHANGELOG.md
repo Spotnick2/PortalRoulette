@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- New option (Wheel, off by default): **Swap clicks**. Left-click opens the portal and
+  right-click teleports. The tooltips, the click hint under the wheel and the grouped-teleport
+  confirmation follow it, and so does Karazhan's portal.
+
 ## v1.2.3
 
 - Fixed: the cinematic camera saved its framing into the game's camera views 4 and 5. A view

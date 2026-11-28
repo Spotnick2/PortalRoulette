@@ -66,7 +66,9 @@ the dev probe (`Tools/PortalRouletteProbe`, `/fp pr`) before code relies on it.
 ## Product
 - Mage-only. Non-mages get no UI at all.
 - The launcher button opens the wheel. On any destination node, **left-click casts the teleport** and
-  **right-click casts the portal**. There are no mode tabs.
+  **right-click casts the portal**. There are no mode tabs. The `swapClicks` option (off by default,
+  #49) turns the two clicks round: `Node.ClickIndex`, `ClickLabel` and `ModeOf` are the one mapping
+  that the casts, the tooltips, the grouped confirmation and the strip's hint all read.
 - The main UI is one **frosted-glass disc** (LibGlass) floating over the world, with no rectangular
   window. Visual targets: `docs/mockups/forever-layout.png` (layout, the approved one) and
   `docs/mockups/forever-glass-wheel.png` (glass material).

@@ -147,6 +147,69 @@ WoW.inGroup = false
 R:Refresh()
 WoW.advance(0)
 
+-- Swap clicks (#49): the portal on the left, the teleport on the right, and
+-- everything that names a click follows.
+eq(ns.db.swapClicks, false, "swapping the clicks is off by default")
+eq(R.strip.hint:GetText(), "Left-click: Teleport  ·  Right-click: Portal", "default hint")
+ns.db.swapClicks = true
+R:Refresh()
+WoW.advance(0)
+sw = nodeFor("stormwind")
+eq(sw.button:GetAttribute("spell1"), 10059, "swapped: left = Portal: Stormwind")
+eq(sw.button:GetAttribute("spell2"), 3561, "swapped: right = Teleport: Stormwind")
+eq(nodeFor("ironforge").button:GetAttribute("type1"), nil, "swapped: an unlearned portal has no left action")
+eq(nodeFor("ironforge").button:GetAttribute("spell2"), 3562, "swapped: Ironforge's teleport on the right")
+eq(R.strip.hint:GetText(), "Left-click: Portal  ·  Right-click: Teleport", "swapped hint")
+R:OnNodeEnter(sw)
+check(R.info.line1:GetText():find("Right%-click"), "swapped: the teleport line says right-click")
+check(R.info.line2:GetText():find("Left%-click"), "swapped: the portal line says left-click")
+R:OnNodeLeave(sw)
+eq(ns.Node.ModeOf("LeftButton"), ns.Mode.PORTAL, "swapped: the left button is the portal")
+eq(ns.Node.ModeOf("RightButton"), ns.Mode.TELEPORT, "swapped: the right button is the teleport")
+eq(ns.Node.ModeOf("MiddleButton"), nil, "another button casts nothing")
+-- Preview: a swapped left click on Dalaran (no portal) names Dalaran, not
+-- its teleport (Codex, #50).
+R:SetPreview(true)
+local dalNode = nodeFor("dalaran")
+local dalName = R.assigned[dalNode].name
+local before = H.messagesMatching("Teleport: Dalaran is not cast")
+dalNode.button:GetScript("PostClick")(dalNode.button, "LeftButton", false)
+eq(H.messagesMatching("Teleport: Dalaran is not cast"), before, "swapped preview: the left click doesn't name the teleport")
+check(H.messagesMatching("Preview: " .. dalName:gsub("%p", "%%%0") .. " is not cast") > 0, "swapped preview: it names the destination")
+dalNode.button:GetScript("PostClick")(dalNode.button, "RightButton", false)
+check(H.messagesMatching("Teleport: Dalaran is not cast") > before, "swapped preview: the right click names the teleport")
+R:SetPreview(false)
+WoW.advance(0)
+-- Karazhan and Dalaran, from Node.Actions directly.
+local kara = { id = "karazhan", state = "ready" }
+local a = ns.Node.Actions(kara, { swapped = true })
+eq(a[1] and a[1].macrotext, "/use 16", "swapped: Atiesh's portal on the left")
+eq(a[2], nil, "swapped: nothing on the right for Karazhan")
+a = ns.Node.Actions(kara, { swapped = false })
+eq(a[2] and a[2].macrotext, "/use 16", "default: Atiesh's portal on the right")
+local dal = { id = "dalaran", teleportKnown = true, teleportID = 1297659 }
+a = ns.Node.Actions(dal, { swapped = true })
+eq(a[2] and a[2].spell, 1297659, "swapped: Dalaran teleports on the right")
+eq(a[1], nil, "swapped: Dalaran has no left action")
+-- Grouped: the right click (the teleport) asks; the left (the portal) casts.
+WoW.inGroup = true
+R:Refresh()
+WoW.advance(0)
+eq(sw.button:GetAttribute("type2"), nil, "swapped, grouped: the teleport is withheld on the right")
+eq(sw.button:GetAttribute("spell1"), 10059, "swapped, grouped: the portal still direct on the left")
+sw.button:GetScript("PostClick")(sw.button, "LeftButton", false)
+check(not R.confirm:IsShown(), "swapped, grouped: the left click asks nothing")
+sw.button:GetScript("PostClick")(sw.button, "RightButton", false)
+check(R.confirm:IsShown(), "swapped, grouped: the right click asks first")
+eq(R.confirm.yes:GetAttribute("spell1"), 3561, "and Yes casts the teleport")
+WoW.click(R.confirm.no, "LeftButton", false)
+WoW.inGroup = false
+ns.db.swapClicks = false
+R:Refresh()
+WoW.advance(0)
+eq(nodeFor("stormwind").button:GetAttribute("spell1"), 3561, "unswapped: left = teleport again")
+eq(R.strip.hint:GetText(), "Left-click: Teleport  ·  Right-click: Portal", "unswapped hint")
+
 -- Combat while open: the wheel closes inside PLAYER_REGEN_DISABLED, which
 -- runs before lockdown, so nothing protected is blocked.
 WoW.blocked = {}

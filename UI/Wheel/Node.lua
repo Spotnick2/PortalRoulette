@@ -3,7 +3,8 @@
 --
 -- node.button  SecureActionButtonTemplate, stationary, the ONLY mouse-
 --              enabled frame in the bead's footprint. Left = teleport,
---              right = portal (numbered attribute families, via SecureAction).
+--              right = portal, or swapped by the swapClicks option
+--              (numbered attribute families, via SecureAction).
 -- node.visual  non-secure child, mouse disabled: glass bead, icon, plate,
 --              pip and cooldown. All animation happens here.
 -- ============================================================
@@ -187,26 +188,68 @@ function Node.Update(node, resolved, state)
     end
 end
 
+------------------------------------------------------------
+-- Which click casts what. By default the left button (attribute index 1)
+-- teleports and the right button (2) opens the portal; the swapClicks
+-- option turns that round (#49). Everything that names or reads a click
+-- goes through these, so the casts, the tooltips and the hint agree.
+------------------------------------------------------------
+
+local BUTTONS = { "LeftButton", "RightButton" }
+local LABELS = { "Left-click", "Right-click" }
+
+function Node.Swapped()
+    return (ns.db and ns.db.swapClicks) == true
+end
+
+-- The attribute index (1 = left, 2 = right) for a ns.Mode. `swapped`
+-- defaults to the option.
+function Node.ClickIndex(mode, swapped)
+    if swapped == nil then
+        swapped = Node.Swapped()
+    end
+    local teleport = swapped and 2 or 1
+    return mode == ns.Mode.PORTAL and (3 - teleport) or teleport
+end
+
+-- "Left-click" or "Right-click" for a ns.Mode.
+function Node.ClickLabel(mode)
+    return LABELS[Node.ClickIndex(mode)]
+end
+
+-- The ns.Mode a mouse button casts, or nil for another button.
+function Node.ModeOf(mouseButton)
+    if mouseButton == BUTTONS[Node.ClickIndex(ns.Mode.TELEPORT)] then
+        return ns.Mode.TELEPORT
+    elseif mouseButton == BUTTONS[Node.ClickIndex(ns.Mode.PORTAL)] then
+        return ns.Mode.PORTAL
+    end
+    return nil
+end
+
 -- The secure actions for the current state; nil entries mean "no action".
---   opts: { preview, confirmTeleport (grouped: the left click asks first) }
+--   opts: { preview, confirmTeleport (grouped: the teleport click asks
+--           first), swapped (the swapClicks option) }
 function Node.Actions(resolved, opts)
     if not resolved or opts.preview then
         return {}
     end
     local actions = {}
+    local tIndex = Node.ClickIndex(ns.Mode.TELEPORT, opts.swapped == true)
+    local pIndex = Node.ClickIndex(ns.Mode.PORTAL, opts.swapped == true)
     if resolved.id == "karazhan" then
         if resolved.state == "ready" then
             -- Atiesh in the main hand: use the slot. type=item on the item ID
             -- would EQUIP an unequipped Atiesh instead (SecureTemplates.lua).
-            actions[2] = { type = "macro", macrotext = "/use 16" }
+            actions[pIndex] = { type = "macro", macrotext = "/use 16" }
         end
         return actions
     end
     if resolved.teleportKnown and resolved.teleportID and not opts.confirmTeleport then
-        actions[1] = { type = "spell", spell = resolved.teleportID }
+        actions[tIndex] = { type = "spell", spell = resolved.teleportID }
     end
     if resolved.portalKnown and resolved.portalID then
-        actions[2] = { type = "spell", spell = resolved.portalID }
+        actions[pIndex] = { type = "spell", spell = resolved.portalID }
     end
     return actions
 end

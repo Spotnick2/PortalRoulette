@@ -123,7 +123,7 @@ local function build()
     sub:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -6)
     sub:SetWidth(620)
     sub:SetJustifyH("LEFT")
-    sub:SetText("Left-click a destination to teleport, right-click to open a portal. /pr opens the wheel, /pr options this page.")
+    sub:SetText("Left-click a destination to teleport, right-click to open a portal (Swap clicks turns that round). /pr opens the wheel, /pr options this page.")
 
     -- Left column.
     local h = heading(panel, "Wheel", sub, 0, -18)
@@ -132,6 +132,7 @@ local function build()
     a = toggle(panel, a, "showUnavailableKarazhan", "Show Karazhan without Atiesh")
     a = toggle(panel, a, "confirmGroupedTeleport", "Confirm teleports while grouped")
     a = toggle(panel, a, "closeOnCastStart", "Close the wheel when a cast starts")
+    a = toggle(panel, a, "swapClicks", "Swap clicks (left-click portal, right-click teleport)")
     a = stepper(panel, a, "uiScale", "Wheel scale", 0.6, 1.6, 0.05, "%.2f")
 
     h = heading(panel, "Animation", a, 0, -18)
