@@ -185,9 +185,17 @@ function Panels.CreateReagentStrip(root)
 
     local hint = Skin:Font(top, 12, "CENTER")
     hint:SetTextColor(1, 1, 1, 0.7)
-    hint:SetText("Left-click: Teleport  ·  Right-click: Portal")
+    hint:SetText(Panels.ClickHint())
     strip.hint = hint
     return strip
+end
+
+-- The strip's hint, left button first, following the swapClicks option.
+function Panels.ClickHint()
+    if ns.Node.Swapped() then
+        return "Left-click: Portal  ·  Right-click: Teleport"
+    end
+    return "Left-click: Teleport  ·  Right-click: Portal"
 end
 
 -- A count that may be secret: a secret goes to SetText untouched (never
@@ -206,6 +214,7 @@ end
 function Panels.UpdateReagentStrip(strip, reagentState)
     local showCounts = reagentState ~= "free"
     local tRaw, pRaw = ns.Reagents:Counts()
+    strip.hint:SetText(Panels.ClickHint())
     for _, region in ipairs({ strip.tIcon, strip.tCount, strip.pIcon, strip.pCount, strip.divider }) do
         region:SetShown(showCounts)
     end

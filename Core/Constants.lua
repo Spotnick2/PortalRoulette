@@ -53,6 +53,7 @@ ns.Constants = {
         broadcastOnSuccess = false,
         confirmGroupedTeleport = true,
         closeOnCastStart = false,
+        swapClicks = false,
         debugFaction = "auto",
         debugTrace = false,
         soundChannel = "SFX",
