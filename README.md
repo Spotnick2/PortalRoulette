@@ -3,8 +3,8 @@
 **Portal Roulette** puts every mage teleport and portal on one frosted-glass wheel, for **World of
 Warcraft: Forever**.
 
-Open the wheel, then left-click a destination to teleport or right-click it to open a portal. Your
-hearthstone sits in the middle.
+Open the wheel, then left-click a destination to teleport or right-click it to open a portal. That's
+the default: *Swap clicks* in the options turns it round. Your hearthstone sits in the middle.
 
 ![Portal Roulette on a Horde mage](https://raw.githubusercontent.com/Spotnick2/PortalRoulette/main/docs/screenshots/hero.jpg)
 
@@ -15,9 +15,9 @@ hearthstone sits in the middle.
   - Horde: Orgrimmar, Undercity, Thunder Bluff.
   - Every faction: Dalaran (Forever's new Teleport: Dalaran) inside the wheel, and Karazhan as a
     satellite linked to the wheel for Atiesh owners.
-- **Left-click teleports, right-click opens a portal**, from secure, combat-safe buttons.
-  Destinations you haven't learned yet stay on the wheel, dimmed, and their tooltip shows the level
-  you learn them at.
+- **Left-click teleports, right-click opens a portal**, from secure, combat-safe buttons. Prefer
+  it the other way round? Tick *Swap clicks* in the options. Destinations you haven't learned yet
+  stay on the wheel, dimmed, and their tooltip shows the level you learn them at.
 - **Your hearthstone in the centre**, with its cooldown and your bind location. A Crumbling
   Hearthstone is used only when you have no Hearthstone.
 - **Reagent counts** for Rune of Teleportation and Rune of Portals, with a
@@ -72,7 +72,8 @@ both spells and what they need:
 Options → AddOns → Portal Roulette:
 
 - **Wheel:** reagent counts (auto, always, hidden), Karazhan without Atiesh, grouped-teleport
-  confirmation, closing the wheel as soon as a cast starts, wheel scale.
+  confirmation, closing the wheel as soon as a cast starts, swapping the clicks (left-click for
+  the portal, right-click for the teleport), wheel scale.
 - **Animation:** all animations, idle motion, hover effects.
 - **Sound:** sounds, hover sounds, sound set (Portal Roulette or game UI sounds), volume channel.
 - **Presentation:** hide the game UI, cinematic camera, camera orbit, cast framing (when a
