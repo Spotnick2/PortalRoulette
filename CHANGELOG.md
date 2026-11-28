@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.3.0
 
 - New option (Wheel, off by default): **Swap clicks**. Left-click opens the portal and
   right-click teleports. The tooltips, the click hint under the wheel and the grouped-teleport
